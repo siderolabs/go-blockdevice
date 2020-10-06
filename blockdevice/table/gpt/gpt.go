@@ -289,7 +289,8 @@ func (gpt *GPT) Add(size uint64, setters ...interface{}) (table.Partition, error
 			return nil, fmt.Errorf("requested partition with maximum size, but no space available")
 		}
 	} else {
-		end = start + size/gpt.lba.LogicalBlockSize
+		// in GPT, partition end is inclusive
+		end = start + size/gpt.lba.LogicalBlockSize - 1
 
 		if end > gpt.header.LastUsableLBA {
 			// Convert the total available LBAs to units of bytes.
