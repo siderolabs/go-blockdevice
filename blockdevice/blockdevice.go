@@ -10,3 +10,15 @@ import "errors"
 // ErrMissingPartitionTable indicates that the the block device does not have a
 // partition table.
 var ErrMissingPartitionTable = errors.New("missing partition table")
+
+// OutOfSpaceError is implemented by out of space errors.
+type OutOfSpaceError interface {
+	OutOfSpaceError()
+}
+
+// IsOutOfSpaceError checks if provided error is 'out of space'.
+func IsOutOfSpaceError(err error) bool {
+	_, ok := err.(OutOfSpaceError)
+
+	return ok
+}

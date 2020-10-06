@@ -21,10 +21,11 @@ import (
 
 // GPT represents the GUID partition table.
 type GPT struct {
-	table      table.Table
-	header     *header.Header
-	partitions []table.Partition
-	lba        *lba.LogicalBlockAddresser
+	table         table.Table
+	header        *header.Header
+	oldPartitions []table.Partition
+	partitions    []table.Partition
+	lba           *lba.LogicalBlockAddresser
 
 	devname string
 	f       *os.File
@@ -88,6 +89,16 @@ func (gpt *GPT) Read() error {
 	gpt.table = primaryTable
 	gpt.header = serializedHeader
 	gpt.partitions = serializedPartitions
+	gpt.renumberPartitions()
+
+	// save original partitions
+	gpt.oldPartitions = make([]table.Partition, len(gpt.partitions))
+
+	for i, part := range gpt.partitions {
+		part := *part.(*partition.Partition)
+
+		gpt.oldPartitions[i] = &part
+	}
 
 	return nil
 }
@@ -109,6 +120,23 @@ func (gpt *GPT) Write() error {
 
 	if err := gpt.f.Sync(); err != nil {
 		return err
+	}
+
+	// inform kernel of partition changes
+	for _, oldPart := range gpt.oldPartitions {
+		if err := blkpg.InformKernelOfDelete(gpt.f, oldPart); err != nil {
+			return err
+		}
+	}
+
+	for _, part := range gpt.partitions {
+		if part == nil {
+			continue
+		}
+
+		if err := blkpg.InformKernelOfAdd(gpt.f, part); err != nil {
+			return err
+		}
 	}
 
 	return gpt.Read()
@@ -270,33 +298,60 @@ func (gpt *GPT) Repair() error {
 	return nil
 }
 
-// Add adds a partition.
+// Add adds a partition to the end of the list.
 func (gpt *GPT) Add(size uint64, setters ...interface{}) (table.Partition, error) {
+	return gpt.InsertAt(len(gpt.partitions), size, setters...)
+}
+
+// InsertAt inserts partition after the partition at the position idx.
+//
+// If idx == 0, it inserts new partition as the first partition, etc., idx == 1 as the second, etc.
+func (gpt *GPT) InsertAt(idx int, size uint64, setters ...interface{}) (table.Partition, error) {
 	opts := partition.NewDefaultOptions(setters...)
 
-	var start, end uint64
-	if len(gpt.partitions) == 0 {
-		start = gpt.header.FirstUsableLBA
-	} else {
-		previous := gpt.partitions[len(gpt.partitions)-1]
-		start = previous.(*partition.Partition).LastLBA + 1
+	// find the minimum and maximum LBAs available
+	var minLBA, maxLBA uint64
+
+	minLBA = gpt.header.FirstUsableLBA
+
+	for i := idx - 1; i >= 0; i-- {
+		if gpt.partitions[i] != nil {
+			minLBA = gpt.partitions[i].(*partition.Partition).LastLBA + 1
+
+			break
+		}
 	}
 
-	if opts.MaximumSize {
-		end = gpt.header.LastUsableLBA
+	maxLBA = gpt.header.LastUsableLBA
 
-		if end <= start {
-			return nil, fmt.Errorf("requested partition with maximum size, but no space available")
+	for i := idx; i < len(gpt.partitions); i++ {
+		if gpt.partitions[i] != nil {
+			maxLBA = gpt.partitions[i].(*partition.Partition).FirstLBA - 1
+
+			break
+		}
+	}
+
+	// find partition boundaries
+	var start, end uint64
+
+	start = minLBA
+
+	if opts.MaximumSize {
+		end = maxLBA
+
+		if end < start {
+			return nil, outOfSpaceError{fmt.Errorf("requested partition with maximum size, but no space available")}
 		}
 	} else {
 		// in GPT, partition end is inclusive
 		end = start + size/gpt.lba.LogicalBlockSize - 1
 
-		if end > gpt.header.LastUsableLBA {
+		if end > maxLBA {
 			// Convert the total available LBAs to units of bytes.
-			available := (gpt.header.LastUsableLBA - start) * gpt.lba.LogicalBlockSize
+			available := (maxLBA - start) * gpt.lba.LogicalBlockSize
 
-			return nil, fmt.Errorf("requested partition size %d, available is %d (%d too many bytes)", size, available, size-available)
+			return nil, outOfSpaceError{fmt.Errorf("requested partition size %d, available is %d (%d too many bytes)", size, available, size-available)}
 		}
 	}
 
@@ -312,14 +367,10 @@ func (gpt *GPT) Add(size uint64, setters ...interface{}) (table.Partition, error
 		LastLBA:  end,
 		Flags:    opts.Flags,
 		Name:     opts.Name,
-		Number:   int32(len(gpt.partitions) + 1),
 	}
 
-	gpt.partitions = append(gpt.partitions, partition)
-
-	if err := blkpg.InformKernelOfAdd(gpt.f, partition); err != nil {
-		return nil, err
-	}
+	gpt.partitions = append(gpt.partitions[:idx], append([]table.Partition{partition}, gpt.partitions[idx:]...)...)
+	gpt.renumberPartitions()
 
 	return partition, nil
 }
@@ -342,15 +393,33 @@ func (gpt *GPT) Resize(p table.Partition) error {
 
 	gpt.partitions[index] = partition
 
-	return blkpg.InformKernelOfResize(gpt.f, partition)
+	return nil
 }
 
 // Delete deletes a partition.
-func (gpt *GPT) Delete(partition table.Partition) error {
-	i := partition.No() - 1
-	gpt.partitions[i] = nil
+func (gpt *GPT) Delete(p table.Partition) error {
+	index := -1
 
-	return blkpg.InformKernelOfDelete(gpt.f, partition)
+	for i, part := range gpt.partitions {
+		if part == nil {
+			continue
+		}
+
+		if part.(*partition.Partition).ID == p.(*partition.Partition).ID {
+			index = i
+
+			break
+		}
+	}
+
+	if index == -1 {
+		return fmt.Errorf("partition not found")
+	}
+
+	gpt.partitions[index] = nil
+	gpt.renumberPartitions()
+
+	return nil
 }
 
 func (gpt *GPT) readPrimary() ([]byte, error) {
@@ -367,6 +436,20 @@ func (gpt *GPT) readPrimary() ([]byte, error) {
 	}
 
 	return table, nil
+}
+
+func (gpt *GPT) renumberPartitions() {
+	// in gpt, partition numbers aren't stored, so numbers are just in-memory representation
+	idx := int32(1)
+
+	for i := range gpt.partitions {
+		if gpt.partitions[i] == nil {
+			continue
+		}
+
+		gpt.partitions[i].(*partition.Partition).Number = idx
+		idx++
+	}
 }
 
 func (gpt *GPT) newTable(header, partitions []byte, headerRange, paritionsRange lba.Range) ([]byte, error) {
@@ -453,10 +536,15 @@ func (gpt *GPT) deserializePartitions(header *header.Header) ([]table.Partition,
 		// The first LBA of the partition cannot start before the first usable
 		// LBA specified in the header.
 		if prt.FirstLBA >= header.FirstUsableLBA {
-			prt.Number = int32(i) + 1
 			partitions = append(partitions, prt)
 		}
 	}
 
 	return partitions, nil
 }
+
+type outOfSpaceError struct {
+	error
+}
+
+func (outOfSpaceError) OutOfSpaceError() {}
