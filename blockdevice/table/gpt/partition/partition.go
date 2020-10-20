@@ -59,6 +59,11 @@ func (prt *Partition) No() int32 {
 	return prt.Number
 }
 
+// Label returns the partition's name.
+func (prt *Partition) Label() string {
+	return prt.Name
+}
+
 // Fields implements the serder.Serde interface.
 func (prt *Partition) Fields() []*serde.Field {
 	return []*serde.Field{
