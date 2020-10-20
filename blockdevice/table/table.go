@@ -58,6 +58,8 @@ type Partition interface {
 	Length() int64
 	// No returns the partition's number.
 	No() int32
+	// Label returns the partitions' name.
+	Label() string
 	serde.Serde
 }
 

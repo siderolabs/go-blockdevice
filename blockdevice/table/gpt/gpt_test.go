@@ -71,16 +71,19 @@ func (suite *GPTSuite) TestPartitionAdd() {
 
 		partBoot := partitions[0]
 		suite.Assert().EqualValues(1, partBoot.No())
+		suite.Assert().EqualValues("boot", partBoot.Label())
 		suite.Assert().EqualValues(bootSize/blockSize, partBoot.Length())
 		suite.Assert().EqualValues(headReserved+1, partBoot.Start()) // first usable LBA
 
 		partEFI := partitions[1]
 		suite.Assert().EqualValues(2, partEFI.No())
+		suite.Assert().EqualValues("efi", partEFI.Label())
 		suite.Assert().EqualValues(efiSize/blockSize, partEFI.Length())
 		suite.Assert().EqualValues(headReserved+1+bootSize/blockSize, partEFI.Start())
 
 		partSystem := partitions[2]
 		suite.Assert().EqualValues(3, partSystem.No())
+		suite.Assert().EqualValues("system", partSystem.Label())
 		suite.Assert().EqualValues((size-bootSize-efiSize)/blockSize-headReserved-tailReserved, partSystem.Length())
 		suite.Assert().EqualValues(headReserved+1+bootSize/blockSize+efiSize/blockSize, partSystem.Start())
 	}
