@@ -7,6 +7,7 @@ package blockdevice
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"syscall"
 	"time"
@@ -156,6 +157,60 @@ func (bd *BlockDevice) Size() (uint64, error) {
 	}
 
 	return devsize, nil
+}
+
+// Wipe the blockdevice contents.
+//
+// In order of availability this tries to perform the following:
+//   * secure discard (secure erase)
+//   * discard with zeros
+//   * zero out via ioctl
+//   * zero out from userland
+func (bd *BlockDevice) Wipe() (string, error) {
+	const (
+		BLKDISCARD       = 4727
+		BLKDISCARDZEROES = 4732
+		BLKSECDISCARD    = 4733
+		BLKZEROOUT       = 4735
+	)
+
+	var (
+		r   [2]uint64
+		err error
+	)
+
+	r[1], err = bd.Size()
+	if err != nil {
+		return "", err
+	}
+
+	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, bd.f.Fd(), BLKSECDISCARD, uintptr(unsafe.Pointer(&r[0]))); errno == 0 {
+		return "blksecdiscard", nil
+	}
+
+	var zeroes int
+
+	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, bd.f.Fd(), BLKDISCARDZEROES, uintptr(unsafe.Pointer(&zeroes))); errno == 0 && zeroes != 0 {
+		if _, _, errno = unix.Syscall(unix.SYS_IOCTL, bd.f.Fd(), BLKDISCARD, uintptr(unsafe.Pointer(&r[0]))); errno == 0 {
+			return "blkdiscardzeros", nil
+		}
+	}
+
+	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, bd.f.Fd(), BLKZEROOUT, uintptr(unsafe.Pointer(&r[0]))); errno == 0 {
+		return "blkzeroout", nil
+	}
+
+	var zero *os.File
+
+	if zero, err = os.Open("/dev/zero"); err != nil {
+		return "", err
+	}
+
+	defer zero.Close() //nolint: errcheck
+
+	_, err = io.CopyN(bd.f, zero, int64(r[1]))
+
+	return "writezeroes", err
 }
 
 // Reset will reset a block device given a device name.

@@ -58,3 +58,8 @@ func (bd *BlockDevice) Size() (uint64, error) {
 func (bd *BlockDevice) Reset() error {
 	return fmt.Errorf("not implemented")
 }
+
+// Wipe the blockdevice contents.
+func (bd *BlockDevice) Wipe() error {
+	return fmt.Errorf("not implemented")
+}
