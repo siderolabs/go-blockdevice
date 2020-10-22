@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/google/uuid"
 
@@ -17,15 +18,15 @@ import (
 	"github.com/talos-systems/go-blockdevice/blockdevice/table"
 	"github.com/talos-systems/go-blockdevice/blockdevice/table/gpt/header"
 	"github.com/talos-systems/go-blockdevice/blockdevice/table/gpt/partition"
+	"github.com/talos-systems/go-blockdevice/blockdevice/util"
 )
 
 // GPT represents the GUID partition table.
 type GPT struct {
-	table         table.Table
-	header        *header.Header
-	oldPartitions []table.Partition
-	partitions    []table.Partition
-	lba           *lba.LogicalBlockAddresser
+	table      table.Table
+	header     *header.Header
+	partitions []table.Partition
+	lba        *lba.LogicalBlockAddresser
 
 	devname string
 	f       *os.File
@@ -91,15 +92,6 @@ func (gpt *GPT) Read() error {
 	gpt.partitions = serializedPartitions
 	gpt.renumberPartitions()
 
-	// save original partitions
-	gpt.oldPartitions = make([]table.Partition, len(gpt.partitions))
-
-	for i, part := range gpt.partitions {
-		part := *part.(*partition.Partition)
-
-		gpt.oldPartitions[i] = &part
-	}
-
 	return nil
 }
 
@@ -122,9 +114,17 @@ func (gpt *GPT) Write() error {
 		return err
 	}
 
-	// inform kernel of partition changes
-	for _, oldPart := range gpt.oldPartitions {
-		if err := blkpg.InformKernelOfDelete(gpt.f, oldPart); err != nil {
+	for i := 1; ; i++ {
+		partName := util.PartName(gpt.devname, i)
+
+		_, err := os.Stat(filepath.Join("/sys/block", filepath.Base(gpt.devname), partName))
+		if err != nil {
+			break
+		}
+
+		if err := blkpg.InformKernelOfDelete(gpt.f, &partition.Partition{
+			Number: int32(i),
+		}); err != nil {
 			return err
 		}
 	}
