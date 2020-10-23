@@ -303,7 +303,7 @@ func (gpt *GPT) Add(size uint64, setters ...interface{}) (table.Partition, error
 	return gpt.InsertAt(len(gpt.partitions), size, setters...)
 }
 
-// InsertAt inserts partition after the partition at the position idx.
+// InsertAt inserts partition before the partition at the position idx.
 //
 // If idx == 0, it inserts new partition as the first partition, etc., idx == 1 as the second, etc.
 func (gpt *GPT) InsertAt(idx int, size uint64, setters ...interface{}) (table.Partition, error) {
