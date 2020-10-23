@@ -4,7 +4,9 @@
 
 package table
 
-import "github.com/talos-systems/go-blockdevice/blockdevice/serde"
+import (
+	"github.com/talos-systems/go-blockdevice/blockdevice/serde"
+)
 
 // Table represents a partition table.
 type Table = []byte
@@ -67,6 +69,8 @@ type Partition interface {
 type Partitioner interface {
 	// Add adds a partition to the partition table.
 	Add(uint64, ...interface{}) (Partition, error)
+	// InsertAt inserts partition before the partition at the position idx.
+	InsertAt(idx int, size uint64, setters ...interface{}) (Partition, error)
 	// Resize resizes a partition table.
 	Resize(Partition) error
 	// Delete deletes a partition table.
