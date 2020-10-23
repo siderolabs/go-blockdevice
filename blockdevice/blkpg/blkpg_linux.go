@@ -79,9 +79,9 @@ func inform(f *os.File, partition table.Partition, op int32) (err error) {
 		if errno != 0 {
 			switch errno { //nolint: exhaustive
 			case unix.EBUSY:
-				return retry.ExpectedError(err)
+				return retry.ExpectedError(errno)
 			default:
-				return retry.UnexpectedError(err)
+				return retry.UnexpectedError(errno)
 			}
 		}
 

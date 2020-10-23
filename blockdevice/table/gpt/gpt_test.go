@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/talos-systems/go-blockdevice/blockdevice"
+	"github.com/talos-systems/go-blockdevice/blockdevice/loopback"
 	bdtable "github.com/talos-systems/go-blockdevice/blockdevice/table"
 	"github.com/talos-systems/go-blockdevice/blockdevice/table/gpt"
 	"github.com/talos-systems/go-blockdevice/blockdevice/table/gpt/partition"
@@ -28,7 +29,9 @@ const (
 type GPTSuite struct {
 	suite.Suite
 
-	f *os.File
+	f              *os.File
+	dev            *os.File
+	loopbackDevice *os.File
 }
 
 func (suite *GPTSuite) SetupTest() {
@@ -38,15 +41,33 @@ func (suite *GPTSuite) SetupTest() {
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(suite.f.Truncate(size))
+
+	suite.loopbackDevice, err = loopback.NextLoopDevice()
+	suite.Require().NoError(err)
+
+	suite.T().Logf("Using %s", suite.loopbackDevice.Name())
+
+	suite.Require().NoError(loopback.Loop(suite.loopbackDevice, suite.f))
+
+	suite.Require().NoError(loopback.LoopSetReadWrite(suite.loopbackDevice))
+
+	suite.dev, err = os.OpenFile(suite.loopbackDevice.Name(), os.O_RDWR, 0)
+	suite.Require().NoError(err)
 }
 
 func (suite *GPTSuite) TearDownTest() {
+	suite.Assert().NoError(suite.dev.Close())
+
+	if suite.loopbackDevice != nil {
+		suite.Assert().NoError(loopback.Unloop(suite.loopbackDevice))
+	}
+
 	suite.Assert().NoError(suite.f.Close())
 	suite.Assert().NoError(os.Remove(suite.f.Name()))
 }
 
 func (suite *GPTSuite) TestPartitionAdd() {
-	table, err := gpt.NewGPT("/dev/null", suite.f)
+	table, err := gpt.NewGPT(suite.loopbackDevice.Name(), suite.dev)
 	suite.Require().NoError(err)
 
 	_, err = table.New()
@@ -93,7 +114,7 @@ func (suite *GPTSuite) TestPartitionAdd() {
 	suite.Require().NoError(table.Write())
 
 	// re-read the partition table
-	table, err = gpt.NewGPT("/dev/null", suite.f)
+	table, err = gpt.NewGPT(suite.loopbackDevice.Name(), suite.dev)
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(table.Read())
@@ -102,7 +123,7 @@ func (suite *GPTSuite) TestPartitionAdd() {
 }
 
 func (suite *GPTSuite) TestPartitionAddOutOfSpace() {
-	table, err := gpt.NewGPT("/dev/null", suite.f)
+	table, err := gpt.NewGPT(suite.loopbackDevice.Name(), suite.dev)
 	suite.Require().NoError(err)
 
 	_, err = table.New()
@@ -131,7 +152,7 @@ func (suite *GPTSuite) TestPartitionAddOutOfSpace() {
 }
 
 func (suite *GPTSuite) TestPartitionDelete() {
-	table, err := gpt.NewGPT("/dev/null", suite.f)
+	table, err := gpt.NewGPT(suite.loopbackDevice.Name(), suite.dev)
 	suite.Require().NoError(err)
 
 	_, err = table.New()
@@ -162,7 +183,7 @@ func (suite *GPTSuite) TestPartitionDelete() {
 	suite.Require().NoError(table.Write())
 
 	// re-read the partition table
-	table, err = gpt.NewGPT("/dev/null", suite.f)
+	table, err = gpt.NewGPT(suite.loopbackDevice.Name(), suite.dev)
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(table.Read())
@@ -182,7 +203,7 @@ func (suite *GPTSuite) TestPartitionDelete() {
 	suite.Require().NoError(table.Write())
 
 	// re-read the partition table for the second time
-	table, err = gpt.NewGPT("/dev/null", suite.f)
+	table, err = gpt.NewGPT(suite.loopbackDevice.Name(), suite.dev)
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(table.Read())
@@ -204,7 +225,7 @@ func (suite *GPTSuite) TestPartitionDelete() {
 }
 
 func (suite *GPTSuite) TestPartitionInsertAt() {
-	table, err := gpt.NewGPT("/dev/null", suite.f)
+	table, err := gpt.NewGPT(suite.loopbackDevice.Name(), suite.dev)
 	suite.Require().NoError(err)
 
 	_, err = table.New()
@@ -233,7 +254,7 @@ func (suite *GPTSuite) TestPartitionInsertAt() {
 	suite.Require().NoError(table.Write())
 
 	// re-read the partition table
-	table, err = gpt.NewGPT("/dev/null", suite.f)
+	table, err = gpt.NewGPT(suite.loopbackDevice.Name(), suite.dev)
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(table.Read())
@@ -297,5 +318,9 @@ func (suite *GPTSuite) TestPartitionInsertAt() {
 }
 
 func TestGPTSuite(t *testing.T) {
+	if os.Getuid() != 0 {
+		t.Skip("can't run the test as non-root")
+	}
+
 	suite.Run(t, new(GPTSuite))
 }

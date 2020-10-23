@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2020-10-06T16:24:33Z by kres latest.
+# Generated on 2020-10-23T19:30:04Z by kres e82c767-dirty.
 
 # common variables
 
@@ -100,11 +100,11 @@ base:  ## Prepare base toolchain
 
 .PHONY: unit-tests
 unit-tests:  ## Performs unit tests
-	@$(MAKE) local-$@ DEST=$(ARTIFACTS)
+	@$(MAKE) local-$@ DEST=$(ARTIFACTS)  TARGET_ARGS="--allow security.insecure"
 
 .PHONY: unit-tests-race
 unit-tests-race:  ## Performs unit tests with race detection enabled.
-	@$(MAKE) target-$@
+	@$(MAKE) target-$@  TARGET_ARGS="--allow security.insecure"
 
 .PHONY: coverage
 coverage:  ## Upload coverage data to codecov.io.

@@ -1,0 +1,10 @@
+---
+kind: common.Docker
+name: setup-ci
+spec:
+    allowInsecure: true
+---
+kind: golang.UnitTests
+name: unit-tests
+spec:
+    requiresInsecure: true
