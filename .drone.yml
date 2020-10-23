@@ -1,7 +1,7 @@
 ---
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2020-09-04T03:46:02Z by kres latest.
+# Generated on 2020-10-23T19:31:03Z by kres e82c767-dirty.
 
 kind: pipeline
 type: kubernetes
@@ -19,7 +19,7 @@ steps:
   - sleep 5
   - git fetch --tags
   - install-ci-key
-  - docker buildx create --driver docker-container --platform linux/amd64 --name local --use unix:///var/outer-run/docker.sock
+  - docker buildx create --driver docker-container --platform linux/amd64 --name local-insecure --buildkitd-flags '--allow-insecure-entitlement security.insecure' --use unix:///var/outer-run/docker.sock
   - docker buildx inspect --bootstrap
   environment:
     SSH_KEY:
@@ -132,7 +132,6 @@ services:
   - --dns=8.8.4.4
   - --mtu=1500
   - --log-level=error
-  - --insecure-registry=http://registry.ci.svc:5000
   privileged: true
   volumes:
   - name: outer-docker-socket
