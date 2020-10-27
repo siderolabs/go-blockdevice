@@ -25,3 +25,8 @@ func InformKernelOfResize(f *os.File, partition table.Partition) error {
 func InformKernelOfDelete(f *os.File, partition table.Partition) error {
 	return fmt.Errorf("not implemented")
 }
+
+// GetKernelPartitions returns kernel state of partitions.
+func GetKernelPartitions(f *os.File, devPath string) ([]KernelPartition, error) {
+	return nil, fmt.Errorf("not implemented")
+}

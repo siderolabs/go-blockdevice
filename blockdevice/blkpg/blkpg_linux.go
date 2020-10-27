@@ -6,7 +6,11 @@ package blkpg
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -16,6 +20,7 @@ import (
 
 	"github.com/talos-systems/go-blockdevice/blockdevice/lba"
 	"github.com/talos-systems/go-blockdevice/blockdevice/table"
+	"github.com/talos-systems/go-blockdevice/blockdevice/util"
 )
 
 // InformKernelOfAdd invokes the BLKPG_ADD_PARTITION ioctl.
@@ -97,4 +102,51 @@ func inform(f *os.File, partition table.Partition, op int32) (err error) {
 	}
 
 	return nil
+}
+
+// GetKernelPartitions returns kernel partition table state.
+func GetKernelPartitions(f *os.File, devPath string) ([]KernelPartition, error) {
+	result := []KernelPartition{}
+
+	for i := 1; i <= 256; i++ {
+		partName := util.PartName(devPath, i)
+		partPath := filepath.Join("/sys/block", filepath.Base(devPath), partName)
+
+		_, err := os.Stat(partPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+
+			return nil, err
+		}
+
+		startS, err := ioutil.ReadFile(filepath.Join(partPath, "start"))
+		if err != nil {
+			return nil, err
+		}
+
+		sizeS, err := ioutil.ReadFile(filepath.Join(partPath, "size"))
+		if err != nil {
+			return nil, err
+		}
+
+		start, err := strconv.ParseInt(strings.TrimSpace(string(startS)), 10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		size, err := strconv.ParseInt(strings.TrimSpace(string(sizeS)), 10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, KernelPartition{
+			No:     i,
+			Start:  start,
+			Length: size,
+		})
+	}
+
+	return result, nil
 }

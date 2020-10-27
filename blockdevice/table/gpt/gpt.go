@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/google/uuid"
 
@@ -18,7 +17,6 @@ import (
 	"github.com/talos-systems/go-blockdevice/blockdevice/table"
 	"github.com/talos-systems/go-blockdevice/blockdevice/table/gpt/header"
 	"github.com/talos-systems/go-blockdevice/blockdevice/table/gpt/partition"
-	"github.com/talos-systems/go-blockdevice/blockdevice/util"
 )
 
 // GPT represents the GUID partition table.
@@ -102,44 +100,88 @@ func (gpt *GPT) Write() error {
 		return err
 	}
 
-	if err := gpt.writePrimary(partitions); err != nil {
+	if err = gpt.writePrimary(partitions); err != nil {
 		return fmt.Errorf("failed to write primary table: %w", err)
 	}
 
-	if err := gpt.writeSecondary(partitions); err != nil {
+	if err = gpt.writeSecondary(partitions); err != nil {
 		return fmt.Errorf("failed to write secondary table: %w", err)
 	}
 
-	if err := gpt.f.Sync(); err != nil {
+	if err = gpt.f.Sync(); err != nil {
 		return err
 	}
 
-	for i := 1; ; i++ {
-		partName := util.PartName(gpt.devname, i)
-
-		_, err := os.Stat(filepath.Join("/sys/block", filepath.Base(gpt.devname), partName))
-		if err != nil {
-			break
-		}
-
-		if err := blkpg.InformKernelOfDelete(gpt.f, &partition.Partition{
-			Number: int32(i),
-		}); err != nil {
-			return err
-		}
+	if err = gpt.syncKernelPartitions(); err != nil {
+		return fmt.Errorf("failed to sync kernel partitions: %w", err)
 	}
+
+	return gpt.Read()
+}
+
+func (gpt *GPT) syncKernelPartitions() error {
+	kernelPartitions, err := blkpg.GetKernelPartitions(gpt.f, gpt.devname)
+	if err != nil {
+		return err
+	}
+
+	// filter out nil partitions
+	newPartitions := make([]table.Partition, 0, len(gpt.partitions))
 
 	for _, part := range gpt.partitions {
 		if part == nil {
 			continue
 		}
 
-		if err := blkpg.InformKernelOfAdd(gpt.f, part); err != nil {
+		newPartitions = append(newPartitions, part)
+	}
+
+	var i int
+
+	// find partitions matching exactly or partitions which can be simply resized
+	for i = 0; i < len(kernelPartitions) && i < len(newPartitions); i++ {
+		kernelPart := kernelPartitions[i]
+		newPart := newPartitions[i]
+
+		// non-contiguous kernel partition table, stop
+		if kernelPart.No != i+1 {
+			break
+		}
+
+		// skip partitions without any changes
+		if kernelPart.Start == newPart.Start() && kernelPart.Length == newPart.Length() {
+			continue
+		}
+
+		// resizing a partition which is the last one in the kernel list (no overlaps)
+		if kernelPart.Start == newPart.Start() && i == len(kernelPartitions)-1 {
+			if err := blkpg.InformKernelOfResize(gpt.f, newPart); err != nil {
+				return err
+			}
+
+			continue
+		}
+
+		// partitions don't match, stop
+		break
+	}
+
+	// process remaining partitions: delete all the kernel partitions left, add new partitions from in-memory set
+	for j := i; j < len(kernelPartitions); j++ {
+		if err := blkpg.InformKernelOfDelete(gpt.f, &partition.Partition{
+			Number: int32(kernelPartitions[j].No),
+		}); err != nil {
 			return err
 		}
 	}
 
-	return gpt.Read()
+	for j := i; j < len(newPartitions); j++ {
+		if err := blkpg.InformKernelOfAdd(gpt.f, newPartitions[j]); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // New creates a new partition table and writes it to disk.
