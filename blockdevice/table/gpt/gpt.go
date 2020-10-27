@@ -419,23 +419,27 @@ func (gpt *GPT) InsertAt(idx int, size uint64, setters ...interface{}) (table.Pa
 
 // Resize resizes a partition.
 // TODO(andrewrynhard): Verify that we can indeed grow this partition safely.
-func (gpt *GPT) Resize(p table.Partition) error {
+func (gpt *GPT) Resize(p table.Partition) (bool, error) {
 	partition, ok := p.(*partition.Partition)
 	if !ok {
-		return fmt.Errorf("partition is not a GUID partition table partition")
+		return false, fmt.Errorf("partition is not a GUID partition table partition")
 	}
 
 	// TODO(andrewrynhard): This should be a parameter.
+	if partition.LastLBA == gpt.header.LastUsableLBA {
+		return false, nil
+	}
+
 	partition.LastLBA = gpt.header.LastUsableLBA
 
 	index := partition.Number - 1
 	if len(gpt.partitions) < int(index) {
-		return fmt.Errorf("unknown partition %d, only %d available", partition.Number, len(gpt.partitions))
+		return false, fmt.Errorf("unknown partition %d, only %d available", partition.Number, len(gpt.partitions))
 	}
 
 	gpt.partitions[index] = partition
 
-	return nil
+	return true, nil
 }
 
 // Delete deletes a partition.

@@ -72,7 +72,7 @@ type Partitioner interface {
 	// InsertAt inserts partition before the partition at the position idx.
 	InsertAt(idx int, size uint64, setters ...interface{}) (Partition, error)
 	// Resize resizes a partition table.
-	Resize(Partition) error
+	Resize(Partition) (bool, error)
 	// Delete deletes a partition table.
 	Delete(Partition) error
 }
