@@ -20,6 +20,21 @@ import (
 	"github.com/talos-systems/go-blockdevice/blockdevice/table/gpt"
 )
 
+// Linux headers constants.
+//
+// Hardcoded here to avoid CGo dependency.
+const (
+	BLKDISCARD       = 4727
+	BLKDISCARDZEROES = 4732
+	BLKSECDISCARD    = 4733
+	BLKZEROOUT       = 4735
+)
+
+// Fast wipe parameters.
+const (
+	FastWipeRange = 1024 * 1024
+)
+
 // BlockDevice represents a block device.
 type BlockDevice struct {
 	table table.PartitionTable
@@ -141,7 +156,7 @@ func (bd *BlockDevice) RereadPartitionTable() error {
 		return fmt.Errorf("failed to re-read partition table: %w", err)
 	}
 
-	return err
+	return nil
 }
 
 // Device returns the backing file for the block device.
@@ -167,22 +182,47 @@ func (bd *BlockDevice) Size() (uint64, error) {
 //   * zero out via ioctl
 //   * zero out from userland
 func (bd *BlockDevice) Wipe() (string, error) {
-	const (
-		BLKDISCARD       = 4727
-		BLKDISCARDZEROES = 4732
-		BLKSECDISCARD    = 4733
-		BLKZEROOUT       = 4735
-	)
-
-	var (
-		r   [2]uint64
-		err error
-	)
-
-	r[1], err = bd.Size()
+	size, err := bd.Size()
 	if err != nil {
 		return "", err
 	}
+
+	return bd.WipeRange(0, size)
+}
+
+// FastWipe the blockdevice contents.
+//
+// This method is much faster than Wipe(), but it doesn't guarantee
+// that device will be zeroed out completely.
+func (bd *BlockDevice) FastWipe() error {
+	size, err := bd.Size()
+	if err != nil {
+		return err
+	}
+
+	// BLKDISCARD is implemented via TRIM on SSDs, it might or might not zero out device contents.
+	r := [2]uint64{0, size}
+
+	// ignoring the error here as DISCARD might be not supported by the device
+	unix.Syscall(unix.SYS_IOCTL, bd.f.Fd(), BLKDISCARD, uintptr(unsafe.Pointer(&r[0]))) //nolint: errcheck
+
+	// zero out the first N bytes of the device to clear any partition table
+	wipeLength := uint64(FastWipeRange)
+
+	if wipeLength > size {
+		wipeLength = size
+	}
+
+	_, err = bd.WipeRange(0, wipeLength)
+
+	return err
+}
+
+// WipeRange the blockdevice [start, start+length).
+func (bd *BlockDevice) WipeRange(start, length uint64) (string, error) {
+	var err error
+
+	r := [2]uint64{start, length}
 
 	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, bd.f.Fd(), BLKSECDISCARD, uintptr(unsafe.Pointer(&r[0]))); errno == 0 {
 		return "blksecdiscard", nil
@@ -228,9 +268,5 @@ func (bd *BlockDevice) Reset() (err error) {
 		}
 	}
 
-	if err = pt.Write(); err != nil {
-		return err
-	}
-
-	return nil
+	return pt.Write()
 }
