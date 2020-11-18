@@ -35,7 +35,11 @@ func GetDisks() ([]*Disk, error) {
 	}
 
 	readFile := func(path string) (string, error) {
-		f, e := os.Open(filepath.Join(sysblock, path))
+		if !strings.HasPrefix(path, "/") {
+			path = filepath.Join(sysblock, path)
+		}
+
+		f, e := os.Open(path)
 
 		if e != nil {
 			return "", fmt.Errorf("failed to open file %w", err)
@@ -66,6 +70,13 @@ func GetDisks() ([]*Disk, error) {
 			continue
 		}
 
+		blockSizeString, err := readFile(
+			fmt.Sprintf("/sys/class/block/%s/queue/logical_block_size", deviceName),
+		)
+		if err != nil {
+			blockSizeString = "512"
+		}
+
 		var size uint64
 
 		s, err := readFile(filepath.Join(dev.Name(), "size"))
@@ -77,6 +88,10 @@ func GetDisks() ([]*Disk, error) {
 		if err != nil {
 			continue
 		}
+
+		blockSize, _ := strconv.ParseUint(strings.TrimSpace(blockSizeString), 10, 64) //nolint:errcheck
+
+		size *= blockSize
 
 		model, err := readFile(filepath.Join(dev.Name(), "device/model"))
 		if err != nil {
