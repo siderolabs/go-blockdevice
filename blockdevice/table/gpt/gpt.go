@@ -28,11 +28,13 @@ type GPT struct {
 
 	devname string
 	f       *os.File
+
+	opts *Options
 }
 
 // NewGPT initializes and returns a GUID partition table.
 func NewGPT(devname string, f *os.File, setters ...interface{}) (gpt *GPT, err error) {
-	_ = NewDefaultOptions(setters...)
+	opts := NewDefaultOptions(setters...)
 
 	lba, err := lba.New(f)
 	if err != nil {
@@ -43,6 +45,7 @@ func NewGPT(devname string, f *os.File, setters ...interface{}) (gpt *GPT, err e
 		lba:     lba,
 		devname: devname,
 		f:       f,
+		opts:    opts,
 	}
 
 	return gpt, nil
@@ -104,9 +107,9 @@ func (gpt *GPT) Write() error {
 		return fmt.Errorf("failed to write primary table: %w", err)
 	}
 
-	if err = gpt.writeSecondary(partitions); err != nil {
-		return fmt.Errorf("failed to write secondary table: %w", err)
-	}
+	// if err = gpt.writeSecondary(partitions); err != nil {
+	// 	return fmt.Errorf("failed to write secondary table: %w", err)
+	// }
 
 	if err = gpt.f.Sync(); err != nil {
 		return err
@@ -233,7 +236,10 @@ func (gpt *GPT) newHeader(size int64) (*header.Header, error) {
 	h.Reserved = binary.LittleEndian.Uint32([]byte{0x00, 0x00, 0x00, 0x00})
 	h.CurrentLBA = 1
 	h.BackupLBA = uint64(size/int64(gpt.lba.LogicalBlockSize) - 1)
-	h.FirstUsableLBA = 34
+	h.PartitionEntriesStartLBA = gpt.opts.PartitionEntriesStartLBA
+	h.NumberOfPartitionEntries = 128
+	h.PartitionEntrySize = 128
+	h.FirstUsableLBA = gpt.opts.PartitionEntriesStartLBA + 32
 	h.LastUsableLBA = h.BackupLBA - 33
 
 	guuid, err := uuid.NewUUID()
@@ -242,9 +248,6 @@ func (gpt *GPT) newHeader(size int64) (*header.Header, error) {
 	}
 
 	h.GUUID = guuid
-	h.PartitionEntriesStartLBA = 2
-	h.NumberOfPartitionEntries = 128
-	h.PartitionEntrySize = 128
 
 	return h, nil
 }
@@ -278,7 +281,7 @@ func (gpt *GPT) writePrimary(partitions []byte) error {
 		return err
 	}
 
-	table, err := gpt.newTable(header, partitions, lba.Range{Start: 0, End: 1}, lba.Range{Start: 1, End: 33})
+	table, err := gpt.newTable(header, partitions, lba.Range{Start: 0, End: 1}, lba.Range{Start: gpt.header.PartitionEntriesStartLBA - 1, End: gpt.header.PartitionEntriesStartLBA + 31})
 	if err != nil {
 		return err
 	}
@@ -302,7 +305,9 @@ func (gpt *GPT) writeSecondary(partitions []byte) error {
 		return err
 	}
 
-	table, err := gpt.newTable(header, partitions, lba.Range{Start: 32, End: 33}, lba.Range{Start: 0, End: 32})
+	// table, err := gpt.newTable(header, partitions, lba.Range{Start: 0, End: 1}, lba.Range{Start: 1, End: 33})
+	// table, err := gpt.newTable(header, partitions, lba.Range{Start: 32, End: 33}, lba.Range{Start: 0, End: 32})
+	table, err := gpt.newTable(header, partitions, lba.Range{Start: gpt.header.PartitionEntriesStartLBA + 30, End: gpt.header.PartitionEntriesStartLBA + 31}, lba.Range{Start: gpt.header.PartitionEntriesStartLBA - 2, End: gpt.header.PartitionEntriesStartLBA + 30})
 	if err != nil {
 		return err
 	}
@@ -469,8 +474,7 @@ func (gpt *GPT) Delete(p table.Partition) error {
 }
 
 func (gpt *GPT) readPrimary() ([]byte, error) {
-	// LBA 34 is the first usable sector on the disk.
-	table := gpt.lba.Make(34)
+	table := gpt.lba.Make(gpt.opts.PartitionEntriesStartLBA + 32)
 
 	read, err := gpt.f.ReadAt(table, 0)
 	if err != nil {
@@ -499,7 +503,7 @@ func (gpt *GPT) renumberPartitions() {
 }
 
 func (gpt *GPT) newTable(header, partitions []byte, headerRange, paritionsRange lba.Range) ([]byte, error) {
-	table := gpt.lba.Make(33)
+	table := gpt.lba.Make(gpt.header.PartitionEntriesStartLBA + 31)
 
 	if _, err := gpt.lba.Copy(table, header, headerRange); err != nil {
 		return nil, fmt.Errorf("failed to copy header data: %w", err)

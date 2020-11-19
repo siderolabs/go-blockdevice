@@ -22,7 +22,7 @@ const (
 	size      = 1024 * 1024 * 1024 * 1024
 	blockSize = 512
 
-	headReserved = 33
+	headReserved = 2079
 	tailReserved = 34
 )
 
@@ -131,7 +131,7 @@ func (suite *GPTSuite) TestPartitionAddOutOfSpace() {
 
 	_, err = table.Add(size, partition.WithPartitionName("boot"))
 	suite.Require().Error(err)
-	suite.Assert().EqualError(err, `requested partition size 1099511627776, available is 1099511592960 (34816 too many bytes)`)
+	suite.Assert().EqualError(err, `requested partition size 1099511627776, available is 1099510545408 (1082368 too many bytes)`)
 	suite.Assert().True(blockdevice.IsOutOfSpaceError(err))
 
 	_, err = table.Add(size/2, partition.WithPartitionName("boot"))
@@ -139,7 +139,7 @@ func (suite *GPTSuite) TestPartitionAddOutOfSpace() {
 
 	_, err = table.Add(size/2, partition.WithPartitionName("boot2"))
 	suite.Require().Error(err)
-	suite.Assert().EqualError(err, `requested partition size 549755813888, available is 549755779072 (34816 too many bytes)`)
+	suite.Assert().EqualError(err, `requested partition size 549755813888, available is 549754731520 (1082368 too many bytes)`)
 	suite.Assert().True(blockdevice.IsOutOfSpaceError(err))
 
 	_, err = table.Add(size/2-(headReserved+tailReserved)*blockSize, partition.WithPartitionName("boot2"))

@@ -281,7 +281,7 @@ func (hdr *Header) Fields() []*serde.Field {
 					return fmt.Errorf("option is not a GPT header option")
 				}
 				hdr.PartitionEntriesStartLBA = binary.LittleEndian.Uint64(contents)
-				array, err := hdr.From(o.Table, lba.Range{Start: hdr.PartitionEntriesStartLBA, End: uint64(33)})
+				array, err := hdr.From(o.Table, lba.Range{Start: hdr.PartitionEntriesStartLBA, End: hdr.PartitionEntriesStartLBA + 31})
 				if err != nil {
 					return fmt.Errorf("failed to read starting LBA from header: %w", err)
 				}

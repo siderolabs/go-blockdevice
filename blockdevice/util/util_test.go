@@ -217,3 +217,47 @@ func Test_DevnameFromPartname(t *testing.T) {
 		})
 	}
 }
+
+func TestPartName(t *testing.T) {
+	type args struct {
+		d string
+		n int
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "loop",
+			args: args{
+				d: "loop0",
+				n: 5,
+			},
+			want: "loop0p5",
+		},
+		{
+			name: "mmc",
+			args: args{
+				d: "mmcblk0",
+				n: 9,
+			},
+			want: "mmcblk0p9",
+		},
+		{
+			name: "nvme1n2",
+			args: args{
+				d: "nvme1n2",
+				n: 1,
+			},
+			want: "nvme1n2p1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := util.PartName(tt.args.d, tt.args.n); got != tt.want {
+				t.Errorf("PartName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

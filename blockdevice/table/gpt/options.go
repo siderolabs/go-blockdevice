@@ -6,7 +6,8 @@ package gpt
 
 // Options is the functional options struct.
 type Options struct {
-	PrimaryGPT bool
+	PrimaryGPT               bool
+	PartitionEntriesStartLBA uint64
 }
 
 // Option is the functional option func.
@@ -19,10 +20,18 @@ func WithPrimaryGPT(o bool) Option {
 	}
 }
 
+// WithPartitionEntriesStartLBA  sets the LBA to be used for specifying which LBA should be used for the start of the partition entries.
+func WithPartitionEntriesStartLBA(o uint64) Option {
+	return func(args *Options) {
+		args.PartitionEntriesStartLBA = o
+	}
+}
+
 // NewDefaultOptions initializes a Options struct with default values.
 func NewDefaultOptions(setters ...interface{}) *Options {
 	opts := &Options{
-		PrimaryGPT: true,
+		PrimaryGPT:               true,
+		PartitionEntriesStartLBA: 2048,
 	}
 
 	for _, setter := range setters {
