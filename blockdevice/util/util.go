@@ -18,6 +18,8 @@ func PartNo(partname string) (partno string, err error) {
 	switch p := partname; {
 	case strings.HasPrefix(p, "nvme"):
 		fallthrough
+	case strings.HasPrefix(p, "mmcblk"):
+		fallthrough
 	case strings.HasPrefix(p, "loop"):
 		idx := strings.LastIndex(partname, "p")
 
@@ -48,6 +50,8 @@ func DevnameFromPartname(partname string) (devname string, err error) {
 	switch p := partname; {
 	case strings.HasPrefix(p, "nvme"):
 		fallthrough
+	case strings.HasPrefix(p, "mmcblk"):
+		fallthrough
 	case strings.HasPrefix(p, "loop"):
 		return strings.TrimSuffix(p, "p"+partno), nil
 	case strings.HasPrefix(p, "sd"):
@@ -69,6 +73,8 @@ func PartName(d string, n int) string {
 
 	switch p := partname; {
 	case strings.HasPrefix(p, "nvme"):
+		fallthrough
+	case strings.HasPrefix(p, "mmcblk"):
 		fallthrough
 	case strings.HasPrefix(p, "loop"):
 		partname = fmt.Sprintf("%sp%d", p, n)
