@@ -31,9 +31,7 @@ type GPT struct {
 }
 
 // NewGPT initializes and returns a GUID partition table.
-func NewGPT(devname string, f *os.File, setters ...interface{}) (gpt *GPT, err error) {
-	_ = NewDefaultOptions(setters...)
-
+func NewGPT(devname string, f *os.File) (gpt *GPT, err error) {
 	lba, err := lba.New(f)
 	if err != nil {
 		return nil, err
@@ -185,7 +183,12 @@ func (gpt *GPT) syncKernelPartitions() error {
 }
 
 // New creates a new partition table and writes it to disk.
-func (gpt *GPT) New() (table.PartitionTable, error) {
+func (gpt *GPT) New(setters ...interface{}) (table.PartitionTable, error) {
+	opts, err := NewDefaultOptions(setters...)
+	if err != nil {
+		return nil, err
+	}
+
 	// Seek to the end to get the size.
 	size, err := gpt.f.Seek(0, 2)
 	if err != nil {
@@ -197,7 +200,7 @@ func (gpt *GPT) New() (table.PartitionTable, error) {
 		return nil, err
 	}
 
-	h, err := gpt.newHeader(size)
+	h, err := gpt.newHeader(size, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +228,7 @@ func (gpt *GPT) New() (table.PartitionTable, error) {
 	return gpt, nil
 }
 
-func (gpt *GPT) newHeader(size int64) (*header.Header, error) {
+func (gpt *GPT) newHeader(size int64, opts *Options) (*header.Header, error) {
 	h := &header.Header{}
 	h.Signature = "EFI PART"
 	h.Revision = binary.LittleEndian.Uint32([]byte{0x00, 0x00, 0x01, 0x00})
@@ -233,7 +236,10 @@ func (gpt *GPT) newHeader(size int64) (*header.Header, error) {
 	h.Reserved = binary.LittleEndian.Uint32([]byte{0x00, 0x00, 0x00, 0x00})
 	h.CurrentLBA = 1
 	h.BackupLBA = uint64(size/int64(gpt.lba.LogicalBlockSize) - 1)
-	h.FirstUsableLBA = 34
+	h.PartitionEntriesStartLBA = opts.PartitionEntriesStartLBA
+	h.NumberOfPartitionEntries = 128
+	h.PartitionEntrySize = 128
+	h.FirstUsableLBA = opts.PartitionEntriesStartLBA + 32
 	h.LastUsableLBA = h.BackupLBA - 33
 
 	guuid, err := uuid.NewUUID()
@@ -242,9 +248,6 @@ func (gpt *GPT) newHeader(size int64) (*header.Header, error) {
 	}
 
 	h.GUUID = guuid
-	h.PartitionEntriesStartLBA = 2
-	h.NumberOfPartitionEntries = 128
-	h.PartitionEntrySize = 128
 
 	return h, nil
 }

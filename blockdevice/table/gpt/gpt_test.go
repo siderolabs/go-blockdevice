@@ -15,6 +15,7 @@ import (
 	"github.com/talos-systems/go-blockdevice/blockdevice/loopback"
 	bdtable "github.com/talos-systems/go-blockdevice/blockdevice/table"
 	"github.com/talos-systems/go-blockdevice/blockdevice/table/gpt"
+	"github.com/talos-systems/go-blockdevice/blockdevice/table/gpt/header"
 	"github.com/talos-systems/go-blockdevice/blockdevice/table/gpt/partition"
 )
 
@@ -22,8 +23,8 @@ const (
 	size      = 1024 * 1024 * 1024 * 1024
 	blockSize = 512
 
-	headReserved = 33
-	tailReserved = 34
+	defaultHeadReserved = 31
+	tailReserved        = 34
 )
 
 type GPTSuite struct {
@@ -72,6 +73,8 @@ func (suite *GPTSuite) TestPartitionAdd() {
 
 	_, err = table.New()
 	suite.Require().NoError(err)
+
+	headReserved := defaultHeadReserved + int(table.Header().(*header.Header).PartitionEntriesStartLBA)
 
 	const (
 		bootSize = 1048576
@@ -129,6 +132,8 @@ func (suite *GPTSuite) TestPartitionAddOutOfSpace() {
 	_, err = table.New()
 	suite.Require().NoError(err)
 
+	headReserved := defaultHeadReserved + table.Header().(*header.Header).PartitionEntriesStartLBA
+
 	_, err = table.Add(size, partition.WithPartitionName("boot"))
 	suite.Require().Error(err)
 	suite.Assert().EqualError(err, `requested partition size 1099511627776, available is 1099511592960 (34816 too many bytes)`)
@@ -140,6 +145,37 @@ func (suite *GPTSuite) TestPartitionAddOutOfSpace() {
 	_, err = table.Add(size/2, partition.WithPartitionName("boot2"))
 	suite.Require().Error(err)
 	suite.Assert().EqualError(err, `requested partition size 549755813888, available is 549755779072 (34816 too many bytes)`)
+	suite.Assert().True(blockdevice.IsOutOfSpaceError(err))
+
+	_, err = table.Add(size/2-(headReserved+tailReserved)*blockSize, partition.WithPartitionName("boot2"))
+	suite.Require().NoError(err)
+
+	_, err = table.Add(0, partition.WithPartitionName("boot3"), partition.WithMaximumSize(true))
+	suite.Require().Error(err)
+	suite.Assert().EqualError(err, `requested partition with maximum size, but no space available`)
+	suite.Assert().True(blockdevice.IsOutOfSpaceError(err))
+}
+
+func (suite *GPTSuite) TestPartitionAddOutOfSpaceWithPartitionEntriesStartLBA() {
+	table, err := gpt.NewGPT(suite.loopbackDevice.Name(), suite.dev)
+	suite.Require().NoError(err)
+
+	_, err = table.New(gpt.WithPartitionEntriesStartLBA(2048))
+	suite.Require().NoError(err)
+
+	headReserved := defaultHeadReserved + table.Header().(*header.Header).PartitionEntriesStartLBA
+
+	_, err = table.Add(size, partition.WithPartitionName("boot"))
+	suite.Require().Error(err)
+	suite.Assert().EqualError(err, `requested partition size 1099511627776, available is 1099510545408 (1082368 too many bytes)`)
+	suite.Assert().True(blockdevice.IsOutOfSpaceError(err))
+
+	_, err = table.Add(size/2, partition.WithPartitionName("boot"))
+	suite.Require().NoError(err)
+
+	_, err = table.Add(size/2, partition.WithPartitionName("boot2"))
+	suite.Require().Error(err)
+	suite.Assert().EqualError(err, `requested partition size 549755813888, available is 549754731520 (1082368 too many bytes)`)
 	suite.Assert().True(blockdevice.IsOutOfSpaceError(err))
 
 	_, err = table.Add(size/2-(headReserved+tailReserved)*blockSize, partition.WithPartitionName("boot2"))
@@ -208,6 +244,10 @@ func (suite *GPTSuite) TestPartitionDelete() {
 
 	suite.Require().NoError(table.Read())
 
+	headReserved := defaultHeadReserved + int(table.Header().(*header.Header).PartitionEntriesStartLBA)
+
+	suite.Require().NoError(table.Read())
+
 	partitions := table.Partitions()
 	suite.Require().Len(partitions, 3)
 
@@ -230,6 +270,8 @@ func (suite *GPTSuite) TestPartitionInsertAt() {
 
 	_, err = table.New()
 	suite.Require().NoError(err)
+
+	headReserved := defaultHeadReserved + int(table.Header().(*header.Header).PartitionEntriesStartLBA)
 
 	const (
 		oldBootSize = 1048576

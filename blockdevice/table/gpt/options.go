@@ -4,32 +4,53 @@
 
 package gpt
 
+import "fmt"
+
 // Options is the functional options struct.
 type Options struct {
-	PrimaryGPT bool
+	PrimaryGPT               bool
+	PartitionEntriesStartLBA uint64
 }
 
 // Option is the functional option func.
-type Option func(*Options)
+type Option func(*Options) error
 
 // WithPrimaryGPT sets the contents of offset 24 in the GPT header to the location of the primary header.
 func WithPrimaryGPT(o bool) Option {
-	return func(args *Options) {
+	return func(args *Options) error {
 		args.PrimaryGPT = o
+
+		return nil
+	}
+}
+
+// WithPartitionEntriesStartLBA  sets the LBA to be used for specifying which LBA should be used for the start of the partition entries.
+func WithPartitionEntriesStartLBA(o uint64) Option {
+	return func(args *Options) error {
+		if o < 2 {
+			return fmt.Errorf("partition entries start LBA must be greater than 2")
+		}
+
+		args.PartitionEntriesStartLBA = o
+
+		return nil
 	}
 }
 
 // NewDefaultOptions initializes a Options struct with default values.
-func NewDefaultOptions(setters ...interface{}) *Options {
+func NewDefaultOptions(setters ...interface{}) (*Options, error) {
 	opts := &Options{
-		PrimaryGPT: true,
+		PrimaryGPT:               true,
+		PartitionEntriesStartLBA: 2,
 	}
 
 	for _, setter := range setters {
 		if s, ok := setter.(Option); ok {
-			s(opts)
+			if err := s(opts); err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	return opts
+	return opts, nil
 }
