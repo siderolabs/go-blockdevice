@@ -24,7 +24,7 @@ func WithPrimaryGPT(o bool) Option {
 	}
 }
 
-// WithPartitionEntriesStartLBA  sets the LBA to be used for specifying which LBA should be used for the start of the partition entries.
+// WithPartitionEntriesStartLBA  sets specifies which LBA should be used for the start of the partition entries.
 func WithPartitionEntriesStartLBA(o uint64) Option {
 	return func(args *Options) error {
 		if o < 2 {
@@ -37,7 +37,7 @@ func WithPartitionEntriesStartLBA(o uint64) Option {
 	}
 }
 
-// NewDefaultOptions initializes a Options struct with default values.
+// NewDefaultOptions initializes an Options struct with default values.
 func NewDefaultOptions(setters ...interface{}) (*Options, error) {
 	opts := &Options{
 		PrimaryGPT:               true,

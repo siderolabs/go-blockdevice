@@ -7,6 +7,7 @@ package gpt
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/google/uuid"
@@ -26,21 +27,19 @@ type GPT struct {
 	partitions []table.Partition
 	lba        *lba.LogicalBlockAddresser
 
-	devname string
-	f       *os.File
+	f *os.File
 }
 
 // NewGPT initializes and returns a GUID partition table.
-func NewGPT(devname string, f *os.File) (gpt *GPT, err error) {
+func NewGPT(f *os.File) (gpt *GPT, err error) {
 	lba, err := lba.New(f)
 	if err != nil {
 		return nil, err
 	}
 
 	gpt = &GPT{
-		lba:     lba,
-		devname: devname,
-		f:       f,
+		lba: lba,
+		f:   f,
 	}
 
 	return gpt, nil
@@ -68,24 +67,25 @@ func (gpt *GPT) Partitions() []table.Partition {
 
 // Read performs reads the partition table.
 func (gpt *GPT) Read() error {
-	primaryTable, err := gpt.readPrimary()
+	table, err := gpt.readPrimary()
 	if err != nil {
 		return err
 	}
 
-	serializedHeader, err := gpt.deserializeHeader(primaryTable)
+	header, err := gpt.deserializeHeader(table)
 	if err != nil {
 		return err
 	}
 
-	serializedPartitions, err := gpt.deserializePartitions(serializedHeader)
+	partitions, err := gpt.deserializePartitions(header)
 	if err != nil {
 		return err
 	}
 
-	gpt.table = primaryTable
-	gpt.header = serializedHeader
-	gpt.partitions = serializedPartitions
+	gpt.table = table
+	gpt.header = header
+	gpt.partitions = partitions
+
 	gpt.renumberPartitions()
 
 	return nil
@@ -118,7 +118,7 @@ func (gpt *GPT) Write() error {
 }
 
 func (gpt *GPT) syncKernelPartitions() error {
-	kernelPartitions, err := blkpg.GetKernelPartitions(gpt.f, gpt.devname)
+	kernelPartitions, err := blkpg.GetKernelPartitions(gpt.f)
 	if err != nil {
 		return err
 	}
@@ -241,6 +241,9 @@ func (gpt *GPT) newHeader(size int64, opts *Options) (*header.Header, error) {
 	h.PartitionEntrySize = 128
 	h.FirstUsableLBA = opts.PartitionEntriesStartLBA + 32
 	h.LastUsableLBA = h.BackupLBA - 33
+
+	log.Println("FirstUsableLBA", h.FirstUsableLBA)
+	log.Println("LastUsableLBA", h.LastUsableLBA)
 
 	guuid, err := uuid.NewUUID()
 	if err != nil {

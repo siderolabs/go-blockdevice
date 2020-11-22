@@ -6,6 +6,7 @@ package blockdevice
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -44,9 +45,7 @@ type BlockDevice struct {
 
 // Open initializes and returns a block device.
 // TODO(andrewrynhard): Use BLKGETSIZE ioctl to get the size.
-func Open(devname string, setters ...Option) (bd *BlockDevice, err error) {
-	opts := NewDefaultOptions(setters...)
-
+func Open(devname string) (bd *BlockDevice, err error) {
 	bd = &BlockDevice{}
 
 	var f *os.File
@@ -64,41 +63,9 @@ func Open(devname string, setters ...Option) (bd *BlockDevice, err error) {
 		}
 	}()
 
-	if opts.CreateGPT {
-		var g *gpt.GPT
-
-		if g, err = gpt.NewGPT(devname, f); err != nil {
-			return nil, err
-		}
-
-		var pt table.PartitionTable
-
-		if pt, err = g.New(); err != nil {
-			return nil, err
-		}
-
-		if err = pt.Write(); err != nil {
-			return nil, err
-		}
-
-		bd.table = pt
-	} else {
-		buf := make([]byte, 1)
-		// PMBR protective entry starts at 446. The partition type is at offset
-		// 4 from the start of the PMBR protective entry.
-		_, err = f.ReadAt(buf, 450)
-		if err != nil {
-			return nil, err
-		}
-
-		// For GPT, the partition type should be 0xee (EFI GPT).
-		if bytes.Equal(buf, []byte{0xee}) {
-			var g *gpt.GPT
-			if g, err = gpt.NewGPT(devname, f); err != nil {
-				return nil, err
-			}
-			bd.table = g
-		}
+	_, err = bd.DetectPartitionTable()
+	if err != nil && !errors.Is(err, ErrMissingPartitionTable) {
+		return nil, err
 	}
 
 	return bd, nil
@@ -269,4 +236,28 @@ func (bd *BlockDevice) Reset() (err error) {
 	}
 
 	return pt.Write()
+}
+
+func (bd *BlockDevice) DetectPartitionTable() (ok bool, err error) {
+	buf := make([]byte, 1)
+	// PMBR protective entry starts at 446. The partition type is at offset
+	// 4 from the start of the PMBR protective entry.
+	_, err = bd.f.ReadAt(buf, 450)
+	if err != nil {
+		return false, err
+	}
+
+	// For GPT, the partition type should be 0xee (EFI GPT).
+	if bytes.Equal(buf, []byte{0xee}) {
+		var g *gpt.GPT
+		if g, err = gpt.NewGPT(bd.f); err != nil {
+			return false, err
+		}
+
+		bd.table = g
+
+		return true, nil
+	}
+
+	return false, ErrMissingPartitionTable
 }

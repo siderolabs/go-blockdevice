@@ -63,3 +63,7 @@ func (bd *BlockDevice) Reset() error {
 func (bd *BlockDevice) Wipe() error {
 	return fmt.Errorf("not implemented")
 }
+
+func (bd *BlockDevice) DetectPartitionTable() (err error) {
+	return fmt.Errorf("not implemented")
+}

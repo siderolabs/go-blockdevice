@@ -105,12 +105,12 @@ func inform(f *os.File, partition table.Partition, op int32) (err error) {
 }
 
 // GetKernelPartitions returns kernel partition table state.
-func GetKernelPartitions(f *os.File, devPath string) ([]KernelPartition, error) {
+func GetKernelPartitions(f *os.File) ([]KernelPartition, error) {
 	result := []KernelPartition{}
 
 	for i := 1; i <= 256; i++ {
-		partName := util.PartName(devPath, i)
-		partPath := filepath.Join("/sys/block", filepath.Base(devPath), partName)
+		partName := util.PartName(f.Name(), i)
+		partPath := filepath.Join("/sys/block", filepath.Base(f.Name()), partName)
 
 		_, err := os.Stat(partPath)
 		if err != nil {
