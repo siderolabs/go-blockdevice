@@ -23,7 +23,6 @@ import (
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/iso9660"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/vfat"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/xfs"
-	gptpartition "github.com/talos-systems/go-blockdevice/blockdevice/table/gpt/partition"
 	"github.com/talos-systems/go-blockdevice/blockdevice/util"
 )
 
@@ -166,8 +165,8 @@ func probe(devpath string) (devpaths []string) {
 	// A partition table was found, now probe each partition's file system.
 	name := filepath.Base(devpath)
 
-	for _, p := range pt.Partitions() {
-		partpath, err := util.PartPath(name, int(p.No()))
+	for _, part := range pt.Partitions().Items() {
+		partpath, err := util.PartPath(name, int(part.Number))
 		if err != nil {
 			return devpaths
 		}
@@ -209,11 +208,9 @@ func GetBlockDeviceWithPartitonName(name string) (bd *blockdevice.BlockDevice, e
 			return nil, fmt.Errorf("failed to open partition table: %w", err)
 		}
 
-		for _, p := range pt.Partitions() {
-			if part, ok := p.(*gptpartition.Partition); ok {
-				if part.Name == name {
-					return bd, nil
-				}
+		for _, p := range pt.Partitions().Items() {
+			if p.Name == name {
+				return bd, nil
 			}
 		}
 
@@ -256,21 +253,19 @@ func GetPartitionWithName(name string) (f *os.File, err error) {
 			return nil, fmt.Errorf("failed to open partition table: %w", err)
 		}
 
-		for _, p := range pt.Partitions() {
-			if part, ok := p.(*gptpartition.Partition); ok {
-				if part.Name == name {
-					partpath, err := util.PartPath(info.Name(), int(part.No()))
-					if err != nil {
-						return nil, err
-					}
-
-					f, err = os.OpenFile(partpath, os.O_RDWR|unix.O_CLOEXEC, os.ModeDevice)
-					if err != nil {
-						return nil, err
-					}
-
-					return f, nil
+		for _, part := range pt.Partitions().Items() {
+			if part.Name == name {
+				partpath, err := util.PartPath(info.Name(), int(part.Number))
+				if err != nil {
+					return nil, err
 				}
+
+				f, err = os.OpenFile(partpath, os.O_RDWR|unix.O_CLOEXEC, os.ModeDevice)
+				if err != nil {
+					return nil, err
+				}
+
+				return f, nil
 			}
 		}
 	}

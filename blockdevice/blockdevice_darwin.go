@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice/table"
+	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
 )
 
 // BlockDevice represents a block device.
 type BlockDevice struct {
-	table table.PartitionTable
+	table *gpt.GPT
 
 	f *os.File
 }
@@ -30,7 +30,7 @@ func (bd *BlockDevice) Close() error {
 }
 
 // PartitionTable returns the block device partition table.
-func (bd *BlockDevice) PartitionTable() (table.PartitionTable, error) {
+func (bd *BlockDevice) PartitionTable() (*gpt.GPT, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 

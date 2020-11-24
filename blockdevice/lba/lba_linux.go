@@ -13,76 +13,87 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Range represents a range of Logical Block Addresses.
-type Range struct {
-	Start uint64
-	End   uint64
-}
-
-// LogicalBlockAddresser represents Logical Block Addressing.
-type LogicalBlockAddresser struct {
-	PhysicalBlockSize uint64
-	LogicalBlockSize  uint64
-}
-
-// New initializes and returns a LogicalBlockAddresser.
-func New(f *os.File) (lba *LogicalBlockAddresser, err error) {
+// NewLBA initializes and returns an `LBA`.
+func NewLBA(f *os.File) (lba *LBA, err error) {
 	st, err := f.Stat()
 	if err != nil {
 		return nil, fmt.Errorf("stat disk error: %w", err)
 	}
 
-	var psize uint64
+	var psize int64
 	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, f.Fd(), unix.BLKPBSZGET, uintptr(unsafe.Pointer(&psize))); errno != 0 {
 		if st.Mode().IsRegular() {
-			// not a device, assume default block size
+			// Not a device, assume default block size.
 			psize = 512
 		} else {
 			return nil, errors.New("BLKPBSZGET failed")
 		}
 	}
 
-	var lsize uint64
+	var lsize int64
 	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, f.Fd(), unix.BLKSSZGET, uintptr(unsafe.Pointer(&lsize))); errno != 0 {
 		if st.Mode().IsRegular() {
-			// not a device, assume default block size
+			// Not a device, assume default block size.
 			lsize = 512
 		} else {
 			return nil, errors.New("BLKSSZGET failed")
 		}
 	}
 
-	lba = &LogicalBlockAddresser{
+	// Seek to the end to get the size.
+	size, err := f.Seek(0, 2)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reset by seeking to the beginning.
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	tsize := size / lsize
+
+	lba = &LBA{
 		PhysicalBlockSize: psize,
 		LogicalBlockSize:  lsize,
+		TotalSectors:      tsize,
+		f:                 f,
 	}
 
 	return lba, nil
 }
 
-// Make returns a slice from a source slice in the the specified range inclusively.
-func (lba *LogicalBlockAddresser) Make(size uint64) []byte {
-	return make([]byte, lba.LogicalBlockSize*size)
-}
+// ReadAt reads from a file in units of LBA.
+func (l *LBA) ReadAt(lba, off, length int64) (b []byte, err error) {
+	b = make([]byte, length)
 
-// Copy copies from src to dst in the specified range.
-func (lba *LogicalBlockAddresser) Copy(dst, src []byte, rng Range) (int, error) {
-	size := lba.LogicalBlockSize
-	n := copy(dst[size*rng.Start:size*rng.End], src)
+	off = lba*l.LogicalBlockSize + off
 
-	if n != len(src) {
-		return -1, fmt.Errorf("expected to write %d elements, wrote %d", len(src), n)
+	n, err := l.f.ReadAt(b, off)
+	if err != nil {
+		return nil, err
 	}
 
-	return n, nil
-}
-
-// From returns a slice from a source slice in the the specified range inclusively.
-func (lba *LogicalBlockAddresser) From(src []byte, rng Range) ([]byte, error) {
-	size := lba.LogicalBlockSize
-	if uint64(len(src)) < size+size*rng.End {
-		return nil, fmt.Errorf("cannot read LBA range (start: %d, end %d), source too small", rng.Start, rng.End)
+	if n != len(b) {
+		return nil, fmt.Errorf("expected to read %d bytes, read %d", len(b), n)
 	}
 
-	return src[size*rng.Start : size+size*rng.End], nil
+	return b, nil
+}
+
+// WriteAt writes to a file in units of LBA.
+func (l *LBA) WriteAt(lba, off int64, b []byte) (err error) {
+	off = lba*l.LogicalBlockSize + off
+
+	n, err := l.f.WriteAt(b, off)
+	if err != nil {
+		return err
+	}
+
+	if n != len(b) {
+		return fmt.Errorf("expected to write %d bytes, read %d", len(b), n)
+	}
+
+	return nil
 }

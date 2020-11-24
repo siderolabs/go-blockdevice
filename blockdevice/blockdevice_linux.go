@@ -16,8 +16,7 @@ import (
 	"github.com/talos-systems/go-retry/retry"
 	"golang.org/x/sys/unix"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice/table"
-	"github.com/talos-systems/go-blockdevice/blockdevice/table/gpt"
+	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
 )
 
 // Linux headers constants.
@@ -37,7 +36,7 @@ const (
 
 // BlockDevice represents a block device.
 type BlockDevice struct {
-	table table.PartitionTable
+	g *gpt.GPT
 
 	f *os.File
 }
@@ -67,21 +66,16 @@ func Open(devname string, setters ...Option) (bd *BlockDevice, err error) {
 	if opts.CreateGPT {
 		var g *gpt.GPT
 
-		if g, err = gpt.NewGPT(devname, f); err != nil {
+		g, err = gpt.New(f)
+		if err != nil {
 			return nil, err
 		}
 
-		var pt table.PartitionTable
-
-		if pt, err = g.New(); err != nil {
+		if err = g.Write(); err != nil {
 			return nil, err
 		}
 
-		if err = pt.Write(); err != nil {
-			return nil, err
-		}
-
-		bd.table = pt
+		bd.g = g
 	} else {
 		buf := make([]byte, 1)
 		// PMBR protective entry starts at 446. The partition type is at offset
@@ -94,10 +88,10 @@ func Open(devname string, setters ...Option) (bd *BlockDevice, err error) {
 		// For GPT, the partition type should be 0xee (EFI GPT).
 		if bytes.Equal(buf, []byte{0xee}) {
 			var g *gpt.GPT
-			if g, err = gpt.NewGPT(devname, f); err != nil {
+			if g, err = gpt.Open(f); err != nil {
 				return nil, err
 			}
-			bd.table = g
+			bd.g = g
 		}
 	}
 
@@ -110,12 +104,12 @@ func (bd *BlockDevice) Close() error {
 }
 
 // PartitionTable returns the block device partition table.
-func (bd *BlockDevice) PartitionTable() (table.PartitionTable, error) {
-	if bd.table == nil {
+func (bd *BlockDevice) PartitionTable() (*gpt.GPT, error) {
+	if bd.g == nil {
 		return nil, ErrMissingPartitionTable
 	}
 
-	return bd.table, bd.table.Read()
+	return bd.g, bd.g.Read()
 }
 
 // RereadPartitionTable invokes the BLKRRPART ioctl to have the kernel read the
@@ -145,7 +139,8 @@ func (bd *BlockDevice) RereadPartitionTable() error {
 		if _, _, ret = unix.Syscall(unix.SYS_IOCTL, bd.f.Fd(), unix.BLKRRPART, 0); ret == 0 {
 			return nil
 		}
-		switch ret { //nolint: exhaustive
+		//nolint: exhaustive
+		switch ret {
 		case syscall.EBUSY:
 			return retry.ExpectedError(err)
 		default:
@@ -256,17 +251,11 @@ func (bd *BlockDevice) WipeRange(start, length uint64) (string, error) {
 // Reset will reset a block device given a device name.
 // Simply deletes partition table on device.
 func (bd *BlockDevice) Reset() (err error) {
-	var pt table.PartitionTable
-
-	if pt, err = bd.PartitionTable(); err != nil {
-		return err
-	}
-
-	for _, p := range pt.Partitions() {
-		if err = pt.Delete(p); err != nil {
+	for _, p := range bd.g.Partitions().Items() {
+		if err = bd.g.Delete(p); err != nil {
 			return fmt.Errorf("failed to delete partition: %w", err)
 		}
 	}
 
-	return pt.Write()
+	return bd.g.Write()
 }
