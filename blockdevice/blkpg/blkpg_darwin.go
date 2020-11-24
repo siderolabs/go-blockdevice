@@ -7,26 +7,24 @@ package blkpg
 import (
 	"fmt"
 	"os"
-
-	"github.com/talos-systems/go-blockdevice/blockdevice/table"
 )
 
 // InformKernelOfAdd invokes the BLKPG_ADD_PARTITION ioctl.
-func InformKernelOfAdd(f *os.File, partition table.Partition) error {
+func InformKernelOfAdd(f *os.File, first, length uint64, n int32) error {
 	return fmt.Errorf("not implemented")
 }
 
 // InformKernelOfResize invokes the BLKPG_RESIZE_PARTITION ioctl.
-func InformKernelOfResize(f *os.File, partition table.Partition) error {
+func InformKernelOfResize(f *os.File, first, length uint64, n int32) error {
 	return fmt.Errorf("not implemented")
 }
 
 // InformKernelOfDelete invokes the BLKPG_DEL_PARTITION ioctl.
-func InformKernelOfDelete(f *os.File, partition table.Partition) error {
+func InformKernelOfDelete(f *os.File, first, length uint64, n int32) error {
 	return fmt.Errorf("not implemented")
 }
 
-// GetKernelPartitions returns kernel state of partitions.
-func GetKernelPartitions(f *os.File, devPath string) ([]KernelPartition, error) {
+// GetKernelPartitions returns kernel partition table state.
+func GetKernelPartitions(f *os.File) ([]KernelPartition, error) {
 	return nil, fmt.Errorf("not implemented")
 }

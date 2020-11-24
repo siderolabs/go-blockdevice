@@ -19,52 +19,51 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/talos-systems/go-blockdevice/blockdevice/lba"
-	"github.com/talos-systems/go-blockdevice/blockdevice/table"
 	"github.com/talos-systems/go-blockdevice/blockdevice/util"
 )
 
 // InformKernelOfAdd invokes the BLKPG_ADD_PARTITION ioctl.
-func InformKernelOfAdd(f *os.File, partition table.Partition) error {
-	return inform(f, partition, unix.BLKPG_ADD_PARTITION)
+func InformKernelOfAdd(f *os.File, first, length uint64, n int32) error {
+	return inform(f, first, length, n, unix.BLKPG_ADD_PARTITION)
 }
 
 // InformKernelOfResize invokes the BLKPG_RESIZE_PARTITION ioctl.
-func InformKernelOfResize(f *os.File, partition table.Partition) error {
-	return inform(f, partition, unix.BLKPG_RESIZE_PARTITION)
+func InformKernelOfResize(f *os.File, first, length uint64, n int32) error {
+	return inform(f, first, length, n, unix.BLKPG_RESIZE_PARTITION)
 }
 
 // InformKernelOfDelete invokes the BLKPG_DEL_PARTITION ioctl.
-func InformKernelOfDelete(f *os.File, partition table.Partition) error {
-	return inform(f, partition, unix.BLKPG_DEL_PARTITION)
+func InformKernelOfDelete(f *os.File, first, length uint64, n int32) error {
+	return inform(f, first, length, n, unix.BLKPG_DEL_PARTITION)
 }
 
-func inform(f *os.File, partition table.Partition, op int32) (err error) {
+func inform(f *os.File, first, length uint64, n, op int32) (err error) {
 	var (
-		start  int64
-		length int64
+		start int64
+		end   int64
 	)
 
 	switch op {
 	case unix.BLKPG_DEL_PARTITION:
 		start = 0
-		length = 0
+		end = 0
 	default:
-		var l *lba.LogicalBlockAddresser
+		var l *lba.LBA
 
-		if l, err = lba.New(f); err != nil {
+		if l, err = lba.NewLBA(f); err != nil {
 			return err
 		}
 
-		blocksize := int64(l.LogicalBlockSize)
+		blocksize := l.LogicalBlockSize
 
-		start = partition.Start() * blocksize
-		length = partition.Length() * blocksize
+		start = int64(first) * blocksize
+		end = int64(length) * blocksize
 	}
 
 	data := &unix.BlkpgPartition{
 		Start:  start,
-		Length: length,
-		Pno:    partition.No(),
+		Length: end,
+		Pno:    n,
 	}
 
 	arg := &unix.BlkpgIoctlArg{
@@ -82,7 +81,8 @@ func inform(f *os.File, partition table.Partition, op int32) (err error) {
 		)
 
 		if errno != 0 {
-			switch errno { //nolint: exhaustive
+			//nolint: exhaustive
+			switch errno {
 			case unix.EBUSY:
 				return retry.ExpectedError(errno)
 			default:
@@ -105,12 +105,12 @@ func inform(f *os.File, partition table.Partition, op int32) (err error) {
 }
 
 // GetKernelPartitions returns kernel partition table state.
-func GetKernelPartitions(f *os.File, devPath string) ([]KernelPartition, error) {
+func GetKernelPartitions(f *os.File) ([]KernelPartition, error) {
 	result := []KernelPartition{}
 
 	for i := 1; i <= 256; i++ {
-		partName := util.PartName(devPath, i)
-		partPath := filepath.Join("/sys/block", filepath.Base(devPath), partName)
+		partName := util.PartName(f.Name(), i)
+		partPath := filepath.Join("/sys/block", filepath.Base(f.Name()), partName)
 
 		_, err := os.Stat(partPath)
 		if err != nil {
