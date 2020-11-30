@@ -58,7 +58,7 @@ func GetDisks() ([]*Disk, error) {
 		skip := false
 		deviceName := filepath.Base(dev.Name())
 
-		for _, prefix := range []string{"sg", "sr", "loop", "md", "dm-"} {
+		for _, prefix := range []string{"sg", "sr", "loop", "md", "dm-", "ram"} {
 			if strings.HasPrefix(deviceName, prefix) {
 				skip = true
 
