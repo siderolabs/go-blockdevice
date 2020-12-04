@@ -64,6 +64,44 @@ func (suite *GPTSuite) TearDownTest() {
 	suite.Assert().NoError(os.Remove(suite.f.Name()))
 }
 
+func (suite *GPTSuite) TestEmpty() {
+	_, err := gpt.Open(suite.dev)
+	suite.Require().Error(err)
+}
+
+func (suite *GPTSuite) TestReset() {
+	g, err := gpt.New(suite.dev)
+	suite.Require().NoError(err)
+
+	_, err = g.Add(1048576, gpt.WithPartitionName("boot"))
+	suite.Require().NoError(err)
+
+	_, err = g.Add(1048576, gpt.WithPartitionName("efi"))
+	suite.Require().NoError(err)
+
+	suite.Require().NoError(g.Write())
+
+	// re-read the partition table
+	g, err = gpt.Open(suite.dev)
+	suite.Require().NoError(err)
+
+	suite.Require().NoError(g.Read())
+
+	for _, p := range g.Partitions().Items() {
+		suite.Require().NoError(g.Delete(p))
+	}
+
+	suite.Require().NoError(g.Write())
+
+	// re-read the partition table
+	g, err = gpt.Open(suite.dev)
+	suite.Require().NoError(err)
+
+	suite.Require().NoError(g.Read())
+
+	suite.Assert().Empty(g.Partitions().Items())
+}
+
 func (suite *GPTSuite) TestPartitionAdd() {
 	g, err := gpt.New(suite.dev)
 	suite.Require().NoError(err)

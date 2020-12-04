@@ -70,6 +70,8 @@ func (l *LBA) ReadAt(lba, off, length int64) (b []byte, err error) {
 
 	off = lba*l.LogicalBlockSize + off
 
+	// TODO: this should either use a loop or ReadFull, as Read() is not guaranteed
+	// to read full buffer
 	n, err := l.f.ReadAt(b, off)
 	if err != nil {
 		return nil, err
