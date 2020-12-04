@@ -250,12 +250,17 @@ func (bd *BlockDevice) WipeRange(start, length uint64) (string, error) {
 
 // Reset will reset a block device given a device name.
 // Simply deletes partition table on device.
-func (bd *BlockDevice) Reset() (err error) {
-	for _, p := range bd.g.Partitions().Items() {
-		if err = bd.g.Delete(p); err != nil {
+func (bd *BlockDevice) Reset() error {
+	g, err := bd.PartitionTable()
+	if err != nil {
+		return err
+	}
+
+	for _, p := range g.Partitions().Items() {
+		if err = g.Delete(p); err != nil {
 			return fmt.Errorf("failed to delete partition: %w", err)
 		}
 	}
 
-	return bd.g.Write()
+	return g.Write()
 }

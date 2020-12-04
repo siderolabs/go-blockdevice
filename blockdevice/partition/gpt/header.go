@@ -334,6 +334,10 @@ func (h *Header) DeserializeSize() (err error) {
 
 	h.Size = binary.LittleEndian.Uint32(data)
 
+	if h.Size < HeaderSize {
+		return fmt.Errorf("header size too small: %d", h.Size)
+	}
+
 	return nil
 }
 
