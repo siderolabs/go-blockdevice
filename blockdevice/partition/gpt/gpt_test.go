@@ -20,8 +20,8 @@ const (
 	size      = 1024 * 1024 * 1024 * 1024
 	blockSize = 512
 
-	headReserved = 33
-	tailReserved = 34
+	headReserved = 34
+	tailReserved = 33
 )
 
 type GPTSuite struct {
@@ -120,31 +120,125 @@ func (suite *GPTSuite) TestPartitionAdd() {
 	_, err = g.Add(0, gpt.WithPartitionName("system"), gpt.WithMaximumSize(true))
 	suite.Require().NoError(err)
 
-	assertPartitions := func(partitions *gpt.Partitions) {
+	assertPartitions := func(partitions *gpt.Partitions) { //nolint: dupl
 		suite.Require().Len(partitions.Items(), 3)
 
 		partBoot := partitions.Items()[0]
 		suite.Assert().EqualValues(1, partBoot.Number)
 		suite.Assert().EqualValues("boot", partBoot.Name)
 		suite.Assert().EqualValues(bootSize/blockSize, partBoot.Length())
-		suite.Assert().EqualValues(headReserved+1, partBoot.FirstLBA)
+		suite.Assert().EqualValues(headReserved, partBoot.FirstLBA)
 
 		partEFI := partitions.Items()[1]
 		suite.Assert().EqualValues(2, partEFI.Number)
 		suite.Assert().EqualValues("efi", partEFI.Name)
 		suite.Assert().EqualValues(efiSize/blockSize, partEFI.Length())
-		suite.Assert().EqualValues(headReserved+1+bootSize/blockSize, partEFI.FirstLBA)
+		suite.Assert().EqualValues(headReserved+bootSize/blockSize, partEFI.FirstLBA)
 
 		partSystem := partitions.Items()[2]
 		suite.Assert().EqualValues(3, partSystem.Number)
 		suite.Assert().EqualValues("system", partSystem.Name)
 		suite.Assert().EqualValues((size-bootSize-efiSize)/blockSize-headReserved-tailReserved, partSystem.Length())
-		suite.Assert().EqualValues(headReserved+1+bootSize/blockSize+efiSize/blockSize, partSystem.FirstLBA)
+		suite.Assert().EqualValues(headReserved+bootSize/blockSize+efiSize/blockSize, partSystem.FirstLBA)
 	}
 
 	assertPartitions(g.Partitions())
 
 	suite.Require().NoError(g.Write())
+
+	// re-read the partition table
+	g, err = gpt.Open(suite.dev)
+	suite.Require().NoError(err)
+
+	suite.Require().NoError(g.Read())
+
+	assertPartitions(g.Partitions())
+}
+
+func (suite *GPTSuite) TestRepairResize() {
+	const newSize = 2 * size
+
+	g, err := gpt.New(suite.dev)
+	suite.Require().NoError(err)
+
+	const (
+		bootSize = 1048576
+		efiSize  = 512 * 1048576
+	)
+
+	_, err = g.Add(bootSize, gpt.WithPartitionName("boot"))
+	suite.Require().NoError(err)
+
+	_, err = g.Add(efiSize, gpt.WithPartitionName("efi"))
+	suite.Require().NoError(err)
+
+	_, err = g.Add(0, gpt.WithPartitionName("system"), gpt.WithMaximumSize(true))
+	suite.Require().NoError(err)
+
+	resized, err := g.Resize(g.Partitions().Items()[2])
+	suite.Require().NoError(err)
+
+	suite.Assert().False(resized)
+
+	suite.Require().NoError(g.Write())
+
+	// detach loopback device, resize file and attach loopback device back
+	suite.Assert().NoError(suite.dev.Close())
+
+	if suite.loopbackDevice != nil {
+		suite.Assert().NoError(loopback.Unloop(suite.loopbackDevice))
+	}
+
+	suite.Require().NoError(suite.f.Truncate(newSize))
+
+	suite.loopbackDevice, err = loopback.NextLoopDevice()
+	suite.Require().NoError(err)
+
+	suite.T().Logf("Using %s", suite.loopbackDevice.Name())
+
+	suite.Require().NoError(loopback.Loop(suite.loopbackDevice, suite.f))
+
+	suite.Require().NoError(loopback.LoopSetReadWrite(suite.loopbackDevice))
+
+	suite.dev, err = os.OpenFile(suite.loopbackDevice.Name(), os.O_RDWR, 0)
+	suite.Require().NoError(err)
+
+	// re-read the partition table
+	g, err = gpt.Open(suite.dev)
+	suite.Require().NoError(err)
+
+	suite.Require().NoError(g.Read())
+
+	suite.Require().NoError(g.Repair())
+
+	resized, err = g.Resize(g.Partitions().Items()[2])
+	suite.Require().NoError(err)
+
+	suite.Assert().True(resized)
+
+	suite.Require().NoError(g.Write())
+
+	assertPartitions := func(partitions *gpt.Partitions) { //nolint: dupl
+		suite.Require().Len(partitions.Items(), 3)
+
+		partBoot := partitions.Items()[0]
+		suite.Assert().EqualValues(1, partBoot.Number)
+		suite.Assert().EqualValues("boot", partBoot.Name)
+		suite.Assert().EqualValues(bootSize/blockSize, partBoot.Length())
+		suite.Assert().EqualValues(headReserved, partBoot.FirstLBA)
+
+		partEFI := partitions.Items()[1]
+		suite.Assert().EqualValues(2, partEFI.Number)
+		suite.Assert().EqualValues("efi", partEFI.Name)
+		suite.Assert().EqualValues(efiSize/blockSize, partEFI.Length())
+		suite.Assert().EqualValues(headReserved+bootSize/blockSize, partEFI.FirstLBA)
+
+		partSystem := partitions.Items()[2]
+		suite.Assert().EqualValues(3, partSystem.Number)
+		suite.Assert().EqualValues("system", partSystem.Name)
+		suite.Assert().EqualValues((newSize-bootSize-efiSize)/blockSize-headReserved-tailReserved, partSystem.Length())
+		suite.Assert().EqualValues(headReserved+bootSize/blockSize+efiSize/blockSize, partSystem.FirstLBA)
+	}
 
 	// re-read the partition table
 	g, err = gpt.Open(suite.dev)
@@ -311,22 +405,22 @@ func (suite *GPTSuite) TestPartitionInsertAt() {
 	partBoot := partitions[0]
 	suite.Assert().EqualValues(1, partBoot.Number)
 	suite.Assert().EqualValues(newBootSize/blockSize, partBoot.Length())
-	suite.Assert().EqualValues(headReserved+1, partBoot.FirstLBA)
+	suite.Assert().EqualValues(headReserved, partBoot.FirstLBA)
 
 	partGrub := partitions[1]
 	suite.Assert().EqualValues(2, partGrub.Number)
 	suite.Assert().EqualValues(grubSize/blockSize, partGrub.Length())
-	suite.Assert().EqualValues(headReserved+1+newBootSize/blockSize, partGrub.FirstLBA)
+	suite.Assert().EqualValues(headReserved+newBootSize/blockSize, partGrub.FirstLBA)
 
 	partConfig := partitions[2]
 	suite.Assert().EqualValues(3, partConfig.Number)
 	suite.Assert().EqualValues(configSize/blockSize, partConfig.Length())
-	suite.Assert().EqualValues(headReserved+1+(newBootSize+grubSize)/blockSize, partConfig.FirstLBA)
+	suite.Assert().EqualValues(headReserved+(newBootSize+grubSize)/blockSize, partConfig.FirstLBA)
 
 	partEFI := partitions[3]
 	suite.Assert().EqualValues(4, partEFI.Number)
 	suite.Assert().EqualValues(((oldBootSize+configSize+efiSize)-(newBootSize+grubSize+configSize))/blockSize, partEFI.Length())
-	suite.Assert().EqualValues(headReserved+1+(newBootSize+grubSize+configSize)/blockSize, partEFI.FirstLBA)
+	suite.Assert().EqualValues(headReserved+(newBootSize+grubSize+configSize)/blockSize, partEFI.FirstLBA)
 
 	suite.Assert().Nil(partitions[4]) // tombstones
 	suite.Assert().Nil(partitions[5])
@@ -336,7 +430,7 @@ func (suite *GPTSuite) TestPartitionInsertAt() {
 	partSystem := partitions[7]
 	suite.Assert().EqualValues(5, partSystem.Number)
 	suite.Assert().EqualValues((size-(oldBootSize+configSize+efiSize))/blockSize-headReserved-tailReserved, partSystem.Length())
-	suite.Assert().EqualValues(headReserved+1+(oldBootSize+configSize+efiSize)/blockSize, partSystem.FirstLBA)
+	suite.Assert().EqualValues(headReserved+(oldBootSize+configSize+efiSize)/blockSize, partSystem.FirstLBA)
 
 	suite.Require().NoError(g.Write())
 }
