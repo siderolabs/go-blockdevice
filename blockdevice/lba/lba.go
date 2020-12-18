@@ -38,7 +38,7 @@ func (buf *Buffer) Write(b []byte, off int64) (err error) {
 	n := copy(buf.b[off:off+int64(len(b))], b)
 
 	if n != len(b) {
-		return fmt.Errorf("expected to write %d bytes, read %d", len(b), n)
+		return fmt.Errorf("expected to write %d bytes, wrote %d", len(b), n)
 	}
 
 	return nil

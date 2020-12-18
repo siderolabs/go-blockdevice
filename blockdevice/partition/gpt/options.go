@@ -18,7 +18,7 @@ type Option func(*Options) error
 func WithPartitionEntriesStartLBA(o uint64) Option {
 	return func(args *Options) error {
 		if o < 2 {
-			return fmt.Errorf("partition entries start LBA must be greater than 2")
+			return fmt.Errorf("partition entries start LBA must be greater or equal than 2")
 		}
 
 		args.PartitionEntriesStartLBA = o

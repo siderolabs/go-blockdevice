@@ -164,6 +164,11 @@ func (g *GPT) Write() (err error) {
 		return err
 	}
 
+	err = g.l.WriteAt(int64(g.h.LastUsableLBA+1), 0x00, data)
+	if err != nil {
+		return err
+	}
+
 	err = g.h.write()
 	if err != nil {
 		return err
@@ -323,18 +328,7 @@ func (g *GPT) Resize(part *Partition) (bool, error) {
 
 // Repair repairs the partition table.
 func (g *GPT) Repair() error {
-	// Seek to the end to get the size.
-	size, err := g.f.Seek(0, 2)
-	if err != nil {
-		return err
-	}
-	// Reset and seek to the beginning.
-	_, err = g.f.Seek(0, 0)
-	if err != nil {
-		return err
-	}
-
-	g.h.BackupLBA = uint64(size/g.l.LogicalBlockSize - 1)
+	g.h.BackupLBA = uint64(g.l.TotalSectors - 1)
 	g.h.LastUsableLBA = g.h.BackupLBA - 33
 
 	return nil
