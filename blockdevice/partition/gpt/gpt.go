@@ -144,7 +144,12 @@ func (g *GPT) Read() (err error) {
 }
 
 func (g *GPT) Write() (err error) {
-	pmbr := g.newPMBR(g.h)
+	var pmbr []byte
+
+	pmbr, err = g.newPMBR(g.h)
+	if err != nil {
+		return err
+	}
 
 	err = g.l.WriteAt(0, 0x00, pmbr)
 	if err != nil {
@@ -338,8 +343,11 @@ func (g *GPT) Repair() error {
 // 	- https://en.wikipedia.org/wiki/GUID_Partition_Table#Protective_MBR_(LBA_0)
 // 	- https://www.syslinux.org/wiki/index.php?title=Doc/gpt
 // 	- https://en.wikipedia.org/wiki/Master_boot_record
-func (g *GPT) newPMBR(h *Header) []byte {
-	p := make([]byte, 512)
+func (g *GPT) newPMBR(h *Header) ([]byte, error) {
+	p, err := g.l.ReadAt(0, 0, 512)
+	if err != nil {
+		return nil, err
+	}
 
 	// Boot signature.
 	copy(p[510:], []byte{0x55, 0xaa})
@@ -357,7 +365,7 @@ func (g *GPT) newPMBR(h *Header) []byte {
 	// Partition length in sectors.
 	binary.LittleEndian.PutUint32(b[12:16], uint32(h.BackupLBA))
 
-	return p
+	return p, nil
 }
 
 func (g *GPT) renumberPartitions() {
