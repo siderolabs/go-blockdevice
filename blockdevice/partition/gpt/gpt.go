@@ -73,7 +73,7 @@ func Open(f *os.File) (g *GPT, err error) {
 			f: f,
 			l: l,
 			h: h,
-			e: &Partitions{h: h},
+			e: &Partitions{h: h, devname: f.Name()},
 		}
 
 		return g, nil
@@ -120,7 +120,7 @@ func New(f *os.File, setters ...Option) (g *GPT, err error) {
 		f: f,
 		l: l,
 		h: h,
-		e: &Partitions{h: h},
+		e: &Partitions{h: h, devname: f.Name()},
 	}
 
 	return g, nil
@@ -277,6 +277,7 @@ func (g *GPT) InsertAt(idx int, size uint64, setters ...PartitionOption) (*Parti
 		LastLBA:    end,
 		Attributes: opts.Attibutes,
 		Name:       opts.Name,
+		devname:    g.e.devname,
 	}
 
 	g.e.p = append(g.e.p[:idx], append([]*Partition{partition}, g.e.p[idx:]...)...)

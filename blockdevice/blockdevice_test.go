@@ -4,7 +4,9 @@
 
 package blockdevice_test
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestEmpty(t *testing.T) {
 	// added for accurate coverage estimation

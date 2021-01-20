@@ -63,3 +63,18 @@ func (bd *BlockDevice) Reset() error {
 func (bd *BlockDevice) Wipe() error {
 	return fmt.Errorf("not implemented")
 }
+
+// OpenPartition opens another blockdevice using a partition of this block device.
+func (bd *BlockDevice) OpenPartition(label string) (*BlockDevice, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+// GetPartition returns partition by label if found.
+func (bd *BlockDevice) GetPartition(label string) (*gpt.Partition, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+// PartPath returns partition path by label, verifies that partition exists.
+func (bd *BlockDevice) PartPath(label string) (string, error) {
+	return "", fmt.Errorf("not implemented")
+}

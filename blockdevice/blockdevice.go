@@ -18,7 +18,7 @@ type OutOfSpaceError interface {
 
 // IsOutOfSpaceError checks if provided error is 'out of space'.
 func IsOutOfSpaceError(err error) bool {
-	_, ok := err.(OutOfSpaceError)
+	_, ok := err.(OutOfSpaceError) //nolint:errorlint
 
 	return ok
 }

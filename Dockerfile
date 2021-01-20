@@ -1,8 +1,8 @@
-# syntax = docker/dockerfile-upstream:1.1.7-experimental
+# syntax = docker/dockerfile-upstream:1.2.0-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2020-10-23T19:30:04Z by kres e82c767-dirty.
+# Generated on 2021-01-21T16:47:42Z by kres latest.
 
 ARG TOOLCHAIN
 
@@ -17,14 +17,14 @@ RUN markdownlint --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --ru
 
 # base toolchain image
 FROM ${TOOLCHAIN} AS toolchain
-RUN apk --update --no-cache add bash curl build-base
+RUN apk --update --no-cache add bash curl build-base dosfstools
 
 # build tools
 FROM toolchain AS tools
 ENV GO111MODULE on
 ENV CGO_ENABLED 0
 ENV GOPATH /go
-RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b /bin v1.30.0
+RUN curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b /bin v1.33.0
 ARG GOFUMPT_VERSION
 RUN cd $(mktemp -d) \
 	&& go mod init tmp \

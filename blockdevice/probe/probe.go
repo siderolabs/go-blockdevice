@@ -6,23 +6,17 @@ package probe
 
 import (
 	"bytes"
-	"encoding/binary"
-	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"time"
-
-	"github.com/talos-systems/go-retry/retry"
-	"golang.org/x/sys/unix"
 
 	"github.com/talos-systems/go-blockdevice/blockdevice"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/iso9660"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/vfat"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/xfs"
+	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
 	"github.com/talos-systems/go-blockdevice/blockdevice/util"
 )
 
@@ -34,8 +28,69 @@ type ProbedBlockDevice struct {
 	Path       string
 }
 
+// SelectOption is a callback matcher for All block devices probes.
+type SelectOption func(device *ProbedBlockDevice) (bool, error)
+
+// WithPartitionLabel search for a block device which has partitions with some specific label.
+func WithPartitionLabel(label string) SelectOption {
+	return func(device *ProbedBlockDevice) (bool, error) {
+		pt, err := device.PartitionTable()
+		if err != nil {
+			return false, err
+		}
+
+		return pt.Partitions().FindByName(label) != nil, nil
+	}
+}
+
+// WithFileSystemLabel search for a block device which has filesystem on root level
+// and that filesystem is labeled as provided label.
+func WithFileSystemLabel(label string) SelectOption {
+	return func(device *ProbedBlockDevice) (bool, error) {
+		superblock, err := filesystem.Probe(device.Device().Name())
+		if err != nil {
+			return false, err
+		}
+
+		if superblock != nil {
+			switch sb := superblock.(type) {
+			case *iso9660.SuperBlock:
+				trimmed := bytes.Trim(sb.VolumeID[:], " \x00")
+				if bytes.Equal(trimmed, []byte(label)) {
+					return true, nil
+				}
+			case *vfat.SuperBlock:
+				trimmed := bytes.Trim(sb.Label[:], " \x00")
+				if bytes.Equal(trimmed, []byte(label)) {
+					return true, nil
+				}
+			case *xfs.SuperBlock:
+				trimmed := bytes.Trim(sb.Fname[:], " \x00")
+				if bytes.Equal(trimmed, []byte(label)) {
+					return true, nil
+				}
+			}
+		}
+
+		return false, nil
+	}
+}
+
+// WithSingleResult enforces a single result from All function.
+func WithSingleResult() SelectOption {
+	count := 0
+
+	return func(device *ProbedBlockDevice) (bool, error) {
+		if count > 0 {
+			return false, fmt.Errorf("got more than one blockdevice with provided criteria")
+		}
+
+		return true, nil
+	}
+}
+
 // All probes a block device's file system for the given label.
-func All() (all []*ProbedBlockDevice, err error) {
+func All(options ...SelectOption) (all []*ProbedBlockDevice, err error) {
 	var infos []os.FileInfo
 
 	if infos, err = ioutil.ReadDir("/sys/block"); err != nil {
@@ -45,95 +100,47 @@ func All() (all []*ProbedBlockDevice, err error) {
 	for _, info := range infos {
 		devpath := "/dev/" + info.Name()
 
-		var probed []*ProbedBlockDevice
+		probed := probePartitions(devpath)
 
-		probed, err = probeFilesystem(devpath)
-		if err != nil {
-			return nil, err
+		for _, dev := range probed {
+			add := true
+			for _, matches := range options {
+				add, err = matches(dev)
+				if err != nil {
+					if e := dev.Close(); e != nil {
+						return nil, e
+					}
+
+					return nil, err
+				}
+
+				if !add {
+					err = dev.Close()
+					if err != nil {
+						return nil, err
+					}
+
+					break
+				}
+			}
+
+			if add {
+				all = append(all, dev)
+			}
 		}
-
-		all = append(all, probed...)
 	}
 
 	return all, nil
 }
 
-// FileSystem probes the provided path's file system.
-func FileSystem(path string) (sb filesystem.SuperBlocker, err error) {
-	var f *os.File
-	// Sleep for up to 5s to wait for kernel to create the necessary device files.
-	// If we dont sleep this becomes racy in that the device file does not exist
-	// and it will fail to open.
-	err = retry.Constant(5*time.Second, retry.WithUnits((50 * time.Millisecond))).Retry(func() error {
-		if f, err = os.OpenFile(path, os.O_RDONLY|unix.O_CLOEXEC, os.ModeDevice); err != nil {
-			if os.IsNotExist(err) {
-				return retry.ExpectedError(err)
-			}
-
-			return retry.UnexpectedError(err)
-		}
-
-		return nil
-	})
+// DevForPartitionLabel finds and opens partition as a blockdevice.
+func DevForPartitionLabel(devname, label string) (*blockdevice.BlockDevice, error) {
+	bd, err := blockdevice.Open(devname)
 	if err != nil {
 		return nil, err
 	}
 
-	//nolint: errcheck
-	defer f.Close()
-
-	superblocks := []filesystem.SuperBlocker{
-		&iso9660.SuperBlock{},
-		&vfat.SuperBlock{},
-		&xfs.SuperBlock{},
-	}
-
-	for _, sb := range superblocks {
-		if _, err = f.Seek(sb.Offset(), io.SeekStart); err != nil {
-			return nil, err
-		}
-
-		err = binary.Read(f, binary.BigEndian, sb)
-		if err != nil {
-			return nil, err
-		}
-
-		if sb.Is() {
-			return sb, nil
-		}
-	}
-
-	return nil, nil
-}
-
-// GetDevWithFileSystemLabel probes all known block device's file systems for
-// the given label.
-func GetDevWithFileSystemLabel(value string) (probe *ProbedBlockDevice, err error) {
-	var probed []*ProbedBlockDevice
-
-	if probed, err = All(); err != nil {
-		return nil, err
-	}
-
-	return filterByLabel(probed, value)
-}
-
-// DevForFileSystemLabel probes a block device's file systems for the
-// given label.
-func DevForFileSystemLabel(devpath, value string) (probe *ProbedBlockDevice, err error) {
-	var probed []*ProbedBlockDevice
-
-	probed, err = probeFilesystem(devpath)
-	if err != nil {
-		return nil, err
-	}
-
-	probe, err = filterByLabel(probed, value)
-	if err != nil {
-		return nil, err
-	}
-
-	return probe, err
+	return bd.OpenPartition(label)
 }
 
 func probe(devpath string) (devpaths []string) {
@@ -145,7 +152,7 @@ func probe(devpath string) (devpaths []string) {
 	bd, err := blockdevice.Open(devpath)
 	if err != nil {
 		//nolint: errcheck
-		if sb, _ := FileSystem(devpath); sb != nil {
+		if sb, _ := filesystem.Probe(devpath); sb != nil {
 			devpaths = append(devpaths, devpath)
 		}
 
@@ -172,7 +179,7 @@ func probe(devpath string) (devpaths []string) {
 		}
 
 		//nolint: errcheck
-		if sb, _ := FileSystem(partpath); sb != nil {
+		if sb, _ := filesystem.Probe(partpath); sb != nil {
 			devpaths = append(devpaths, partpath)
 		}
 	}
@@ -180,145 +187,65 @@ func probe(devpath string) (devpaths []string) {
 	return devpaths
 }
 
-// GetBlockDeviceWithPartitonName probes all known block device's partition
+// GetDevWithPartitionName probes all known block device's partition
 // table for a parition with the specified name.
-func GetBlockDeviceWithPartitonName(name string) (bd *blockdevice.BlockDevice, err error) {
-	var infos []os.FileInfo
-
-	if infos, err = ioutil.ReadDir("/sys/block"); err != nil {
+func GetDevWithPartitionName(name string) (bd *ProbedBlockDevice, err error) {
+	probed, err := All(WithPartitionLabel(name), WithSingleResult())
+	if err != nil {
 		return nil, err
 	}
 
-	for _, info := range infos {
-		devpath := "/dev/" + info.Name()
-
-		if bd, err = blockdevice.Open(devpath); err != nil {
-			continue
-		}
-
-		pt, err := bd.PartitionTable()
-		if err != nil {
-			//nolint: errcheck
-			bd.Close()
-
-			if errors.Is(err, blockdevice.ErrMissingPartitionTable) {
-				continue
-			}
-
-			return nil, fmt.Errorf("failed to open partition table: %w", err)
-		}
-
-		for _, p := range pt.Partitions().Items() {
-			if p.Name == name {
-				return bd, nil
-			}
-		}
-
-		//nolint: errcheck
-		bd.Close()
+	if len(probed) == 0 {
+		return nil, os.ErrNotExist
 	}
 
-	return nil, os.ErrNotExist
+	return probed[0], nil
+}
+
+// GetDevWithFileSystemLabel probes all known block device's file systems for
+// the given label.
+func GetDevWithFileSystemLabel(value string) (probe *ProbedBlockDevice, err error) {
+	var probed []*ProbedBlockDevice
+
+	if probed, err = All(WithFileSystemLabel(value), WithSingleResult()); err != nil {
+		return nil, err
+	}
+
+	if len(probed) == 0 {
+		return nil, os.ErrNotExist
+	}
+
+	return probed[0], nil
 }
 
 // GetPartitionWithName probes all known block device's partition
 // table for a parition with the specified name.
 //
 //nolint: gocyclo
-func GetPartitionWithName(name string) (f *os.File, err error) {
-	var infos []os.FileInfo
-
-	if infos, err = ioutil.ReadDir("/sys/block"); err != nil {
+func GetPartitionWithName(name string) (part *gpt.Partition, err error) {
+	device, err := GetDevWithPartitionName(name)
+	if err != nil {
 		return nil, err
 	}
 
-	for _, info := range infos {
-		devpath := "/dev/" + info.Name()
-
-		var bd *blockdevice.BlockDevice
-
-		if bd, err = blockdevice.Open(devpath); err != nil {
-			continue
-		}
-
-		//nolint: errcheck
-		defer bd.Close()
-
-		pt, err := bd.PartitionTable()
-		if err != nil {
-			if errors.Is(err, blockdevice.ErrMissingPartitionTable) {
-				continue
-			}
-
-			return nil, fmt.Errorf("failed to open partition table: %w", err)
-		}
-
-		for _, part := range pt.Partitions().Items() {
-			if part.Name == name {
-				partpath, err := util.PartPath(info.Name(), int(part.Number))
-				if err != nil {
-					return nil, err
-				}
-
-				f, err = os.OpenFile(partpath, os.O_RDWR|unix.O_CLOEXEC, os.ModeDevice)
-				if err != nil {
-					return nil, err
-				}
-
-				return f, nil
-			}
-		}
-	}
-
-	return nil, os.ErrNotExist
+	return device.GetPartition(name)
 }
 
-func probeFilesystem(devpath string) (probed []*ProbedBlockDevice, err error) {
+func probePartitions(devpath string) (probed []*ProbedBlockDevice) {
 	for _, path := range probe(devpath) {
 		var (
-			bd *blockdevice.BlockDevice
-			sb filesystem.SuperBlocker
+			bd  *blockdevice.BlockDevice
+			sb  filesystem.SuperBlocker
+			err error
 		)
-		// We ignore the error here because there is the
-		// possibility that opening the block device fails for
-		// good reason (e.g. no partition table, read-only
-		// filesystem), but the block device does have a
-		// filesystem. This is currently a limitation in our
-		// blockdevice package. We should make that package
-		// better and update the code here.
-		//nolint: errcheck
-		bd, _ = blockdevice.Open(devpath)
 
-		if sb, err = FileSystem(path); err != nil {
-			return nil, fmt.Errorf("unexpected error when reading super block: %w", err)
+		bd, err = blockdevice.Open(devpath)
+		if err != nil {
+			continue
 		}
 
 		probed = append(probed, &ProbedBlockDevice{BlockDevice: bd, SuperBlock: sb, Path: path})
 	}
 
-	return probed, nil
-}
-
-func filterByLabel(probed []*ProbedBlockDevice, value string) (probe *ProbedBlockDevice, err error) {
-	for _, probe = range probed {
-		switch sb := probe.SuperBlock.(type) {
-		case *iso9660.SuperBlock:
-			trimmed := bytes.Trim(sb.VolumeID[:], " \x00")
-			if bytes.Equal(trimmed, []byte(value)) {
-				return probe, nil
-			}
-		case *vfat.SuperBlock:
-			trimmed := bytes.Trim(sb.Label[:], " \x00")
-			if bytes.Equal(trimmed, []byte(value)) {
-				return probe, nil
-			}
-		case *xfs.SuperBlock:
-			trimmed := bytes.Trim(sb.Fname[:], " \x00")
-			if bytes.Equal(trimmed, []byte(value)) {
-				return probe, nil
-			}
-		}
-	}
-
-	return nil, os.ErrNotExist
+	return probed
 }
