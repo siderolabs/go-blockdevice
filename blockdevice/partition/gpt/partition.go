@@ -13,13 +13,16 @@ import (
 	"golang.org/x/text/encoding/unicode"
 
 	"github.com/talos-systems/go-blockdevice/blockdevice/endianness"
+	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem"
 	"github.com/talos-systems/go-blockdevice/blockdevice/lba"
+	"github.com/talos-systems/go-blockdevice/blockdevice/util"
 )
 
 // Partitions represents the GPT partitions array.
 type Partitions struct {
-	h *Header
-	p []*Partition
+	h       *Header
+	p       []*Partition
+	devname string
 }
 
 // Partition represents a GPT partition.
@@ -32,11 +35,25 @@ type Partition struct {
 	Name       string
 
 	Number int32
+
+	devname    string
+	superblock filesystem.SuperBlocker
 }
 
 // Items returns the partitions.
 func (p *Partitions) Items() []*Partition {
 	return p.p
+}
+
+// FindByName finds partition by label.
+func (p *Partitions) FindByName(name string) *Partition {
+	for _, part := range p.Items() {
+		if part.Name == name {
+			return part
+		}
+	}
+
+	return nil
 }
 
 // Length returns the partition's length in LBA.
@@ -58,7 +75,7 @@ func (p *Partitions) read() (err error) {
 
 		buf := lba.NewBuffer(p.h.LBA, data)
 
-		part := &Partition{Number: int32(i + 1)}
+		part := &Partition{Number: int32(i + 1), devname: p.devname}
 
 		err = part.DeserializeType(buf)
 		if err != nil {
@@ -351,4 +368,32 @@ func (p *Partition) SerializeName(buf *lba.Buffer) (err error) {
 	}
 
 	return nil
+}
+
+// Filesystem returns partition filesystem type.
+func (p *Partition) Filesystem() (string, error) {
+	if p.superblock == nil {
+		path, err := p.Path()
+		if err != nil {
+			return "", err
+		}
+
+		sb, err := filesystem.Probe(path)
+		if err != nil {
+			return "", err
+		}
+
+		if sb == nil {
+			return filesystem.Unknown, nil
+		}
+
+		p.superblock = sb
+	}
+
+	return p.superblock.Type(), nil
+}
+
+// Path returns partition path.
+func (p *Partition) Path() (string, error) {
+	return util.PartPath(p.devname, int(p.Number))
 }

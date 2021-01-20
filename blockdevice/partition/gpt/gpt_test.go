@@ -5,7 +5,6 @@
 package gpt_test
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/talos-systems/go-blockdevice/blockdevice"
 	"github.com/talos-systems/go-blockdevice/blockdevice/loopback"
 	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
+	"github.com/talos-systems/go-blockdevice/blockdevice/test"
 )
 
 const (
@@ -25,52 +25,20 @@ const (
 )
 
 type GPTSuite struct {
-	suite.Suite
-
-	f              *os.File
-	dev            *os.File
-	loopbackDevice *os.File
+	test.BlockDeviceSuite
 }
 
 func (suite *GPTSuite) SetupTest() {
-	var err error
-
-	suite.f, err = ioutil.TempFile("", "blockdevice")
-	suite.Require().NoError(err)
-
-	suite.Require().NoError(suite.f.Truncate(size))
-
-	suite.loopbackDevice, err = loopback.NextLoopDevice()
-	suite.Require().NoError(err)
-
-	suite.T().Logf("Using %s", suite.loopbackDevice.Name())
-
-	suite.Require().NoError(loopback.Loop(suite.loopbackDevice, suite.f))
-
-	suite.Require().NoError(loopback.LoopSetReadWrite(suite.loopbackDevice))
-
-	suite.dev, err = os.OpenFile(suite.loopbackDevice.Name(), os.O_RDWR, 0)
-	suite.Require().NoError(err)
-}
-
-func (suite *GPTSuite) TearDownTest() {
-	suite.Assert().NoError(suite.dev.Close())
-
-	if suite.loopbackDevice != nil {
-		suite.Assert().NoError(loopback.Unloop(suite.loopbackDevice))
-	}
-
-	suite.Assert().NoError(suite.f.Close())
-	suite.Assert().NoError(os.Remove(suite.f.Name()))
+	suite.CreateBlockDevice(size)
 }
 
 func (suite *GPTSuite) TestEmpty() {
-	_, err := gpt.Open(suite.dev)
+	_, err := gpt.Open(suite.Dev)
 	suite.Require().Error(err)
 }
 
 func (suite *GPTSuite) TestReset() {
-	g, err := gpt.New(suite.dev)
+	g, err := gpt.New(suite.Dev)
 	suite.Require().NoError(err)
 
 	_, err = g.Add(1048576, gpt.WithPartitionName("boot"))
@@ -82,7 +50,7 @@ func (suite *GPTSuite) TestReset() {
 	suite.Require().NoError(g.Write())
 
 	// re-read the partition table
-	g, err = gpt.Open(suite.dev)
+	g, err = gpt.Open(suite.Dev)
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(g.Read())
@@ -94,7 +62,7 @@ func (suite *GPTSuite) TestReset() {
 	suite.Require().NoError(g.Write())
 
 	// re-read the partition table
-	g, err = gpt.Open(suite.dev)
+	g, err = gpt.Open(suite.Dev)
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(g.Read())
@@ -103,7 +71,7 @@ func (suite *GPTSuite) TestReset() {
 }
 
 func (suite *GPTSuite) TestPartitionAdd() {
-	g, err := gpt.New(suite.dev)
+	g, err := gpt.New(suite.Dev)
 	suite.Require().NoError(err)
 
 	const (
@@ -144,10 +112,13 @@ func (suite *GPTSuite) TestPartitionAdd() {
 
 	assertPartitions(g.Partitions())
 
+	part := g.Partitions().FindByName("system")
+	suite.Require().NotNil(part)
+
 	suite.Require().NoError(g.Write())
 
 	// re-read the partition table
-	g, err = gpt.Open(suite.dev)
+	g, err = gpt.Open(suite.Dev)
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(g.Read())
@@ -158,7 +129,7 @@ func (suite *GPTSuite) TestPartitionAdd() {
 func (suite *GPTSuite) TestRepairResize() {
 	const newSize = 2 * size
 
-	g, err := gpt.New(suite.dev)
+	g, err := gpt.New(suite.Dev)
 	suite.Require().NoError(err)
 
 	const (
@@ -183,28 +154,28 @@ func (suite *GPTSuite) TestRepairResize() {
 	suite.Require().NoError(g.Write())
 
 	// detach loopback device, resize file and attach loopback device back
-	suite.Assert().NoError(suite.dev.Close())
+	suite.Assert().NoError(suite.Dev.Close())
 
-	if suite.loopbackDevice != nil {
-		suite.Assert().NoError(loopback.Unloop(suite.loopbackDevice))
+	if suite.LoopbackDevice != nil {
+		suite.Assert().NoError(loopback.Unloop(suite.LoopbackDevice))
 	}
 
-	suite.Require().NoError(suite.f.Truncate(newSize))
+	suite.Require().NoError(suite.File.Truncate(newSize))
 
-	suite.loopbackDevice, err = loopback.NextLoopDevice()
+	suite.LoopbackDevice, err = loopback.NextLoopDevice()
 	suite.Require().NoError(err)
 
-	suite.T().Logf("Using %s", suite.loopbackDevice.Name())
+	suite.T().Logf("Using %s", suite.LoopbackDevice.Name())
 
-	suite.Require().NoError(loopback.Loop(suite.loopbackDevice, suite.f))
+	suite.Require().NoError(loopback.Loop(suite.LoopbackDevice, suite.File))
 
-	suite.Require().NoError(loopback.LoopSetReadWrite(suite.loopbackDevice))
+	suite.Require().NoError(loopback.LoopSetReadWrite(suite.LoopbackDevice))
 
-	suite.dev, err = os.OpenFile(suite.loopbackDevice.Name(), os.O_RDWR, 0)
+	suite.Dev, err = os.OpenFile(suite.LoopbackDevice.Name(), os.O_RDWR, 0)
 	suite.Require().NoError(err)
 
 	// re-read the partition table
-	g, err = gpt.Open(suite.dev)
+	g, err = gpt.Open(suite.Dev)
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(g.Read())
@@ -241,7 +212,7 @@ func (suite *GPTSuite) TestRepairResize() {
 	}
 
 	// re-read the partition table
-	g, err = gpt.Open(suite.dev)
+	g, err = gpt.Open(suite.Dev)
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(g.Read())
@@ -250,7 +221,7 @@ func (suite *GPTSuite) TestRepairResize() {
 }
 
 func (suite *GPTSuite) TestPartitionAddOutOfSpace() {
-	g, err := gpt.New(suite.dev)
+	g, err := gpt.New(suite.Dev)
 	suite.Require().NoError(err)
 
 	_, err = g.Add(size, gpt.WithPartitionName("boot"))
@@ -276,7 +247,7 @@ func (suite *GPTSuite) TestPartitionAddOutOfSpace() {
 }
 
 func (suite *GPTSuite) TestPartitionDelete() {
-	g, err := gpt.New(suite.dev)
+	g, err := gpt.New(suite.Dev)
 	suite.Require().NoError(err)
 
 	const (
@@ -304,7 +275,7 @@ func (suite *GPTSuite) TestPartitionDelete() {
 	suite.Require().NoError(g.Write())
 
 	// re-read the partition table
-	g, err = gpt.Open(suite.dev)
+	g, err = gpt.Open(suite.Dev)
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(g.Read())
@@ -324,7 +295,7 @@ func (suite *GPTSuite) TestPartitionDelete() {
 	suite.Require().NoError(g.Write())
 
 	// re-read the partition table for the second time
-	g, err = gpt.Open(suite.dev)
+	g, err = gpt.Open(suite.Dev)
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(g.Read())
@@ -346,7 +317,7 @@ func (suite *GPTSuite) TestPartitionDelete() {
 }
 
 func (suite *GPTSuite) TestPartitionInsertAt() {
-	g, err := gpt.New(suite.dev)
+	g, err := gpt.New(suite.Dev)
 	suite.Require().NoError(err)
 
 	const (
@@ -372,7 +343,7 @@ func (suite *GPTSuite) TestPartitionInsertAt() {
 	suite.Require().NoError(g.Write())
 
 	// re-read the partition table
-	g, err = gpt.New(suite.dev)
+	g, err = gpt.New(suite.Dev)
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(g.Read())
@@ -436,7 +407,7 @@ func (suite *GPTSuite) TestPartitionInsertAt() {
 }
 
 func (suite *GPTSuite) TestPartitionGUUID() {
-	g, err := gpt.New(suite.dev)
+	g, err := gpt.New(suite.Dev)
 	suite.Require().NoError(err)
 
 	err = g.Write()
@@ -444,7 +415,7 @@ func (suite *GPTSuite) TestPartitionGUUID() {
 
 	suite.Assert().NotEqual(g.Header().GUUID.String(), "00000000-0000-0000-0000-000000000000")
 
-	g, err = gpt.Open(suite.dev)
+	g, err = gpt.Open(suite.Dev)
 	suite.Require().NoError(err)
 
 	err = g.Read()

@@ -264,3 +264,49 @@ func (bd *BlockDevice) Reset() error {
 
 	return g.Write()
 }
+
+// OpenPartition opens another blockdevice using a partition of this block device.
+func (bd *BlockDevice) OpenPartition(label string) (*BlockDevice, error) {
+	g, err := bd.PartitionTable()
+	if err != nil {
+		return nil, err
+	}
+
+	part := g.Partitions().FindByName(label)
+	if part == nil {
+		return nil, os.ErrNotExist
+	}
+
+	path, err := part.Path()
+	if err != nil {
+		return nil, err
+	}
+
+	return Open(path)
+}
+
+// GetPartition returns partition by label if found.
+func (bd *BlockDevice) GetPartition(label string) (*gpt.Partition, error) {
+	g, err := bd.PartitionTable()
+	if err != nil {
+		return nil, err
+	}
+
+	part := g.Partitions().FindByName(label)
+
+	if part == nil {
+		return nil, os.ErrNotExist
+	}
+
+	return part, nil
+}
+
+// PartPath returns partition path by label, verifies that partition exists.
+func (bd *BlockDevice) PartPath(label string) (string, error) {
+	part, err := bd.GetPartition(label)
+	if err != nil {
+		return "", err
+	}
+
+	return part.Path()
+}

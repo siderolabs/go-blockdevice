@@ -38,7 +38,7 @@ import (
 // syscalls will return an errno type (which implements error) for all calls,
 // including success (errno 0). We only care about non-zero errnos.
 func errnoIsErr(err error) error {
-	if err.(syscall.Errno) != 0 {
+	if err.(syscall.Errno) != 0 { //nolint:errorlint
 		return err
 	}
 
