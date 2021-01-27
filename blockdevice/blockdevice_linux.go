@@ -63,6 +63,14 @@ func Open(devname string, setters ...Option) (bd *BlockDevice, err error) {
 		}
 	}()
 
+	if opts.ExclusiveLock {
+		if err = syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+			err = fmt.Errorf("error locking device %q: %w", devname, err)
+
+			return nil, err
+		}
+	}
+
 	if opts.CreateGPT {
 		var g *gpt.GPT
 

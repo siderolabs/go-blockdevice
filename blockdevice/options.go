@@ -6,7 +6,8 @@ package blockdevice
 
 // Options is the functional options struct.
 type Options struct {
-	CreateGPT bool
+	CreateGPT     bool
+	ExclusiveLock bool
 }
 
 // Option is the functional option func.
@@ -16,6 +17,13 @@ type Option func(*Options)
 func WithNewGPT(o bool) Option {
 	return func(args *Options) {
 		args.CreateGPT = o
+	}
+}
+
+// WithExclusiveLock locks the blockdevice for exclusive access using flock().
+func WithExclusiveLock(o bool) Option {
+	return func(args *Options) {
+		args.ExclusiveLock = o
 	}
 }
 
