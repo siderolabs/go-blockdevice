@@ -5,7 +5,9 @@
 // Package blockdevice provides a library for working with block devices.
 package blockdevice
 
-import "errors"
+import (
+	"errors"
+)
 
 // ErrMissingPartitionTable indicates that the the block device does not have a
 // partition table.

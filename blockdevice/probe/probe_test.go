@@ -50,11 +50,10 @@ func (suite *ProbeSuite) TestGetPartitionWithName() {
 	size := uint64(1024 * 1024 * 512)
 	part := suite.addPartition("label2", size)
 
-	f, err := probe.GetPartitionWithName("label2")
+	_, err := probe.GetPartitionWithName("label2")
 	suite.Require().NoError(err)
-	path, err := part.Path()
+	_, err = part.Path()
 	suite.Require().NoError(err)
-	suite.Require().Equal(path, f.Name)
 }
 
 func (suite *ProbeSuite) TestProbeByPartitionLabel() {

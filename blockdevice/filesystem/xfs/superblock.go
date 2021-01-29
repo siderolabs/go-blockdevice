@@ -59,3 +59,8 @@ func (sb *SuperBlock) Offset() int64 {
 func (sb *SuperBlock) Type() string {
 	return "xfs"
 }
+
+// Encrypted implements the SuperBlocker interface.
+func (sb *SuperBlock) Encrypted() bool {
+	return false
+}
