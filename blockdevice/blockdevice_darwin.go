@@ -65,7 +65,7 @@ func (bd *BlockDevice) Wipe() error {
 }
 
 // OpenPartition opens another blockdevice using a partition of this block device.
-func (bd *BlockDevice) OpenPartition(label string) (*BlockDevice, error) {
+func (bd *BlockDevice) OpenPartition(label string, setters ...Option) (*BlockDevice, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 

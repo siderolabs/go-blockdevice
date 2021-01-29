@@ -45,7 +45,6 @@ type BlockDevice struct {
 // TODO(andrewrynhard): Use BLKGETSIZE ioctl to get the size.
 func Open(devname string, setters ...Option) (bd *BlockDevice, err error) {
 	opts := NewDefaultOptions(setters...)
-
 	bd = &BlockDevice{}
 
 	var f *os.File
@@ -274,7 +273,7 @@ func (bd *BlockDevice) Reset() error {
 }
 
 // OpenPartition opens another blockdevice using a partition of this block device.
-func (bd *BlockDevice) OpenPartition(label string) (*BlockDevice, error) {
+func (bd *BlockDevice) OpenPartition(label string, setters ...Option) (*BlockDevice, error) {
 	g, err := bd.PartitionTable()
 	if err != nil {
 		return nil, err
@@ -290,7 +289,7 @@ func (bd *BlockDevice) OpenPartition(label string) (*BlockDevice, error) {
 		return nil, err
 	}
 
-	return Open(path)
+	return Open(path, setters...)
 }
 
 // GetPartition returns partition by label if found.

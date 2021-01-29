@@ -14,6 +14,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/iso9660"
+	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/luks"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/vfat"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/xfs"
 )
@@ -23,6 +24,7 @@ type SuperBlocker interface {
 	Is() bool
 	Offset() int64
 	Type() string
+	Encrypted() bool
 }
 
 const (
@@ -58,6 +60,7 @@ func Probe(path string) (sb SuperBlocker, err error) {
 		&iso9660.SuperBlock{},
 		&vfat.SuperBlock{},
 		&xfs.SuperBlock{},
+		&luks.SuperBlock{},
 	}
 
 	for _, sb := range superblocks {

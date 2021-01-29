@@ -45,3 +45,8 @@ func (sb *SuperBlock) Offset() int64 {
 func (sb *SuperBlock) Type() string {
 	return "iso9660"
 }
+
+// Encrypted implements the SuperBlocker interface.
+func (sb *SuperBlock) Encrypted() bool {
+	return false
+}

@@ -36,8 +36,7 @@ type Partition struct {
 
 	Number int32
 
-	devname    string
-	superblock filesystem.SuperBlocker
+	devname string
 }
 
 // Items returns the partitions.
@@ -370,27 +369,64 @@ func (p *Partition) SerializeName(buf *lba.Buffer) (err error) {
 	return nil
 }
 
+// SuperBlock read partition superblock.
+// if partition is encrypted it will always return superblock of the physical partition,
+// instead of a mapped device partition.
+func (p *Partition) SuperBlock() (filesystem.SuperBlocker, error) {
+	path, err := p.Path()
+	if err != nil {
+		return nil, err
+	}
+
+	superblock, err := filesystem.Probe(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return superblock, nil
+}
+
 // Filesystem returns partition filesystem type.
+// if partition is encrypted it will return /dev/mapper parition filesystem kind.
 func (p *Partition) Filesystem() (string, error) {
-	if p.superblock == nil {
+	sb, err := p.SuperBlock()
+	if err != nil {
+		return "", err
+	}
+
+	if sb == nil {
+		return filesystem.Unknown, nil
+	}
+
+	if sb.Encrypted() {
 		path, err := p.Path()
 		if err != nil {
 			return "", err
 		}
 
-		sb, err := filesystem.Probe(path)
+		sb, err = filesystem.Probe(path)
 		if err != nil {
 			return "", err
 		}
 
-		if sb == nil {
-			return filesystem.Unknown, nil
+		if sb != nil {
+			return sb.Type(), nil
 		}
 
-		p.superblock = sb
+		return filesystem.Unknown, nil
 	}
 
-	return p.superblock.Type(), nil
+	return sb.Type(), nil
+}
+
+// Encrypted checks if partition is encrypted.
+func (p *Partition) Encrypted() (bool, error) {
+	sb, err := p.SuperBlock()
+	if err != nil {
+		return false, err
+	}
+
+	return sb != nil && sb.Encrypted(), nil
 }
 
 // Path returns partition path.

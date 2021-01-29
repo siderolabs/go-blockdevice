@@ -107,3 +107,8 @@ func PartPath(d string, n int) (string, error) {
 		return filepath.Join("/dev", PartName(d, n)), nil
 	}
 }
+
+// PartPathEncrypted gets encrypted partition path which is mounted into /dev/mapper.
+func PartPathEncrypted(partitionName string) string {
+	return fmt.Sprintf("/dev/mapper/%s-encrypted", partitionName)
+}

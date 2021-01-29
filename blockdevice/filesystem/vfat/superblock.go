@@ -60,3 +60,8 @@ func (sb *SuperBlock) Offset() int64 {
 func (sb *SuperBlock) Type() string {
 	return "vfat"
 }
+
+// Encrypted implements the SuperBlocker interface.
+func (sb *SuperBlock) Encrypted() bool {
+	return false
+}
