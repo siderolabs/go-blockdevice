@@ -251,7 +251,9 @@ func (l *LUKS) runCommand(args []string, stdin []byte) error {
 			}
 		}
 
-		return fmt.Errorf("failed to call cryptsetup: %w, output: %s", err, out.String())
+		if !strings.Contains(err.Error(), "no child processes") {
+			return fmt.Errorf("failed to call cryptsetup: %w, output: %s", err, out.String())
+		}
 	}
 
 	return nil
