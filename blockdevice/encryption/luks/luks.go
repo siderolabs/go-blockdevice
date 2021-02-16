@@ -7,14 +7,16 @@ package luks
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/talos-systems/go-cmd/pkg/cmd"
 	"golang.org/x/sys/unix"
 
 	"github.com/talos-systems/go-blockdevice/blockdevice/encryption"
@@ -225,23 +227,16 @@ func (l *LUKS) ReadKeyslots(deviceName string) (*encryption.Keyslots, error) {
 
 // runCommand executes cryptsetup with arguments.
 func (l *LUKS) runCommand(args []string, stdin []byte) error {
-	cmd := exec.Command("cryptsetup", args...)
-
-	var out bytes.Buffer
-
-	if stdin != nil {
-		cmd.Stdin = bytes.NewBuffer(stdin)
-	}
-
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-
-	err := cmd.Run()
+	_, err := cmd.RunContext(cmd.WithStdin(
+		context.Background(),
+		bytes.NewBuffer(stdin)), "cryptsetup", args...)
 	if err != nil {
-		if e, ok := err.(*exec.ExitError); ok { //nolint:errorlint
-			switch e.ExitCode() {
+		var exitError *cmd.ExitError
+
+		if errors.As(err, &exitError) {
+			switch exitError.ExitCode {
 			case 1:
-				if strings.Contains(out.String(), "Keyslot open failed.\nNo usable keyslot is available.") {
+				if strings.Contains(string(exitError.Output), "Keyslot open failed.\nNo usable keyslot is available.") {
 					return encryption.ErrEncryptionKeyRejected
 				}
 			case 2:
@@ -251,9 +246,7 @@ func (l *LUKS) runCommand(args []string, stdin []byte) error {
 			}
 		}
 
-		if !strings.Contains(err.Error(), "no child processes") {
-			return fmt.Errorf("failed to call cryptsetup: %w, output: %s", err, out.String())
-		}
+		return fmt.Errorf("failed to call cryptsetup: %w", err)
 	}
 
 	return nil
