@@ -57,3 +57,14 @@ type LBA struct {
 
 	f *os.File
 }
+
+// AlignToPhysicalBlockSize aligns LBA value in LogicalBlockSize multiples to be aligned to PhysicalBlockSize.
+func (l *LBA) AlignToPhysicalBlockSize(lba uint64) uint64 {
+	physToLogical := uint64(l.PhysicalBlockSize / l.LogicalBlockSize)
+
+	if physToLogical <= 1 {
+		return lba
+	}
+
+	return (lba + physToLogical - 1) / physToLogical * physToLogical
+}
