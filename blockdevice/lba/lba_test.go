@@ -4,11 +4,25 @@
 
 package lba_test
 
-import "testing"
+import (
+	"testing"
 
-func TestEmpty(t *testing.T) {
-	// added for accurate coverage estimation
-	//
-	// please remove it once any unit-test is added
-	// for this package
+	"github.com/stretchr/testify/assert"
+
+	"github.com/talos-systems/go-blockdevice/blockdevice/lba"
+)
+
+func TestAlignToPhysicalBlockSize(t *testing.T) {
+	l := lba.LBA{ //nolint: exhaustivestruct
+		PhysicalBlockSize: 4096,
+		LogicalBlockSize:  512,
+	}
+
+	assert.EqualValues(t, 0, l.AlignToPhysicalBlockSize(0))
+	assert.EqualValues(t, 8, l.AlignToPhysicalBlockSize(1))
+	assert.EqualValues(t, 8, l.AlignToPhysicalBlockSize(2))
+	assert.EqualValues(t, 8, l.AlignToPhysicalBlockSize(3))
+	assert.EqualValues(t, 8, l.AlignToPhysicalBlockSize(4))
+	assert.EqualValues(t, 8, l.AlignToPhysicalBlockSize(8))
+	assert.EqualValues(t, 16, l.AlignToPhysicalBlockSize(9))
 }

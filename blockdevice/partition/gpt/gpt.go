@@ -245,7 +245,7 @@ func (g *GPT) InsertAt(idx int, size uint64, setters ...PartitionOption) (*Parti
 	// Find partition boundaries.
 	var start, end uint64
 
-	start = minLBA
+	start = g.l.AlignToPhysicalBlockSize(minLBA)
 
 	if opts.MaximumSize {
 		end = maxLBA
