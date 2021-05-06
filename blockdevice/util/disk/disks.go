@@ -173,14 +173,14 @@ func Get(dev string) *Disk {
 	rotational := readFile(sysblock, dev, "queue/rotational")
 
 	switch {
-	case rotational == "1":
-		diskType = TypeHDD
-	case rotational == "0":
-		diskType = TypeSSD
 	case strings.Contains(dev, "nvme"):
 		diskType = TypeNVMe
 	case strings.Contains(dev, "mmc"):
 		diskType = TypeSD
+	case rotational == "1":
+		diskType = TypeHDD
+	case rotational == "0":
+		diskType = TypeSSD
 	}
 
 	uuid := readFile(sysblock, dev, "uuid")
