@@ -50,6 +50,8 @@ func (t Type) String() string {
 
 // ParseType converts string id to the disk type id.
 func ParseType(id string) (Type, error) {
+	id = strings.ToLower(id)
+
 	switch id {
 	case "ssd":
 		return TypeSSD, nil
