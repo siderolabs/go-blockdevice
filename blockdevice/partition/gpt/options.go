@@ -9,6 +9,7 @@ import "fmt"
 // Options is the functional options struct.
 type Options struct {
 	PartitionEntriesStartLBA uint64
+	MarkMBRBootable          bool
 }
 
 // Option is the functional option func.
@@ -22,6 +23,15 @@ func WithPartitionEntriesStartLBA(o uint64) Option {
 		}
 
 		args.PartitionEntriesStartLBA = o
+
+		return nil
+	}
+}
+
+// WithMarkMBRBootable marks MBR partition as bootable.
+func WithMarkMBRBootable(value bool) Option {
+	return func(args *Options) error {
+		args.MarkMBRBootable = value
 
 		return nil
 	}
