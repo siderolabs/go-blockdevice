@@ -41,10 +41,11 @@ func (outOfSpaceError) OutOfSpaceError() {}
 
 // GPT represents the GUID Partition Table.
 type GPT struct {
-	f *os.File
-	l *lba.LBA
-	h *Header
-	e *Partitions
+	f               *os.File
+	l               *lba.LBA
+	h               *Header
+	e               *Partitions
+	markMBRBootable bool
 }
 
 // Open attempts to open a partition table on f.
@@ -117,10 +118,11 @@ func New(f *os.File, setters ...Option) (g *GPT, err error) {
 	h.GUUID = guuid
 
 	g = &GPT{
-		f: f,
-		l: l,
-		h: h,
-		e: &Partitions{h: h, devname: f.Name()},
+		f:               f,
+		l:               l,
+		h:               h,
+		e:               &Partitions{h: h, devname: f.Name()},
+		markMBRBootable: opts.MarkMBRBootable,
 	}
 
 	return g, nil
@@ -344,6 +346,7 @@ func (g *GPT) Repair() error {
 // 	- https://en.wikipedia.org/wiki/GUID_Partition_Table#Protective_MBR_(LBA_0)
 // 	- https://www.syslinux.org/wiki/index.php?title=Doc/gpt
 // 	- https://en.wikipedia.org/wiki/Master_boot_record
+// 	- http://www.rodsbooks.com/gdisk/bios.html
 func (g *GPT) newPMBR(h *Header) ([]byte, error) {
 	p, err := g.l.ReadAt(0, 0, 512)
 	if err != nil {
@@ -355,7 +358,14 @@ func (g *GPT) newPMBR(h *Header) ([]byte, error) {
 
 	// PMBR protective entry.
 	b := p[446 : 446+16]
-	b[0] = 0x00
+
+	if g.markMBRBootable {
+		// Some BIOSes in legacy mode won't boot from a disk unless there is at least one
+		// partition in the MBR marked bootable.  Mark this partition as bootable.
+		b[0] = 0x80
+	} else {
+		b[0] = 0x00
+	}
 
 	// Partition type: EFI data partition.
 	b[4] = 0xee
