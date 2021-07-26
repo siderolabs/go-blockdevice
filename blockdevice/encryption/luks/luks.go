@@ -27,11 +27,21 @@ import (
 // Cipher LUKS2 cipher type.
 type Cipher int
 
+var keySizeDefaults = map[Cipher]uint{
+	AESXTSPlain64Cipher: 512,
+	XChaCha12Cipher:     256,
+	XChaCha20Cipher:     256,
+}
+
 // String converts to command line string parameter value.
 func (c Cipher) String() (string, error) {
 	switch c {
 	case AESXTSPlain64Cipher:
 		return AESXTSPlain64CipherString, nil
+	case XChaCha12Cipher:
+		return XChaCha12String, nil
+	case XChaCha20Cipher:
+		return XChaCha20String, nil
 	default:
 		return "", fmt.Errorf("unknown cipher kind %d", c)
 	}
@@ -44,6 +54,10 @@ func ParseCipherKind(s string) (Cipher, error) {
 		fallthrough
 	case AESXTSPlain64CipherString:
 		return AESXTSPlain64Cipher, nil
+	case XChaCha12String:
+		return XChaCha12Cipher, nil
+	case XChaCha20String:
+		return XChaCha20Cipher, nil
 	default:
 		return 0, fmt.Errorf("unknown cipher kind %s", s)
 	}
@@ -52,16 +66,50 @@ func ParseCipherKind(s string) (Cipher, error) {
 const (
 	// AESXTSPlain64CipherString string representation of aes-xts-plain64 cipher.
 	AESXTSPlain64CipherString = "aes-xts-plain64"
+	// XChaCha12String string representation of xchacha12 cipher.
+	XChaCha12String = "xchacha12,aes-adiantum-plain64"
+	// XChaCha20String string representation of xchacha20 cipher.
+	XChaCha20String = "xchacha20,aes-adiantum-plain64"
 	// AESXTSPlain64Cipher represents aes-xts-plain64 encryption cipher.
 	AESXTSPlain64Cipher Cipher = iota
+	// XChaCha12Cipher represents xchacha12 encryption cipher.
+	XChaCha12Cipher
+	// XChaCha20Cipher represents xchacha20 encryption cipher.
+	XChaCha20Cipher
 )
+
+const (
+	// PerfNoReadWorkqueue sets --perf-no_read_workqueue.
+	PerfNoReadWorkqueue = "no_read_workqueue"
+	// PerfNoWriteWorkqueue sets --perf-no_write_workqueue.
+	PerfNoWriteWorkqueue = "no_write_workqueue"
+	// PerfSameCPUCrypt sets --perf-same_cpu_crypt.
+	PerfSameCPUCrypt = "same_cpu_crypt"
+)
+
+// ValidatePerfOption checks that specified string is a valid perf option.
+func ValidatePerfOption(value string) error {
+	switch value {
+	case PerfNoReadWorkqueue:
+		fallthrough
+	case PerfNoWriteWorkqueue:
+		fallthrough
+	case PerfSameCPUCrypt:
+		return nil
+	}
+
+	return fmt.Errorf("invalid perf option %v", value)
+}
 
 // LUKS implements LUKS2 encryption provider.
 type LUKS struct {
+	perfOptions          []string
 	cipher               Cipher
 	iterTime             time.Duration
 	pbkdfForceIterations uint
 	pbkdfMemory          uint64
+	blockSize            uint64
+	keySize              uint
 }
 
 // New creates new LUKS2 encryption provider.
@@ -72,6 +120,10 @@ func New(cipher Cipher, options ...Option) *LUKS {
 
 	for _, option := range options {
 		option(l)
+	}
+
+	if l.keySize == 0 {
+		l.keySize = keySizeDefaults[cipher]
 	}
 
 	return l
@@ -86,6 +138,7 @@ func (l *LUKS) Open(deviceName string, key *encryption.Key) (string, error) {
 
 	args := []string{"luksOpen", deviceName, mappedName, "--key-file=-"}
 	args = append(args, keyslotArgs(key)...)
+	args = append(args, l.perfArgs()...)
 
 	err := l.runCommand(args, key.Value)
 	if err != nil {
@@ -105,6 +158,11 @@ func (l *LUKS) Encrypt(deviceName string, key *encryption.Key) error {
 	args := []string{"luksFormat", "--type", "luks2", "--key-file=-", "-c", cipher, deviceName}
 	args = append(args, l.argonArgs()...)
 	args = append(args, keyslotArgs(key)...)
+	args = append(args, l.encryptionArgs()...)
+
+	if l.blockSize != 0 {
+		args = append(args, fmt.Sprintf("--sector-size=%d", l.blockSize))
+	}
 
 	err = l.runCommand(args, key.Value)
 	if err != nil {
@@ -134,6 +192,7 @@ func (l *LUKS) AddKey(devname string, key, newKey *encryption.Key) error {
 	}
 
 	args = append(args, l.argonArgs()...)
+	args = append(args, l.encryptionArgs()...)
 	args = append(args, keyslotArgs(newKey)...)
 
 	return l.runCommand(args, buffer.Bytes())
@@ -159,6 +218,7 @@ func (l *LUKS) SetKey(devname string, oldKey, newKey *encryption.Key) error {
 	}
 
 	args = append(args, l.argonArgs()...)
+	args = append(args, l.perfArgs()...)
 
 	return l.runCommand(args, buffer.Bytes())
 }
@@ -223,8 +283,6 @@ func (l *LUKS) ReadKeyslots(deviceName string) (*encryption.Keyslots, error) {
 	return keyslots, nil
 }
 
-// CheckKey try using the key
-
 // runCommand executes cryptsetup with arguments.
 func (l *LUKS) runCommand(args []string, stdin []byte) error {
 	_, err := cmd.RunContext(cmd.WithStdin(
@@ -268,6 +326,26 @@ func (l *LUKS) argonArgs() []string {
 	}
 
 	return args
+}
+
+func (l *LUKS) perfArgs() []string {
+	res := []string{}
+
+	for _, o := range l.perfOptions {
+		res = append(res, fmt.Sprintf("--perf-%s", o))
+	}
+
+	return res
+}
+
+func (l *LUKS) encryptionArgs() []string {
+	res := []string{}
+
+	if l.keySize != 0 {
+		res = append(res, fmt.Sprintf("--key-size=%d", l.keySize))
+	}
+
+	return append(res, l.perfArgs()...)
 }
 
 func keyslotArgs(key *encryption.Key) []string {

@@ -30,3 +30,24 @@ func WithPBKDFMemory(value uint64) Option {
 		l.pbkdfMemory = value
 	}
 }
+
+// WithKeySize sets generated key size.
+func WithKeySize(value uint) Option {
+	return func(l *LUKS) {
+		l.keySize = value
+	}
+}
+
+// WithBlockSize sets block size.
+func WithBlockSize(value uint64) Option {
+	return func(l *LUKS) {
+		l.blockSize = value
+	}
+}
+
+// WithPerfOptions enables encryption perf options.
+func WithPerfOptions(options ...string) Option {
+	return func(l *LUKS) {
+		l.perfOptions = options
+	}
+}
