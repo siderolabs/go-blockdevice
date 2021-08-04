@@ -26,3 +26,20 @@ func TestAlignToPhysicalBlockSize(t *testing.T) {
 	assert.EqualValues(t, 8, l.AlignToPhysicalBlockSize(8))
 	assert.EqualValues(t, 16, l.AlignToPhysicalBlockSize(9))
 }
+
+func TestAlignToMinIOkSize(t *testing.T) {
+	l := lba.LBA{ //nolint: exhaustivestruct
+		MinimalIOSize:     262144,
+		PhysicalBlockSize: 512,
+		LogicalBlockSize:  512,
+	}
+
+	assert.EqualValues(t, 0, l.AlignToPhysicalBlockSize(0))
+	assert.EqualValues(t, 512, l.AlignToPhysicalBlockSize(1))
+	assert.EqualValues(t, 512, l.AlignToPhysicalBlockSize(2))
+	assert.EqualValues(t, 512, l.AlignToPhysicalBlockSize(3))
+	assert.EqualValues(t, 512, l.AlignToPhysicalBlockSize(4))
+	assert.EqualValues(t, 512, l.AlignToPhysicalBlockSize(8))
+	assert.EqualValues(t, 512, l.AlignToPhysicalBlockSize(512))
+	assert.EqualValues(t, 1024, l.AlignToPhysicalBlockSize(513))
+}

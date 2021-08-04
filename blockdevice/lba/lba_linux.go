@@ -13,6 +13,12 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// These newer ioctl magic values are not available from unix yet.
+const (
+	BLKIOMIN = 0x1278
+	BLKIOOPT = 0x1279
+)
+
 // NewLBA initializes and returns an `LBA`.
 func NewLBA(f *os.File) (lba *LBA, err error) {
 	st, err := f.Stat()
@@ -40,6 +46,34 @@ func NewLBA(f *os.File) (lba *LBA, err error) {
 		}
 	}
 
+	var minio int64
+	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, f.Fd(), BLKIOMIN, uintptr(unsafe.Pointer(&minio))); errno != 0 {
+		if st.Mode().IsRegular() {
+			// Not supported, fail over to psize.
+			minio = psize
+		} else {
+			return nil, errors.New("BLKIOMIN failed")
+		}
+	}
+
+	if minio == 0 {
+		minio = psize
+	}
+
+	var optio int64
+	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, f.Fd(), BLKIOOPT, uintptr(unsafe.Pointer(&optio))); errno != 0 {
+		if st.Mode().IsRegular() {
+			// Not supported, fail over to psize.
+			optio = minio
+		} else {
+			return nil, errors.New("BLKIOOPT failed")
+		}
+	}
+
+	if optio == 0 {
+		optio = minio
+	}
+
 	// Seek to the end to get the size.
 	size, err := f.Seek(0, 2)
 	if err != nil {
@@ -57,6 +91,8 @@ func NewLBA(f *os.File) (lba *LBA, err error) {
 	lba = &LBA{
 		PhysicalBlockSize: psize,
 		LogicalBlockSize:  lsize,
+		MinimalIOSize:     minio,
+		OptimalIOSize:     optio,
 		TotalSectors:      tsize,
 		f:                 f,
 	}
