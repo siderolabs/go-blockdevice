@@ -53,7 +53,10 @@ func (buf *Buffer) Bytes() []byte {
 type LBA struct {
 	PhysicalBlockSize int64
 	LogicalBlockSize  int64
-	TotalSectors      int64
+	MinimalIOSize     int64
+	OptimalIOSize     int64
+
+	TotalSectors int64
 
 	f *os.File
 }
@@ -61,10 +64,16 @@ type LBA struct {
 // AlignToPhysicalBlockSize aligns LBA value in LogicalBlockSize multiples to be aligned to PhysicalBlockSize.
 func (l *LBA) AlignToPhysicalBlockSize(lba uint64) uint64 {
 	physToLogical := uint64(l.PhysicalBlockSize / l.LogicalBlockSize)
+	minIOToLogical := uint64(l.MinimalIOSize / l.LogicalBlockSize)
 
-	if physToLogical <= 1 {
+	ratio := physToLogical
+	if minIOToLogical > ratio {
+		ratio = minIOToLogical
+	}
+
+	if ratio <= 1 {
 		return lba
 	}
 
-	return (lba + physToLogical - 1) / physToLogical * physToLogical
+	return (lba + ratio - 1) / ratio * ratio
 }
