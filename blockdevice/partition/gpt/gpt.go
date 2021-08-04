@@ -5,7 +5,6 @@
 package gpt
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -50,17 +49,23 @@ type GPT struct {
 
 // Open attempts to open a partition table on f.
 func Open(f *os.File) (g *GPT, err error) {
-	buf := make([]byte, 1)
+	buf := make([]byte, 16)
 
 	// PMBR protective entry starts at 446. The partition type is at offset
 	// 4 from the start of the PMBR protective entry.
-	_, err = f.ReadAt(buf, 450)
+	var n int
+
+	n, err = f.ReadAt(buf, 446)
 	if err != nil {
 		return nil, err
 	}
 
+	if n != len(buf) {
+		return nil, fmt.Errorf("incomplete read: %d != %d", n, len(buf))
+	}
+
 	// For GPT, the partition type should be 0xEE (EFI GPT).
-	if bytes.Equal(buf, []byte{0xEE}) {
+	if buf[4] == 0xEE {
 		l, err := lba.NewLBA(f)
 		if err != nil {
 			return nil, err
@@ -71,10 +76,11 @@ func Open(f *os.File) (g *GPT, err error) {
 		h := &Header{Buffer: b, LBA: l}
 
 		g = &GPT{
-			f: f,
-			l: l,
-			h: h,
-			e: &Partitions{h: h, devname: f.Name()},
+			f:               f,
+			l:               l,
+			h:               h,
+			e:               &Partitions{h: h, devname: f.Name()},
+			markMBRBootable: buf[0] == 0x80,
 		}
 
 		return g, nil

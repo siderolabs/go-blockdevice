@@ -49,6 +49,8 @@ func (suite *GPTSuite) TestReset() {
 
 	suite.Require().NoError(g.Write())
 
+	suite.checkMBRFlag(0x00)
+
 	// re-read the partition table
 	g, err = gpt.Open(suite.Dev)
 	suite.Require().NoError(err)
@@ -60,6 +62,8 @@ func (suite *GPTSuite) TestReset() {
 	}
 
 	suite.Require().NoError(g.Write())
+
+	suite.checkMBRFlag(0x00)
 
 	// re-read the partition table
 	g, err = gpt.Open(suite.Dev)
@@ -422,6 +426,39 @@ func (suite *GPTSuite) TestPartitionGUUID() {
 	suite.Require().NoError(err)
 
 	suite.Assert().NotEqual(g.Header().GUUID.String(), "00000000-0000-0000-0000-000000000000")
+}
+
+func (suite *GPTSuite) TestMarkPMBRBootable() {
+	g, err := gpt.New(suite.Dev, gpt.WithMarkMBRBootable(true))
+	suite.Require().NoError(err)
+
+	_, err = g.Add(1048576, gpt.WithPartitionName("boot"))
+	suite.Require().NoError(err)
+
+	_, err = g.Add(1048576, gpt.WithPartitionName("efi"))
+	suite.Require().NoError(err)
+
+	suite.Require().NoError(g.Write())
+
+	suite.checkMBRFlag(0x80)
+
+	// re-read the partition table
+	g, err = gpt.Open(suite.Dev)
+	suite.Require().NoError(err)
+
+	suite.Require().NoError(g.Read())
+	suite.Require().NoError(g.Write())
+
+	suite.checkMBRFlag(0x80)
+}
+
+func (suite *GPTSuite) checkMBRFlag(flag byte) {
+	buf := make([]byte, 1)
+
+	_, err := suite.Dev.ReadAt(buf, 446)
+	suite.Require().NoError(err)
+
+	suite.Assert().Equal(flag, buf[0])
 }
 
 func TestGPTSuite(t *testing.T) {
