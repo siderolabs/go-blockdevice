@@ -5,6 +5,7 @@
 package gpt_test
 
 import (
+	"encoding/binary"
 	"os"
 	"testing"
 
@@ -49,7 +50,7 @@ func (suite *GPTSuite) TestReset() {
 
 	suite.Require().NoError(g.Write())
 
-	suite.checkMBRFlag(0x00)
+	suite.validatePMBR(0x00)
 
 	// re-read the partition table
 	g, err = gpt.Open(suite.Dev)
@@ -63,7 +64,7 @@ func (suite *GPTSuite) TestReset() {
 
 	suite.Require().NoError(g.Write())
 
-	suite.checkMBRFlag(0x00)
+	suite.validatePMBR(0x00)
 
 	// re-read the partition table
 	g, err = gpt.Open(suite.Dev)
@@ -440,7 +441,7 @@ func (suite *GPTSuite) TestMarkPMBRBootable() {
 
 	suite.Require().NoError(g.Write())
 
-	suite.checkMBRFlag(0x80)
+	suite.validatePMBR(0x80)
 
 	// re-read the partition table
 	g, err = gpt.Open(suite.Dev)
@@ -449,16 +450,26 @@ func (suite *GPTSuite) TestMarkPMBRBootable() {
 	suite.Require().NoError(g.Read())
 	suite.Require().NoError(g.Write())
 
-	suite.checkMBRFlag(0x80)
+	suite.validatePMBR(0x80)
 }
 
-func (suite *GPTSuite) checkMBRFlag(flag byte) {
-	buf := make([]byte, 1)
+func (suite *GPTSuite) validatePMBR(flag byte) {
+	buf := make([]byte, 512)
 
-	_, err := suite.Dev.ReadAt(buf, 446)
+	n, err := suite.Dev.ReadAt(buf, 0)
 	suite.Require().NoError(err)
+	suite.Require().EqualValues(512, n)
 
-	suite.Assert().Equal(flag, buf[0])
+	partition := buf[446:460]
+
+	suite.Assert().Equal(flag, partition[0])                                                     // active flag
+	suite.Assert().Equal([]byte{0x00, 0x02, 0x00}, partition[1:4])                               // CHS start
+	suite.Assert().Equal(byte(0xee), partition[4])                                               // partition type
+	suite.Assert().Equal([]byte{0xff, 0xff, 0xff}, partition[5:8])                               // CHS end
+	suite.Assert().Equal(uint32(1), binary.LittleEndian.Uint32(partition[8:12]))                 // LBA start
+	suite.Assert().Equal(uint32(size/blockSize-1), binary.LittleEndian.Uint32(partition[12:16])) // length in sectors
+
+	suite.Assert().Equal([]byte{0x55, 0xaa}, buf[510:512]) // boot signature
 }
 
 func TestGPTSuite(t *testing.T) {

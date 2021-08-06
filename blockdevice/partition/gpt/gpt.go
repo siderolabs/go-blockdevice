@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 
 	"github.com/google/uuid"
@@ -376,11 +377,22 @@ func (g *GPT) newPMBR(h *Header) ([]byte, error) {
 	// Partition type: EFI data partition.
 	b[4] = 0xee
 
+	// CHS for the start of the partition
+	copy(b[1:4], []byte{0x00, 0x02, 0x00})
+
+	// CHS for the end of the partition
+	copy(b[5:8], []byte{0xff, 0xff, 0xff})
+
 	// Partition start LBA.
 	binary.LittleEndian.PutUint32(b[8:12], 1)
 
 	// Partition length in sectors.
-	binary.LittleEndian.PutUint32(b[12:16], uint32(h.BackupLBA))
+	// This might overflow uint32, so check accordingly
+	if h.BackupLBA > math.MaxUint32 {
+		binary.LittleEndian.PutUint32(b[12:16], uint32(math.MaxUint32))
+	} else {
+		binary.LittleEndian.PutUint32(b[12:16], uint32(h.BackupLBA))
+	}
 
 	return p, nil
 }
