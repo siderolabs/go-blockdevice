@@ -8,10 +8,10 @@ import (
 	"encoding/binary"
 	"io"
 	"os"
+	"syscall"
 	"time"
 
 	"github.com/talos-systems/go-retry/retry"
-	"golang.org/x/sys/unix"
 
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/iso9660"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/luks"
@@ -39,7 +39,7 @@ func Probe(path string) (sb SuperBlocker, err error) {
 	// If we dont sleep this becomes racy in that the device file does not exist
 	// and it will fail to open.
 	err = retry.Constant(5*time.Second, retry.WithUnits((50 * time.Millisecond))).Retry(func() error {
-		if f, err = os.OpenFile(path, os.O_RDONLY|unix.O_CLOEXEC, os.ModeDevice); err != nil {
+		if f, err = os.OpenFile(path, os.O_RDONLY|syscall.O_CLOEXEC, os.ModeDevice); err != nil {
 			if os.IsNotExist(err) {
 				return retry.ExpectedError(err)
 			}
