@@ -239,7 +239,7 @@ func probePartitions(devpath string) (probed []*ProbedBlockDevice) {
 			err error
 		)
 
-		bd, err = blockdevice.Open(devpath)
+		bd, err = blockdevice.Open(devpath, blockdevice.WithMode(blockdevice.ReadonlyMode))
 		if err != nil {
 			continue
 		}
