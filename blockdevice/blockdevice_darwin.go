@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
 )
 
@@ -17,6 +19,13 @@ type BlockDevice struct {
 
 	f *os.File
 }
+
+const (
+	// ReadonlyMode readonly mode.
+	ReadonlyMode = unix.O_CLOEXEC | os.O_RDONLY
+	// DefaultMode read write.
+	DefaultMode = unix.O_CLOEXEC | os.O_RDWR
+)
 
 // Open initializes and returns a block device.
 // TODO(andrewrynhard): Use BLKGETSIZE ioctl to get the size.

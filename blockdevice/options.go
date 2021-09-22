@@ -8,6 +8,7 @@ package blockdevice
 type Options struct {
 	CreateGPT     bool
 	ExclusiveLock bool
+	Mode          int
 }
 
 // Option is the functional option func.
@@ -27,10 +28,18 @@ func WithExclusiveLock(o bool) Option {
 	}
 }
 
+// WithMode opens blockdevice in a specific mode.
+func WithMode(value int) Option {
+	return func(args *Options) {
+		args.Mode = value
+	}
+}
+
 // NewDefaultOptions initializes a Options struct with default values.
 func NewDefaultOptions(setters ...Option) *Options {
 	opts := &Options{
 		CreateGPT: false,
+		Mode:      DefaultMode,
 	}
 
 	for _, setter := range setters {

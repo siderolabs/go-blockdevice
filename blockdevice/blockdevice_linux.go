@@ -29,9 +29,13 @@ const (
 	BLKZEROOUT       = 4735
 )
 
-// Fast wipe parameters.
 const (
+	// FastWipeRange fast wipe block.
 	FastWipeRange = 1024 * 1024
+	// ReadonlyMode readonly mode.
+	ReadonlyMode = unix.O_CLOEXEC | os.O_RDONLY
+	// DefaultMode read write.
+	DefaultMode = unix.O_CLOEXEC | os.O_RDWR
 )
 
 // BlockDevice represents a block device.
@@ -49,7 +53,7 @@ func Open(devname string, setters ...Option) (bd *BlockDevice, err error) {
 
 	var f *os.File
 
-	if f, err = os.OpenFile(devname, os.O_RDWR|unix.O_CLOEXEC, os.ModeDevice); err != nil {
+	if f, err = os.OpenFile(devname, opts.Mode, os.ModeDevice); err != nil {
 		return nil, err
 	}
 

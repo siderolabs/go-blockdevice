@@ -18,6 +18,13 @@ type BlockDevice struct {
 	f *os.File
 }
 
+const (
+	// ReadonlyMode readonly mode.
+	ReadonlyMode = os.O_RDONLY
+	// DefaultMode read write.
+	DefaultMode = os.O_RDWR
+)
+
 // Open initializes and returns a block device.
 // TODO(andrewrynhard): Use BLKGETSIZE ioctl to get the size.
 func Open(devname string, setters ...Option) (bd *BlockDevice, err error) {

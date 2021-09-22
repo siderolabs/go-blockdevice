@@ -149,7 +149,7 @@ func probe(devpath string) (devpaths []string) {
 	// Start by opening the block device.
 	// If a partition table was not found, it is still possible that a
 	// file system exists without a partition table.
-	bd, err := blockdevice.Open(devpath)
+	bd, err := blockdevice.Open(devpath, blockdevice.WithMode(blockdevice.ReadonlyMode))
 	if err != nil {
 		//nolint: errcheck
 		if sb, _ := filesystem.Probe(devpath); sb != nil {
