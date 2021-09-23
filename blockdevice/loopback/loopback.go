@@ -55,6 +55,21 @@ func Loop(loopbackDevice, image *os.File) error {
 		unix.LOOP_SET_FD,
 		image.Fd(),
 	)
+	if e := errnoIsErr(err); e != nil {
+		return e
+	}
+
+	// Force kernel to scan partition table on loop device
+	status := &unix.LoopInfo64{
+		Flags: unix.LO_FLAGS_PARTSCAN,
+	}
+
+	_, _, err = syscall.Syscall(
+		syscall.SYS_IOCTL,
+		loopbackDevice.Fd(),
+		unix.LOOP_SET_STATUS64,
+		uintptr(unsafe.Pointer(status)),
+	)
 
 	return errnoIsErr(err)
 }

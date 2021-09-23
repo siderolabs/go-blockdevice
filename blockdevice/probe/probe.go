@@ -103,7 +103,7 @@ func All(options ...SelectOption) (all []*ProbedBlockDevice, err error) {
 		probed := probePartitions(devpath)
 
 		for _, dev := range probed {
-			add := true
+			add := false
 			for _, matches := range options {
 				add, err = matches(dev)
 				if err != nil {
@@ -111,7 +111,7 @@ func All(options ...SelectOption) (all []*ProbedBlockDevice, err error) {
 						return nil, e
 					}
 
-					return nil, err
+					break
 				}
 
 				if !add {
@@ -151,6 +151,9 @@ func probe(devpath string) (devpaths []string) {
 	// file system exists without a partition table.
 	bd, err := blockdevice.Open(devpath, blockdevice.WithMode(blockdevice.ReadonlyMode))
 	if err != nil {
+		// Now blockdevice.Open returns error if it cannot read devpath
+		// I believe filesystem.Probe always return sb = nil
+		// but i keep it here. May be it will fix in future.
 		//nolint: errcheck
 		if sb, _ := filesystem.Probe(devpath); sb != nil {
 			devpaths = append(devpaths, devpath)
@@ -166,6 +169,13 @@ func probe(devpath string) (devpaths []string) {
 	// has partitions.
 	pt, err := bd.PartitionTable()
 	if err != nil {
+		// If a partition table was not found, it is still possible that a
+		// file system exists without a partition table.
+		//nolint: errcheck
+		if sb, _ := filesystem.Probe(devpath); sb != nil {
+			devpaths = append(devpaths, devpath)
+		}
+
 		return devpaths
 	}
 
@@ -231,6 +241,7 @@ func GetPartitionWithName(name string) (part *gpt.Partition, err error) {
 	return device.GetPartition(name)
 }
 
+// Returns array with partitions or root readable device.
 func probePartitions(devpath string) (probed []*ProbedBlockDevice) {
 	for _, path := range probe(devpath) {
 		var (

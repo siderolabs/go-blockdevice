@@ -46,14 +46,39 @@ func (suite *ProbeSuite) addPartition(name string, size uint64) *gpt.Partition {
 	return partition
 }
 
-func (suite *ProbeSuite) TestGetPartitionWithName() {
-	size := uint64(1024 * 1024 * 512)
-	part := suite.addPartition("label2", size)
+func (suite *ProbeSuite) setSystemLabel(name string) {
+	cmd := exec.Command("mkfs.vfat", "-F", "32", "-n", name, suite.LoopbackDevice.Name())
+	suite.Require().NoError(cmd.Run())
+}
 
-	_, err := probe.GetPartitionWithName("label2")
+func (suite *ProbeSuite) TestDevForPartitionLabel() {
+	size := uint64(1024 * 1024 * 256)
+	part := suite.addPartition("devpart1", size)
+
+	dev, err := probe.DevForPartitionLabel(suite.LoopbackDevice.Name(), "devpart1")
 	suite.Require().NoError(err)
-	_, err = part.Path()
+	path, err := part.Path()
 	suite.Require().NoError(err)
+	suite.Require().Equal(path, dev.Device().Name())
+}
+
+func (suite *ProbeSuite) TestGetDevWithPartitionName() {
+	size := uint64(1024 * 1024 * 512)
+	part := suite.addPartition("devlabel", size)
+
+	dev, err := probe.GetDevWithPartitionName("devlabel")
+	suite.Require().NoError(err)
+	devpath, err := part.Path()
+	suite.Require().NoError(err)
+	suite.Require().Equal(devpath, dev.Path)
+}
+
+func (suite *ProbeSuite) TestGetDevWithFileSystemLabel() {
+	suite.setSystemLabel("GETLABELSYS")
+
+	dev, err := probe.GetDevWithFileSystemLabel("GETLABELSYS")
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.LoopbackDevice.Name(), dev.Path)
 }
 
 func (suite *ProbeSuite) TestProbeByPartitionLabel() {
@@ -66,17 +91,6 @@ func (suite *ProbeSuite) TestProbeByPartitionLabel() {
 	suite.Require().Equal(1, len(probed))
 
 	suite.Require().Equal(suite.LoopbackDevice.Name(), probed[0].Device().Name())
-}
-
-func (suite *ProbeSuite) TestDevForPartitionLabel() {
-	size := uint64(1024 * 1024 * 256)
-	part := suite.addPartition("label1", size)
-
-	dev, err := probe.DevForPartitionLabel(suite.LoopbackDevice.Name(), "label1")
-	suite.Require().NoError(err)
-	path, err := part.Path()
-	suite.Require().NoError(err)
-	suite.Require().Equal(path, dev.Device().Name())
 }
 
 func TestProbe(t *testing.T) {
