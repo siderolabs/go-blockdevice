@@ -103,13 +103,7 @@ func Open(devname string, setters ...Option) (bd *BlockDevice, err error) {
 				return nil, err
 			}
 			bd.g = g
-
-			return bd, nil
 		}
-
-		err = ErrMissingPartitionTable
-
-		return nil, err
 	}
 
 	return bd, nil
