@@ -35,9 +35,7 @@ func (suite *DisksSuite) TestDisk() {
 		suite.T().Skip("can't run the test as non-root")
 	}
 
-	hostname, _ := os.Hostname() //nolint: errcheck
-
-	if hostname == "buildkitsandbox" {
+	if hostname, _ := os.Hostname(); hostname == "buildkitsandbox" { //nolint:errcheck
 		suite.T().Skip("test not supported under buildkit as partition devices are not propagated from /dev")
 	}
 
@@ -66,8 +64,6 @@ func (suite *DisksSuite) TestDiskMatcher() {
 
 	sdCard := &disk.Disk{
 		Serial: "0xeb791622",
-		Name:   "SC32G",
-		Size:   1e+8,
 	}
 
 	sdCard2 := &disk.Disk{

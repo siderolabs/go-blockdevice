@@ -411,6 +411,78 @@ func (suite *GPTSuite) TestPartitionInsertAt() {
 	suite.Require().NoError(g.Write())
 }
 
+func (suite *GPTSuite) TestPartitionInsertOffsetAndResize() {
+	g, err := gpt.New(suite.Dev)
+	suite.Require().NoError(err)
+
+	const (
+		bootSize    = 1048576
+		efiSize     = 512 * 1048576
+		configStart = size - (2 * blockSize * 1048576)
+	)
+
+	_, err = g.Add(bootSize, gpt.WithPartitionName("boot"))
+	suite.Require().NoError(err)
+
+	_, err = g.Add(efiSize, gpt.WithPartitionName("efi"))
+	suite.Require().NoError(err)
+
+	_, err = g.Add(0, gpt.WithPartitionName("system"))
+	suite.Require().NoError(err)
+
+	_, err = g.Add(0, gpt.WithPartitionName("config"), gpt.WithOffset(configStart), gpt.WithMaximumSize(true))
+	suite.Require().NoError(err)
+
+	suite.Require().NoError(g.Write())
+
+	// re-read the partition table
+	g, err = gpt.Open(suite.Dev)
+	suite.Require().NoError(err)
+
+	suite.Require().NoError(g.Read())
+
+	suite.Require().NoError(g.Repair())
+
+	resized, err := g.Resize(g.Partitions().Items()[2])
+	suite.Require().NoError(err)
+
+	suite.Assert().True(resized)
+
+	suite.Require().NoError(g.Write())
+
+	// re-read the partition table
+	g, err = gpt.New(suite.Dev)
+	suite.Require().NoError(err)
+
+	suite.Require().NoError(g.Read())
+
+	partitions := g.Partitions().Items()
+	suite.Require().Len(partitions, 4)
+
+	partBoot := partitions[0]
+	suite.Assert().EqualValues(1, partBoot.Number)
+	suite.Assert().EqualValues(bootSize/blockSize, partBoot.Length())
+	suite.Assert().EqualValues(headReserved, partBoot.FirstLBA)
+
+	partEFI := partitions[1]
+	suite.Assert().EqualValues(2, partEFI.Number)
+	suite.Assert().EqualValues(efiSize/blockSize, partEFI.Length())
+	suite.Assert().EqualValues(headReserved+bootSize/blockSize, partEFI.FirstLBA)
+
+	partSystem := partitions[2]
+	suite.Assert().EqualValues(3, partSystem.Number)
+	suite.Assert().EqualValues((configStart-bootSize-efiSize)/blockSize-headReserved, int(partSystem.Length()))
+	suite.Assert().EqualValues(headReserved+(bootSize+efiSize)/blockSize, partSystem.FirstLBA)
+	suite.Assert().EqualValues(configStart/blockSize-1, partSystem.LastLBA)
+
+	partConfig := partitions[3]
+	suite.Assert().EqualValues(4, partConfig.Number)
+	suite.Assert().EqualValues((size-configStart)/blockSize-tailReserved, partConfig.Length())
+	suite.Assert().EqualValues(configStart/blockSize, int(partConfig.FirstLBA))
+
+	suite.Require().NoError(g.Write())
+}
+
 func (suite *GPTSuite) TestPartitionGUUID() {
 	g, err := gpt.New(suite.Dev)
 	suite.Require().NoError(err)

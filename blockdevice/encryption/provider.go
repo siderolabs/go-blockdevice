@@ -28,10 +28,10 @@ type Provider interface {
 }
 
 // ErrEncryptionKeyRejected triggered when encryption key does not match.
-var ErrEncryptionKeyRejected error = fmt.Errorf("encryption key rejected")
+var ErrEncryptionKeyRejected = fmt.Errorf("encryption key rejected")
 
 // ErrDeviceBusy returned when mapped device is still in use.
-var ErrDeviceBusy error = fmt.Errorf("mapped device is still in use")
+var ErrDeviceBusy = fmt.Errorf("mapped device is still in use")
 
 // Keyslots represents LUKS2 keyslots metadata.
 type Keyslots struct {

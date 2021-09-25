@@ -2,16 +2,20 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2020-09-04T03:46:02Z by kres latest.
-
+# Generated on 2021-11-15T13:22:12Z by kres c4d092b.
 
 set -e
 
+RELEASE_TOOL_IMAGE="ghcr.io/talos-systems/release-tool:latest"
+
+function release-tool {
+  docker pull "${RELEASE_TOOL_IMAGE}" >/dev/null
+  docker run --rm -w /src -v "${PWD}":/src:ro "${RELEASE_TOOL_IMAGE}" -l -d -n -t "${1}" ./hack/release.toml
+}
+
 function changelog {
   if [ "$#" -eq 1 ]; then
-    git-chglog --output CHANGELOG.md -c ./hack/git-chglog/config.yaml --tag-filter-pattern "^${1}" "${1}.0-alpha.0.."
-  elif [ "$#" -eq 0 ]; then
-    git-chglog --output CHANGELOG.md -c ./hack/git-chglog/config.yaml
+    (release-tool ${1}; echo; cat CHANGELOG.md) > CHANGELOG.md- && mv CHANGELOG.md- CHANGELOG.md
   else
     echo 1>&2 "Usage: $0 changelog [tag]"
     exit 1
@@ -19,7 +23,7 @@ function changelog {
 }
 
 function release-notes {
-  git-chglog --output ${1} -c ./hack/git-chglog/config.yaml "${2}"
+  release-tool "${2}" > "${1}"
 }
 
 function cherry-pick {
@@ -51,10 +55,12 @@ then
 else
   cat <<EOF
 Usage:
-  commit:       Create the official release commit message.
-  cherry-pick:  Cherry-pick a commit into a release branch.
-  changelog:    Update the specified CHANGELOG.
+  commit:        Create the official release commit message.
+  cherry-pick:   Cherry-pick a commit into a release branch.
+  changelog:     Update the specified CHANGELOG.
+  release-notes: Create release notes for GitHub release.
 EOF
 
   exit 1
 fi
+

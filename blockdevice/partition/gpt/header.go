@@ -18,7 +18,7 @@ import (
 
 // Header represents the GPT header.
 //
-//nolint: maligned
+//nolint:maligned,govet
 type Header struct {
 	*lba.Buffer
 	*lba.LBA

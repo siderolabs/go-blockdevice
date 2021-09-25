@@ -1,12 +1,16 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2020-09-08T22:09:46Z by kres latest.
+# Generated on 2021-11-15T13:22:12Z by kres c4d092b.
 
+---
 policies:
 - type: commit
   spec:
     dco: true
-    gpg: false
+    gpg:
+      required: true
+      identity:
+        gitHubOrganization: talos-systems
     spellcheck:
       locale: US
     maximumOfOneCommit: true
@@ -19,16 +23,15 @@ policies:
       required: true
     conventional:
       types: ["chore","docs","perf","refactor","style","test","release"]
-      scopes: ["*"]
+      scopes: [".*"]
 - type: license
   spec:
     skipPaths:
       - .git/
+      - testdata/
     includeSuffixes:
       - .go
     excludeSuffixes:
       - .pb.go
-    header: |
-      // This Source Code Form is subject to the terms of the Mozilla Public
-      // License, v. 2.0. If a copy of the MPL was not distributed with this
-      // file, You can obtain one at http://mozilla.org/MPL/2.0/.
+      - .pb.gw.go
+    header: "// This Source Code Form is subject to the terms of the Mozilla Public\u000A// License, v. 2.0. If a copy of the MPL was not distributed with this\u000A// file, You can obtain one at http://mozilla.org/MPL/2.0/.\u000A"

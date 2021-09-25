@@ -19,6 +19,8 @@ import (
 )
 
 // Partitions represents the GPT partitions array.
+//
+//nolint:govet
 type Partitions struct {
 	h       *Header
 	p       []*Partition
@@ -26,6 +28,8 @@ type Partitions struct {
 }
 
 // Partition represents a GPT partition.
+//
+//nolint:govet
 type Partition struct {
 	Type       uuid.UUID
 	ID         uuid.UUID

@@ -50,6 +50,8 @@ func (buf *Buffer) Bytes() []byte {
 }
 
 // LBA represents logical block addressing.
+//
+//nolint:govet
 type LBA struct {
 	PhysicalBlockSize int64
 	LogicalBlockSize  int64

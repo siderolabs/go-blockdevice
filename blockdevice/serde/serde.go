@@ -20,6 +20,8 @@ type FieldDeserializerFunc = func([]byte, interface{}) error
 type FieldSerializerFunc = func(uint32, uint32, []byte, interface{}) ([]byte, error)
 
 // Field represents a field in a datastructure.
+//
+//nolint:govet
 type Field struct {
 	Offset           uint32
 	Length           uint32

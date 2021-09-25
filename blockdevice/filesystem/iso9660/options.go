@@ -5,8 +5,7 @@
 package iso9660
 
 // Options is the functional options struct.
-type Options struct {
-}
+type Options struct{}
 
 // Option is the functional option func.
 type Option func(*Options)

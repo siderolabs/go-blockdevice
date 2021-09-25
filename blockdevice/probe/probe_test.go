@@ -98,9 +98,7 @@ func TestProbe(t *testing.T) {
 		t.Skip("can't run the test as non-root")
 	}
 
-	hostname, _ := os.Hostname() //nolint: errcheck
-
-	if hostname == "buildkitsandbox" {
+	if hostname, _ := os.Hostname(); hostname == "buildkitsandbox" { //nolint: errcheck
 		t.Skip("test not supported under buildkit as partition devices are not propagated from /dev")
 	}
 

@@ -9,9 +9,12 @@ import (
 )
 
 // PartitionOptions represent the options available for partitions.
+//
+//nolint:govet
 type PartitionOptions struct {
 	Type        uuid.UUID
 	Name        string
+	Offset      uint64
 	MaximumSize bool
 	Attibutes   uint64
 }
@@ -23,7 +26,7 @@ type PartitionOption func(*PartitionOptions)
 func WithPartitionType(id string) PartitionOption {
 	return func(args *PartitionOptions) {
 		// TODO: An Option should return an error.
-		// nolint: errcheck
+		//nolint: errcheck
 		guuid, _ := uuid.Parse(id)
 		args.Type = guuid
 	}
@@ -33,6 +36,13 @@ func WithPartitionType(id string) PartitionOption {
 func WithPartitionName(o string) PartitionOption {
 	return func(args *PartitionOptions) {
 		args.Name = o
+	}
+}
+
+// WithOffset sets partition start offset in bytes.
+func WithOffset(o uint64) PartitionOption {
+	return func(args *PartitionOptions) {
+		args.Offset = o
 	}
 }
 
@@ -55,12 +65,13 @@ func WithLegacyBIOSBootableAttribute(o bool) PartitionOption {
 // NewDefaultPartitionOptions initializes a Options struct with default values.
 func NewDefaultPartitionOptions(setters ...PartitionOption) *PartitionOptions {
 	// TODO: An Option should return an error.
-	// nolint: errcheck
+	//nolint: errcheck
 	guuid, _ := uuid.Parse("0FC63DAF-8483-4772-8E79-3D69D8477DE4")
 
 	opts := &PartitionOptions{
-		Type: guuid,
-		Name: "",
+		Type:   guuid,
+		Name:   "",
+		Offset: 0,
 	}
 
 	for _, setter := range setters {

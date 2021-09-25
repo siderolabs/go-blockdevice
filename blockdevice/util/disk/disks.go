@@ -67,6 +67,8 @@ func ParseType(id string) (Type, error) {
 }
 
 // Disk reresents disk information obtained by reading /sys/block.
+//
+//nolint:govet
 type Disk struct {
 	// Size disk size in bytes.
 	Size uint64

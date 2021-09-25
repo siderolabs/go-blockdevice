@@ -230,8 +230,6 @@ func GetDevWithFileSystemLabel(value string) (probe *ProbedBlockDevice, err erro
 
 // GetPartitionWithName probes all known block device's partition
 // table for a parition with the specified name.
-//
-//nolint: gocyclo
 func GetPartitionWithName(name string) (part *gpt.Partition, err error) {
 	device, err := GetDevWithPartitionName(name)
 	if err != nil {

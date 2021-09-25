@@ -181,8 +181,8 @@ func (l *LUKS) Close(devname string) error {
 func (l *LUKS) AddKey(devname string, key, newKey *encryption.Key) error {
 	var buffer bytes.Buffer
 
-	keyfileLen, _ := buffer.Write(key.Value) //nolint:errcheck
-	buffer.Write(newKey.Value)               //nolint:errcheck
+	keyfileLen, _ := buffer.Write(key.Value)
+	buffer.Write(newKey.Value)
 
 	args := []string{
 		"luksAddKey",
@@ -206,8 +206,8 @@ func (l *LUKS) SetKey(devname string, oldKey, newKey *encryption.Key) error {
 
 	var buffer bytes.Buffer
 
-	keyfileLen, _ := buffer.Write(oldKey.Value) //nolint:errcheck
-	buffer.Write(newKey.Value)                  //nolint:errcheck
+	keyfileLen, _ := buffer.Write(oldKey.Value)
+	buffer.Write(newKey.Value)
 
 	args := []string{
 		"luksChangeKey",

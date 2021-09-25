@@ -16,6 +16,8 @@ import (
 //
 // This code is far from being production quality, it might break if filesystem
 // is corrupted or is not actually FAT32.
+//
+//nolint:govet
 type FileSystem struct {
 	sb *SuperBlock
 	f  io.ReaderAt
@@ -293,7 +295,7 @@ func readAtFull(r io.ReaderAt, off int64, buf []byte) error {
 }
 
 func parseLfn(entry []byte) string {
-	raw := append(entry[1:11], append(entry[14:26], entry[28:32]...)...)
+	raw := append([]byte(nil), append(entry[1:11], append(entry[14:26], entry[28:32]...)...)...)
 
 	parsed := []rune{}
 

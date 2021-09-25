@@ -233,9 +233,17 @@ func (g *GPT) InsertAt(idx int, size uint64, setters ...PartitionOption) (*Parti
 
 	minLBA = g.h.FirstUsableLBA
 
+	if opts.Offset != 0 {
+		minLBA = opts.Offset / uint64(g.l.LogicalBlockSize)
+	}
+
 	for i := idx - 1; i >= 0; i-- {
 		if g.e.p[i] != nil {
-			minLBA = g.e.p[i].LastLBA + 1
+			if opts.Offset == 0 {
+				minLBA = g.e.p[i].LastLBA + 1
+			} else if g.e.p[i].LastLBA >= minLBA {
+				return nil, outOfSpaceError{fmt.Errorf("requested partition with offset %d bytes, overlapping partition %d", opts.Offset, i)}
+			}
 
 			break
 		}
@@ -243,6 +251,7 @@ func (g *GPT) InsertAt(idx int, size uint64, setters ...PartitionOption) (*Parti
 
 	maxLBA = g.h.LastUsableLBA
 
+	// Find the maximum LBAs available.
 	for i := idx; i < len(g.e.p); i++ {
 		if g.e.p[i] != nil {
 			maxLBA = g.e.p[i].FirstLBA - 1
@@ -321,22 +330,30 @@ func (g *GPT) Delete(p *Partition) error {
 	return nil
 }
 
-// Resize resizes a partition.
-// TODO(andrewrynhard): Verify that we can indeed grow this partition safely.
+// Resize resizes a partition to next one if exists.
 func (g *GPT) Resize(part *Partition) (bool, error) {
-	// TODO(andrewrynhard): This should be a parameter.
-	if part.LastLBA == g.h.LastUsableLBA {
-		return false, nil
-	}
-
-	part.LastLBA = g.h.LastUsableLBA
-
-	index := part.Number - 1
-	if len(g.e.p) < int(index) {
+	idx := int(part.Number - 1)
+	if len(g.e.p) < idx {
 		return false, fmt.Errorf("unknown partition %d, only %d available", part.Number, len(g.e.p))
 	}
 
-	g.e.p[index] = part
+	maxLBA := g.h.LastUsableLBA
+
+	for i := idx + 1; i < len(g.e.p); i++ {
+		if g.e.p[i] != nil {
+			maxLBA = g.e.p[i].FirstLBA - 1
+
+			break
+		}
+	}
+
+	if part.LastLBA >= maxLBA {
+		return false, nil
+	}
+
+	part.LastLBA = maxLBA
+
+	g.e.p[idx] = part
 
 	return true, nil
 }
