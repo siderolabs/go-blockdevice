@@ -5,7 +5,7 @@
 package blockdevice
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -88,22 +88,16 @@ func Open(devname string, setters ...Option) (bd *BlockDevice, err error) {
 
 		bd.g = g
 	} else {
-		buf := make([]byte, 1)
-		// PMBR protective entry starts at 446. The partition type is at offset
-		// 4 from the start of the PMBR protective entry.
-		_, err = f.ReadAt(buf, 450)
-		if err != nil {
+		var g *gpt.GPT
+		if g, err = gpt.Open(f); err != nil {
+			if errors.Is(err, gpt.ErrPartitionTableDoesNotExist) {
+				return bd, nil
+			}
+
 			return nil, err
 		}
 
-		// For GPT, the partition type should be 0xee (EFI GPT).
-		if bytes.Equal(buf, []byte{0xee}) {
-			var g *gpt.GPT
-			if g, err = gpt.Open(f); err != nil {
-				return nil, err
-			}
-			bd.g = g
-		}
+		bd.g = g
 	}
 
 	return bd, nil

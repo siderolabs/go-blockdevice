@@ -35,7 +35,7 @@ func (suite *GPTSuite) SetupTest() {
 
 func (suite *GPTSuite) TestEmpty() {
 	_, err := gpt.Open(suite.Dev)
-	suite.Require().Error(err)
+	suite.Require().EqualError(err, gpt.ErrPartitionTableDoesNotExist.Error())
 }
 
 func (suite *GPTSuite) TestReset() {

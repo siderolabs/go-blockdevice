@@ -26,11 +26,11 @@ const (
 
 var (
 	// ErrPartitionTableDoesNotExist indicates that the partition table does not exist.
-	ErrPartitionTableDoesNotExist = errors.New("does not exist")
+	ErrPartitionTableDoesNotExist = errors.New("block device partition table does not exist")
 	// ErrHeaderCRCMismatch indicates that the header CRC does not match what is on disk.
-	ErrHeaderCRCMismatch = errors.New("header CRC mismatch")
+	ErrHeaderCRCMismatch = errors.New("block device partition table header CRC mismatch")
 	// ErrEntriesCRCMismatch indicates that the partitions array CRC does not match what is on disk.
-	ErrEntriesCRCMismatch = errors.New("entries CRC mismatch")
+	ErrEntriesCRCMismatch = errors.New("block device partition table entries CRC mismatch")
 )
 
 type outOfSpaceError struct {
@@ -82,6 +82,10 @@ func Open(f *os.File) (g *GPT, err error) {
 			h:               h,
 			e:               &Partitions{h: h, devname: f.Name()},
 			markMBRBootable: buf[0] == 0x80,
+		}
+
+		if err = h.DeserializeSignature(); err != nil {
+			return nil, ErrPartitionTableDoesNotExist
 		}
 
 		return g, nil
