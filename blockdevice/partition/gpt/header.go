@@ -521,12 +521,7 @@ func (h *Header) DeserializeGUUID() (err error) {
 		return fmt.Errorf("guuid read: %w", err)
 	}
 
-	u, err := endianness.FromMiddleEndian(data)
-	if err != nil {
-		return err
-	}
-
-	guid, err := uuid.FromBytes(u)
+	guid, err := uuid.FromBytes(endianness.FromMiddleEndian(data))
 	if err != nil {
 		return fmt.Errorf("invalid GUUID: %w", err)
 	}
@@ -543,12 +538,7 @@ func (h *Header) SerializeGUUID() (err error) {
 		return err
 	}
 
-	data, err := endianness.ToMiddleEndian(b)
-	if err != nil {
-		return err
-	}
-
-	err = h.Write(data, 0x38)
+	err = h.Write(endianness.ToMiddleEndian(b), 0x38)
 	if err != nil {
 		return err
 	}

@@ -23,30 +23,22 @@ func TestToMiddleEndian(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		args    args
-		wantB   []byte
-		wantErr bool
+		name  string
+		args  args
+		wantB []byte
 	}{
 		{
 			name: "valid",
 			args: args{
 				data: uuid,
 			},
-			wantB:   middle,
-			wantErr: false,
+			wantB: middle,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotB, err := endianness.ToMiddleEndian(tt.args.data)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ToMiddleEndian() error = %v, wantErr %v", err, tt.wantErr)
-
-				return
-			}
+			gotB := endianness.ToMiddleEndian(tt.args.data)
 
 			if !reflect.DeepEqual(gotB, tt.wantB) {
 				t.Errorf("ToMiddleEndian() = %v, want %v", gotB, tt.wantB)
@@ -61,30 +53,22 @@ func TestFromMiddleEndian(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		args    args
-		wantB   []byte
-		wantErr bool
+		name  string
+		args  args
+		wantB []byte
 	}{
 		{
 			name: "valid",
 			args: args{
 				data: middle,
 			},
-			wantB:   uuid,
-			wantErr: false,
+			wantB: uuid,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotB, err := endianness.FromMiddleEndian(tt.args.data)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("FromMiddleEndian() error = %v, wantErr %v", err, tt.wantErr)
-
-				return
-			}
+			gotB := endianness.FromMiddleEndian(tt.args.data)
 
 			if !reflect.DeepEqual(gotB, tt.wantB) {
 				t.Errorf("FromMiddleEndian() = %v, want %v", gotB, tt.wantB)

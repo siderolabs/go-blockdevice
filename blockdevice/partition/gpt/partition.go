@@ -176,12 +176,7 @@ func (p *Partition) DeserializeType(buf *lba.Buffer) (err error) {
 		return fmt.Errorf("type read: %w", err)
 	}
 
-	u, err := endianness.FromMiddleEndian(data)
-	if err != nil {
-		return err
-	}
-
-	guid, err := uuid.FromBytes(u)
+	guid, err := uuid.FromBytes(endianness.FromMiddleEndian(data))
 	if err != nil {
 		return fmt.Errorf("invalid GUUID: %w", err)
 	}
@@ -200,12 +195,7 @@ func (p *Partition) SerializeType(buf *lba.Buffer) (err error) {
 		return err
 	}
 
-	data, err := endianness.ToMiddleEndian(b)
-	if err != nil {
-		return err
-	}
-
-	err = buf.Write(data, 0x00)
+	err = buf.Write(endianness.ToMiddleEndian(b), 0x00)
 	if err != nil {
 		return err
 	}
@@ -220,12 +210,7 @@ func (p *Partition) DeserializeID(buf *lba.Buffer) (err error) {
 		return fmt.Errorf("id read: %w", err)
 	}
 
-	u, err := endianness.FromMiddleEndian(data)
-	if err != nil {
-		return err
-	}
-
-	guid, err := uuid.FromBytes(u)
+	guid, err := uuid.FromBytes(endianness.FromMiddleEndian(data))
 	if err != nil {
 		return fmt.Errorf("invalid GUUID: %w", err)
 	}
@@ -242,12 +227,7 @@ func (p *Partition) SerializeID(buf *lba.Buffer) (err error) {
 		return err
 	}
 
-	data, err := endianness.ToMiddleEndian(b)
-	if err != nil {
-		return err
-	}
-
-	err = buf.Write(data, 0x10)
+	err = buf.Write(endianness.ToMiddleEndian(b), 0x10)
 	if err != nil {
 		return err
 	}

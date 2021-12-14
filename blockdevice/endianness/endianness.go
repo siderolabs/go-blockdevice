@@ -5,90 +5,39 @@
 package endianness
 
 import (
-	"bytes"
 	"encoding/binary"
 )
 
 // ToMiddleEndian converts a byte slice representation of a UUID to a
 // middle-endian byte slice representation of a UUID.
-//
-//nolint: dupl
-func ToMiddleEndian(data []byte) (b []byte, err error) {
-	buf := bytes.NewBuffer(make([]byte, 0, 16))
+func ToMiddleEndian(data []byte) []byte {
+	b := make([]byte, 16)
 
-	timeLow := binary.BigEndian.Uint32(data[0:4])
-	if err := binary.Write(buf, binary.LittleEndian, timeLow); err != nil {
-		return nil, err
-	}
+	// timeLow
+	binary.LittleEndian.PutUint32(b, binary.BigEndian.Uint32(data[0:4]))
+	// timeMid
+	binary.LittleEndian.PutUint16(b[4:], binary.BigEndian.Uint16(data[4:6]))
+	// timeHigh
+	binary.LittleEndian.PutUint16(b[6:], binary.BigEndian.Uint16(data[6:8]))
+	// clockSeqHi,clockSeqLo,node
+	copy(b[8:], data[8:16])
 
-	timeMid := binary.BigEndian.Uint16(data[4:6])
-	if err := binary.Write(buf, binary.LittleEndian, timeMid); err != nil {
-		return nil, err
-	}
-
-	timeHigh := binary.BigEndian.Uint16(data[6:8])
-	if err := binary.Write(buf, binary.LittleEndian, timeHigh); err != nil {
-		return nil, err
-	}
-
-	clockSeqHi := data[8:9][0]
-	if err := binary.Write(buf, binary.BigEndian, clockSeqHi); err != nil {
-		return nil, err
-	}
-
-	clockSeqLow := data[9:10][0]
-	if err := binary.Write(buf, binary.BigEndian, clockSeqLow); err != nil {
-		return nil, err
-	}
-
-	node := data[10:16]
-	if err := binary.Write(buf, binary.BigEndian, node); err != nil {
-		return nil, err
-	}
-
-	b = buf.Bytes()
-
-	return b, nil
+	return b
 }
 
 // FromMiddleEndian converts a middle-endian byte slice representation of a
 // UUID to a big-endian byte slice representation of a UUID.
-//
-//nolint: dupl
-func FromMiddleEndian(data []byte) (b []byte, err error) {
-	buf := bytes.NewBuffer(make([]byte, 0, 16))
+func FromMiddleEndian(data []byte) []byte {
+	b := make([]byte, 16)
 
-	timeLow := binary.LittleEndian.Uint32(data[0:4])
-	if err := binary.Write(buf, binary.BigEndian, timeLow); err != nil {
-		return nil, err
-	}
+	// timeLow
+	binary.BigEndian.PutUint32(b, binary.LittleEndian.Uint32(data[0:4]))
+	// timeMid
+	binary.BigEndian.PutUint16(b[4:], binary.LittleEndian.Uint16(data[4:6]))
+	// timeHigh
+	binary.BigEndian.PutUint16(b[6:], binary.LittleEndian.Uint16(data[6:8]))
+	// clockSeqHi,clockSeqLo,node
+	copy(b[8:], data[8:16])
 
-	timeMid := binary.LittleEndian.Uint16(data[4:6])
-	if err := binary.Write(buf, binary.BigEndian, timeMid); err != nil {
-		return nil, err
-	}
-
-	timeHigh := binary.LittleEndian.Uint16(data[6:8])
-	if err := binary.Write(buf, binary.BigEndian, timeHigh); err != nil {
-		return nil, err
-	}
-
-	clockSeqHi := data[8:9][0]
-	if err := binary.Write(buf, binary.BigEndian, clockSeqHi); err != nil {
-		return nil, err
-	}
-
-	clockSeqLow := data[9:10][0]
-	if err := binary.Write(buf, binary.BigEndian, clockSeqLow); err != nil {
-		return nil, err
-	}
-
-	node := data[10:16]
-	if err := binary.Write(buf, binary.BigEndian, node); err != nil {
-		return nil, err
-	}
-
-	b = buf.Bytes()
-
-	return b, nil
+	return b
 }
