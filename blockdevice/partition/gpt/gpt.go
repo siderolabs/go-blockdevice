@@ -72,9 +72,11 @@ func Open(f *os.File) (g *GPT, err error) {
 			return nil, err
 		}
 
-		b := lba.NewBuffer(l, make([]byte, l.LogicalBlockSize))
+		h := &Header{LBA: l}
 
-		h := &Header{Buffer: b, LBA: l}
+		if err = h.verifySignature(); err != nil {
+			return nil, ErrPartitionTableDoesNotExist
+		}
 
 		g = &GPT{
 			f:               f,
@@ -82,10 +84,6 @@ func Open(f *os.File) (g *GPT, err error) {
 			h:               h,
 			e:               &Partitions{h: h, devname: f.Name()},
 			markMBRBootable: buf[0] == 0x80,
-		}
-
-		if err = h.DeserializeSignature(); err != nil {
-			return nil, ErrPartitionTableDoesNotExist
 		}
 
 		return g, nil
@@ -106,9 +104,7 @@ func New(f *os.File, setters ...Option) (g *GPT, err error) {
 		return nil, err
 	}
 
-	b := lba.NewBuffer(l, make([]byte, l.LogicalBlockSize))
-
-	h := &Header{Buffer: b, LBA: l}
+	h := &Header{LBA: l}
 
 	h.Signature = MagicEFIPart
 	h.Revision = binary.LittleEndian.Uint32([]byte{0x00, 0x00, 0x01, 0x00})

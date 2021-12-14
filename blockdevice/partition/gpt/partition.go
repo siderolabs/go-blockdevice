@@ -8,13 +8,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 
 	"github.com/google/uuid"
 	"golang.org/x/text/encoding/unicode"
 
 	"github.com/talos-systems/go-blockdevice/blockdevice/endianness"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem"
-	"github.com/talos-systems/go-blockdevice/blockdevice/lba"
 	"github.com/talos-systems/go-blockdevice/blockdevice/util"
 )
 
@@ -68,6 +68,8 @@ func (p *Partition) Length() uint64 {
 func (p *Partitions) read() (err error) {
 	partitions := make([]*Partition, 0, p.h.NumberOfPartitionEntries)
 
+	checksummer := crc32.NewIEEE()
+
 	for i := uint32(0); i < p.h.NumberOfPartitionEntries; i++ {
 		offset := i * p.h.PartitionEntrySize
 
@@ -76,36 +78,11 @@ func (p *Partitions) read() (err error) {
 			return fmt.Errorf("partition read: %w", err)
 		}
 
-		buf := lba.NewBuffer(p.h.LBA, data)
+		checksummer.Write(data)
 
 		part := &Partition{Number: int32(i + 1), devname: p.devname}
 
-		err = part.DeserializeType(buf)
-		if err != nil {
-			return err
-		}
-
-		err = part.DeserializeID(buf)
-		if err != nil {
-			return err
-		}
-
-		err = part.DeserializeFirstLBA(buf)
-		if err != nil {
-			return err
-		}
-
-		err = part.DeserializeLastLBA(buf)
-		if err != nil {
-			return err
-		}
-
-		err = part.DeserializeAttributes(buf)
-		if err != nil {
-			return err
-		}
-
-		err = part.DeserializeName(buf)
+		err = part.deserialize(data)
 		if err != nil {
 			return err
 		}
@@ -115,6 +92,10 @@ func (p *Partitions) read() (err error) {
 		if part.FirstLBA >= p.h.FirstUsableLBA {
 			partitions = append(partitions, part)
 		}
+	}
+
+	if checksummer.Sum32() != p.h.PartitionEntriesChecksum {
+		return fmt.Errorf("expected partition checksum of %v, got %v", p.h.PartitionEntriesChecksum, checksummer.Sum32())
 	}
 
 	p.p = partitions
@@ -130,199 +111,37 @@ func (p *Partitions) write() (data []byte, err error) {
 			continue
 		}
 
-		b := make([]byte, p.h.PartitionEntrySize)
-		buf := lba.NewBuffer(p.h.LBA, b)
-
-		err = part.SerializeType(buf)
-		if err != nil {
+		if err = part.serialize(data[i*int(p.h.PartitionEntrySize):]); err != nil {
 			return nil, err
 		}
-
-		err = part.SerializeID(buf)
-		if err != nil {
-			return nil, err
-		}
-
-		err = part.SerializeFirstLBA(buf)
-		if err != nil {
-			return nil, err
-		}
-
-		err = part.SerializeLastLBA(buf)
-		if err != nil {
-			return nil, err
-		}
-
-		err = part.SerializeAttributes(buf)
-		if err != nil {
-			return nil, err
-		}
-
-		err = part.SerializeName(buf)
-		if err != nil {
-			return nil, err
-		}
-
-		copy(data[i*int(p.h.PartitionEntrySize):], b)
 	}
+
+	p.h.PartitionEntriesChecksum = crc32.ChecksumIEEE(data)
 
 	return data, nil
 }
 
-// DeserializeType deserializes the partition type GUID (mixed endian).
-func (p *Partition) DeserializeType(buf *lba.Buffer) (err error) {
-	data, err := buf.Read(0x00, 16)
-	if err != nil {
-		return fmt.Errorf("type read: %w", err)
-	}
+var utf16 = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
 
-	guid, err := uuid.FromBytes(endianness.FromMiddleEndian(data))
+func (p *Partition) deserialize(b []byte) (err error) {
+	p.Type, err = uuid.FromBytes(endianness.FromMiddleEndian(b[:16]))
 	if err != nil {
 		return fmt.Errorf("invalid GUUID: %w", err)
 	}
 
 	// TODO: Provide a method for getting the human readable name of the type.
 	// See https://en.wikipedia.org/wiki/GUID_Partition_Table.
-	p.Type = guid
 
-	return nil
-}
-
-// SerializeType serializes the partition type GUID (mixed endian).
-func (p *Partition) SerializeType(buf *lba.Buffer) (err error) {
-	b, err := p.Type.MarshalBinary()
-	if err != nil {
-		return err
-	}
-
-	err = buf.Write(endianness.ToMiddleEndian(b), 0x00)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// DeserializeID deserializes the unique partition GUID (mixed endian).
-func (p *Partition) DeserializeID(buf *lba.Buffer) (err error) {
-	data, err := buf.Read(0x10, 16)
-	if err != nil {
-		return fmt.Errorf("id read: %w", err)
-	}
-
-	guid, err := uuid.FromBytes(endianness.FromMiddleEndian(data))
+	p.ID, err = uuid.FromBytes(endianness.FromMiddleEndian(b[16:32]))
 	if err != nil {
 		return fmt.Errorf("invalid GUUID: %w", err)
 	}
 
-	p.ID = guid
+	p.FirstLBA = binary.LittleEndian.Uint64(b[32:40])
+	p.LastLBA = binary.LittleEndian.Uint64(b[40:48])
+	p.Attributes = binary.LittleEndian.Uint64(b[48:56])
 
-	return nil
-}
-
-// SerializeID serializes the unique partition GUID (mixed endian).
-func (p *Partition) SerializeID(buf *lba.Buffer) (err error) {
-	b, err := p.ID.MarshalBinary()
-	if err != nil {
-		return err
-	}
-
-	err = buf.Write(endianness.ToMiddleEndian(b), 0x10)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// DeserializeFirstLBA deserializes the first LBA (little endian).
-func (p *Partition) DeserializeFirstLBA(buf *lba.Buffer) (err error) {
-	data, err := buf.Read(0x20, 8)
-	if err != nil {
-		return fmt.Errorf("first LBA read: %w", err)
-	}
-
-	p.FirstLBA = binary.LittleEndian.Uint64(data)
-
-	return nil
-}
-
-// SerializeFirstLBA serializes the first LBA (little endian).
-func (p *Partition) SerializeFirstLBA(buf *lba.Buffer) (err error) {
-	data := make([]byte, 8)
-
-	binary.LittleEndian.PutUint64(data, p.FirstLBA)
-
-	err = buf.Write(data, 0x20)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// DeserializeLastLBA deserializes the last LBA (inclusive, usually odd).
-func (p *Partition) DeserializeLastLBA(buf *lba.Buffer) (err error) {
-	data, err := buf.Read(0x28, 8)
-	if err != nil {
-		return fmt.Errorf("last LBA read: %w", err)
-	}
-
-	p.LastLBA = binary.LittleEndian.Uint64(data)
-
-	return nil
-}
-
-// SerializeLastLBA serializes the last LBA (inclusive, usually odd).
-func (p *Partition) SerializeLastLBA(buf *lba.Buffer) (err error) {
-	data := make([]byte, 8)
-
-	binary.LittleEndian.PutUint64(data, p.LastLBA)
-
-	err = buf.Write(data, 0x28)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// DeserializeAttributes deserializes the attribute flags (e.g. bit 60 denotes read-only).
-func (p *Partition) DeserializeAttributes(buf *lba.Buffer) (err error) {
-	data, err := buf.Read(0x30, 8)
-	if err != nil {
-		return fmt.Errorf("attributes read: %w", err)
-	}
-
-	p.Attributes = binary.LittleEndian.Uint64(data)
-
-	return nil
-}
-
-// SerializeAttributes serializes the attribute flags (e.g. bit 60 denotes read-only).
-func (p *Partition) SerializeAttributes(buf *lba.Buffer) (err error) {
-	data := make([]byte, 8)
-
-	binary.LittleEndian.PutUint64(data, p.Attributes)
-
-	err = buf.Write(data, 0x30)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// DeserializeName deserializes partition name (36 UTF-16LE code units).
-func (p *Partition) DeserializeName(buf *lba.Buffer) (err error) {
-	data, err := buf.Read(0x38, 72)
-	if err != nil {
-		return fmt.Errorf("name read: %w", err)
-	}
-
-	utf16 := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
-
-	decoded, err := utf16.NewDecoder().Bytes(data)
+	decoded, err := utf16.NewDecoder().Bytes(b[56:128])
 	if err != nil {
 		return err
 	}
@@ -332,23 +151,35 @@ func (p *Partition) DeserializeName(buf *lba.Buffer) (err error) {
 	return nil
 }
 
-// SerializeName serializes the partition name (36 UTF-16LE code units).
-func (p *Partition) SerializeName(buf *lba.Buffer) (err error) {
-	utf16 := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
+func (p *Partition) serialize(b []byte) error {
+	uuid, err := p.Type.MarshalBinary()
+	if err != nil {
+		return err
+	}
+
+	copy(b[:16], endianness.ToMiddleEndian(uuid))
+
+	uuid, err = p.ID.MarshalBinary()
+	if err != nil {
+		return err
+	}
+
+	copy(b[16:32], endianness.ToMiddleEndian(uuid))
+
+	binary.LittleEndian.PutUint64(b[32:40], p.FirstLBA)
+	binary.LittleEndian.PutUint64(b[40:48], p.LastLBA)
+	binary.LittleEndian.PutUint64(b[48:56], p.Attributes)
 
 	name, err := utf16.NewEncoder().Bytes([]byte(p.Name))
 	if err != nil {
 		return err
 	}
 
-	// TODO: Should we error if the name exceeds 72 bytes?
-	data := make([]byte, 72)
-	copy(data, name)
-
-	err = buf.Write(data, 0x38)
-	if err != nil {
-		return err
+	if len(name) > 72 {
+		return fmt.Errorf("partition name is too long: %q", p.Name)
 	}
+
+	copy(b[56:128], name)
 
 	return nil
 }

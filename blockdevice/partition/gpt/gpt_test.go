@@ -7,6 +7,7 @@ package gpt_test
 import (
 	"encoding/binary"
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -73,6 +74,8 @@ func (suite *GPTSuite) TestReset() {
 	suite.Require().NoError(g.Read())
 
 	suite.Assert().Empty(g.Partitions().Items())
+
+	suite.validatePartitions()
 }
 
 func (suite *GPTSuite) TestPartitionAdd() {
@@ -129,6 +132,8 @@ func (suite *GPTSuite) TestPartitionAdd() {
 	suite.Require().NoError(g.Read())
 
 	assertPartitions(g.Partitions())
+
+	suite.validatePartitions()
 }
 
 func (suite *GPTSuite) TestRepairResize() {
@@ -223,6 +228,8 @@ func (suite *GPTSuite) TestRepairResize() {
 	suite.Require().NoError(g.Read())
 
 	assertPartitions(g.Partitions())
+
+	suite.validatePartitions()
 }
 
 func (suite *GPTSuite) TestPartitionAddOutOfSpace() {
@@ -319,6 +326,8 @@ func (suite *GPTSuite) TestPartitionDelete() {
 	partSystem := partitions[2]
 	suite.Assert().EqualValues(3, partSystem.Number)
 	suite.Assert().EqualValues((size-bootSize-efiSize-grubSize-configSize)/blockSize-headReserved-tailReserved, partSystem.Length())
+
+	suite.validatePartitions()
 }
 
 func (suite *GPTSuite) TestPartitionInsertAt() {
@@ -409,6 +418,8 @@ func (suite *GPTSuite) TestPartitionInsertAt() {
 	suite.Assert().EqualValues(headReserved+(oldBootSize+configSize+efiSize)/blockSize, partSystem.FirstLBA)
 
 	suite.Require().NoError(g.Write())
+
+	suite.validatePartitions()
 }
 
 func (suite *GPTSuite) TestPartitionInsertOffsetAndResize() {
@@ -481,6 +492,8 @@ func (suite *GPTSuite) TestPartitionInsertOffsetAndResize() {
 	suite.Assert().EqualValues(configStart/blockSize, int(partConfig.FirstLBA))
 
 	suite.Require().NoError(g.Write())
+
+	suite.validatePartitions()
 }
 
 func (suite *GPTSuite) TestPartitionGUUID() {
@@ -523,6 +536,8 @@ func (suite *GPTSuite) TestMarkPMBRBootable() {
 	suite.Require().NoError(g.Write())
 
 	suite.validatePMBR(0x80)
+
+	suite.validatePartitions()
 }
 
 func (suite *GPTSuite) validatePMBR(flag byte) {
@@ -542,6 +557,20 @@ func (suite *GPTSuite) validatePMBR(flag byte) {
 	suite.Assert().Equal(uint32(size/blockSize-1), binary.LittleEndian.Uint32(partition[12:16])) // length in sectors
 
 	suite.Assert().Equal([]byte{0x55, 0xaa}, buf[510:512]) // boot signature
+}
+
+func (suite *GPTSuite) validatePartitions() {
+	for _, tool := range []string{"fdisk", "gdisk"} {
+		if toolPath, _ := exec.LookPath(tool); toolPath != "" { //nolint:errcheck
+			cmd := exec.Command(toolPath, "-l", suite.Dev.Name())
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+
+			suite.Assert().NoError(cmd.Run())
+		} else {
+			suite.T().Logf("%s is not available", tool)
+		}
+	}
 }
 
 func TestGPTSuite(t *testing.T) {
