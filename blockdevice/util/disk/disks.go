@@ -88,6 +88,8 @@ type Disk struct {
 	UUID string
 	// Type is the disk type: HDD, SSD, SD card, NVMe drive.
 	Type Type
+	// BusPath PCI bus path.
+	BusPath string
 }
 
 // List returns list of disks by reading /sys/block.
@@ -133,6 +135,11 @@ func Get(dev string) *Disk {
 	sysblock := "/sys/block"
 
 	dev = filepath.Base(dev)
+
+	fullPath, _ := os.Readlink(filepath.Join(sysblock, dev)) //nolint:errcheck
+
+	busPath := strings.TrimPrefix(fullPath, "../devices")
+	busPath = strings.TrimSuffix(busPath, filepath.Join("block", dev))
 
 	readFile := func(parts ...string) string {
 		path := filepath.Join(parts...)
@@ -212,6 +219,7 @@ func Get(dev string) *Disk {
 		WWID:       wwid,
 		UUID:       uuid,
 		Type:       diskType,
+		BusPath:    busPath,
 	}
 }
 
@@ -281,6 +289,13 @@ func WithWWID(wwid string) Matcher {
 func WithUUID(uuid string) Matcher {
 	return func(d *Disk) bool {
 		return glob.Glob(uuid, d.UUID)
+	}
+}
+
+// WithBusPath select disk by it's full path.
+func WithBusPath(path string) Matcher {
+	return func(d *Disk) bool {
+		return glob.Glob(path, d.BusPath)
 	}
 }
 

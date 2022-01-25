@@ -51,15 +51,17 @@ func (suite *DisksSuite) TestDisk() {
 
 		suite.Require().NoError(err)
 		suite.Require().NotNil(d)
+		suite.Require().NotEmpty(d.BusPath)
 	}
 }
 
 func (suite *DisksSuite) TestDiskMatcher() {
 	hdd := &disk.Disk{
-		Model: "WDC  WDS100T2B0B",
-		Size:  1e+9,
-		WWID:  "naa.5044cca67bddsd",
-		UUID:  "fake-uuid-string-whatever",
+		Model:   "WDC  WDS100T2B0B",
+		Size:    1e+9,
+		WWID:    "naa.5044cca67bddsd",
+		UUID:    "fake-uuid-string-whatever",
+		BusPath: "/pci0000:00/0000:00:17.0/ata1/host0/target0:0:0/0:0:0:0",
 	}
 
 	sdCard := &disk.Disk{
@@ -81,6 +83,13 @@ func (suite *DisksSuite) TestDiskMatcher() {
 			disk: hdd,
 			matchers: []disk.Matcher{
 				disk.WithWWID(hdd.WWID),
+			},
+			match: true,
+		},
+		{
+			disk: hdd,
+			matchers: []disk.Matcher{
+				disk.WithBusPath("/pci0000:00/*"),
 			},
 			match: true,
 		},
