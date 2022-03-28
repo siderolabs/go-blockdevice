@@ -43,11 +43,10 @@ func WithPartitionLabel(label string) SelectOption {
 	}
 }
 
-// WithFileSystemLabel search for a block device which has filesystem on root level
-// and that filesystem is labeled as provided label.
+// WithFileSystemLabel searches for a block device which has filesystem labeled with the provided label.
 func WithFileSystemLabel(label string) SelectOption {
 	return func(device *ProbedBlockDevice) (bool, error) {
-		superblock, err := filesystem.Probe(device.Device().Name())
+		superblock, err := filesystem.Probe(device.Path)
 		if err != nil {
 			return false, err
 		}

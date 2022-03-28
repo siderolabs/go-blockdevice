@@ -5,13 +5,13 @@
 package probe_test
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice"
 	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
 	"github.com/talos-systems/go-blockdevice/blockdevice/probe"
 	"github.com/talos-systems/go-blockdevice/blockdevice/test"
@@ -26,16 +26,24 @@ func (suite *ProbeSuite) SetupTest() {
 }
 
 func (suite *ProbeSuite) addPartition(name string, size uint64) *gpt.Partition {
-	g, err := gpt.New(suite.Dev)
+	var (
+		g   *gpt.GPT
+		err error
+	)
+
+	g, err = gpt.Open(suite.Dev)
+	if errors.Is(err, gpt.ErrPartitionTableDoesNotExist) {
+		g, err = gpt.New(suite.Dev)
+	} else if err == nil {
+		err = g.Read()
+	}
+
 	suite.Require().NoError(err)
 
 	partition, err := g.Add(size, gpt.WithPartitionName(name))
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(g.Write())
-
-	_, err = blockdevice.Open(suite.LoopbackDevice.Name())
-	suite.Require().NoError(err)
 
 	partPath, err := partition.Path()
 	suite.Require().NoError(err)
@@ -84,13 +92,37 @@ func (suite *ProbeSuite) TestGetDevWithFileSystemLabel() {
 func (suite *ProbeSuite) TestProbeByPartitionLabel() {
 	size := uint64(1024 * 1024 * 256)
 	suite.addPartition("test", size)
-	suite.addPartition("test", size)
+	suite.addPartition("test2", size)
 
 	probed, err := probe.All(probe.WithPartitionLabel("test"))
 	suite.Require().NoError(err)
 	suite.Require().Equal(1, len(probed))
 
 	suite.Require().Equal(suite.LoopbackDevice.Name(), probed[0].Device().Name())
+}
+
+func (suite *ProbeSuite) TestProbeByFilesystemLabelBlockdevice() {
+	suite.setSystemLabel("FSLBABELBD")
+
+	probed, err := probe.All(probe.WithFileSystemLabel("FSLBABELBD"))
+	suite.Require().NoError(err)
+	suite.Require().Equal(1, len(probed))
+
+	suite.Require().Equal(suite.LoopbackDevice.Name(), probed[0].Device().Name())
+	suite.Require().Equal(suite.LoopbackDevice.Name(), probed[0].Path)
+}
+
+func (suite *ProbeSuite) TestProbeByFilesystemLabelPartition() {
+	size := uint64(1024 * 1024 * 256)
+	suite.addPartition("FOO", size)
+	suite.addPartition("FSLABELPART", size)
+
+	probed, err := probe.All(probe.WithFileSystemLabel("FSLABELPART"))
+	suite.Require().NoError(err)
+	suite.Require().Equal(1, len(probed))
+
+	suite.Require().Equal(suite.LoopbackDevice.Name(), probed[0].Device().Name())
+	suite.Require().Equal(suite.LoopbackDevice.Name()+"p2", probed[0].Path)
 }
 
 func TestProbe(t *testing.T) {
