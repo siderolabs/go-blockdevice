@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/talos-systems/go-blockdevice/blockdevice"
+	"github.com/talos-systems/go-blockdevice/blockdevice/lba"
 	"github.com/talos-systems/go-blockdevice/blockdevice/loopback"
 	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
 	"github.com/talos-systems/go-blockdevice/blockdevice/test"
@@ -21,9 +22,10 @@ import (
 const (
 	size      = 1024 * 1024 * 1024 * 1024
 	blockSize = 512
+	alignment = lba.RecommendedAlignment / blockSize
 
-	headReserved = 34
-	tailReserved = 33
+	headReserved = (34 + alignment - 1) / alignment * alignment
+	tailReserved = (33 + alignment - 1) / alignment * alignment
 )
 
 type GPTSuite struct {
@@ -238,7 +240,7 @@ func (suite *GPTSuite) TestPartitionAddOutOfSpace() {
 
 	_, err = g.Add(size, gpt.WithPartitionName("boot"))
 	suite.Require().Error(err)
-	suite.Assert().EqualError(err, `requested partition size 1099511627776, available is 1099511592960 (34816 too many bytes)`)
+	suite.Assert().EqualError(err, `requested partition size 1099511627776, available is 1099510561792 (1065984 too many bytes)`)
 	suite.Assert().True(blockdevice.IsOutOfSpaceError(err))
 
 	_, err = g.Add(size/2, gpt.WithPartitionName("boot"))
@@ -246,7 +248,7 @@ func (suite *GPTSuite) TestPartitionAddOutOfSpace() {
 
 	_, err = g.Add(size/2, gpt.WithPartitionName("boot2"))
 	suite.Require().Error(err)
-	suite.Assert().EqualError(err, `requested partition size 549755813888, available is 549755779072 (34816 too many bytes)`)
+	suite.Assert().EqualError(err, `requested partition size 549755813888, available is 549754747904 (1065984 too many bytes)`)
 	suite.Assert().True(blockdevice.IsOutOfSpaceError(err))
 
 	_, err = g.Add(size/2-(headReserved+tailReserved)*blockSize, gpt.WithPartitionName("boot2"))
@@ -266,7 +268,7 @@ func (suite *GPTSuite) TestPartitionDelete() {
 		bootSize   = 1048576
 		grubSize   = 2 * bootSize
 		efiSize    = 512 * 1048576
-		configSize = blockSize
+		configSize = 1048576
 	)
 
 	_, err = g.Add(bootSize, gpt.WithPartitionName("boot"))
@@ -335,10 +337,10 @@ func (suite *GPTSuite) TestPartitionInsertAt() {
 	suite.Require().NoError(err)
 
 	const (
-		oldBootSize = 1048576
+		oldBootSize = 4 * 1048576
 		newBootSize = oldBootSize / 2
 		grubSize    = newBootSize / 2
-		configSize  = blockSize
+		configSize  = 1048576
 		efiSize     = 512 * 1048576
 	)
 

@@ -94,7 +94,7 @@ func (suite *ProbeSuite) TestProbeByPartitionLabel() {
 	suite.addPartition("test", size)
 	suite.addPartition("test2", size)
 
-	probed, err := probe.All(probe.WithPartitionLabel("test"))
+	probed, err := probe.All(probe.WithPartitionLabel("test"), probe.WithSingleResult())
 	suite.Require().NoError(err)
 	suite.Require().Equal(1, len(probed))
 

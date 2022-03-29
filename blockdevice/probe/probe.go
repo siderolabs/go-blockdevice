@@ -84,6 +84,8 @@ func WithSingleResult() SelectOption {
 			return false, fmt.Errorf("got more than one blockdevice with provided criteria")
 		}
 
+		count++
+
 		return true, nil
 	}
 }

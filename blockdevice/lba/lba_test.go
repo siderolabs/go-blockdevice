@@ -12,34 +12,52 @@ import (
 	"github.com/talos-systems/go-blockdevice/blockdevice/lba"
 )
 
-func TestAlignToPhysicalBlockSize(t *testing.T) {
+func TestAlignToRecommended(t *testing.T) {
 	l := lba.LBA{ //nolint: exhaustivestruct
-		PhysicalBlockSize: 4096,
-		LogicalBlockSize:  512,
-	}
-
-	assert.EqualValues(t, 0, l.AlignToPhysicalBlockSize(0))
-	assert.EqualValues(t, 8, l.AlignToPhysicalBlockSize(1))
-	assert.EqualValues(t, 8, l.AlignToPhysicalBlockSize(2))
-	assert.EqualValues(t, 8, l.AlignToPhysicalBlockSize(3))
-	assert.EqualValues(t, 8, l.AlignToPhysicalBlockSize(4))
-	assert.EqualValues(t, 8, l.AlignToPhysicalBlockSize(8))
-	assert.EqualValues(t, 16, l.AlignToPhysicalBlockSize(9))
-}
-
-func TestAlignToMinIOkSize(t *testing.T) {
-	l := lba.LBA{ //nolint: exhaustivestruct
-		MinimalIOSize:     262144,
 		PhysicalBlockSize: 512,
 		LogicalBlockSize:  512,
 	}
 
-	assert.EqualValues(t, 0, l.AlignToPhysicalBlockSize(0))
-	assert.EqualValues(t, 512, l.AlignToPhysicalBlockSize(1))
-	assert.EqualValues(t, 512, l.AlignToPhysicalBlockSize(2))
-	assert.EqualValues(t, 512, l.AlignToPhysicalBlockSize(3))
-	assert.EqualValues(t, 512, l.AlignToPhysicalBlockSize(4))
-	assert.EqualValues(t, 512, l.AlignToPhysicalBlockSize(8))
-	assert.EqualValues(t, 512, l.AlignToPhysicalBlockSize(512))
-	assert.EqualValues(t, 1024, l.AlignToPhysicalBlockSize(513))
+	assert.EqualValues(t, 0, l.AlignToPhysicalBlockSize(0, true))
+	assert.EqualValues(t, 2048, l.AlignToPhysicalBlockSize(1, true))
+	assert.EqualValues(t, 2048, l.AlignToPhysicalBlockSize(2, true))
+	assert.EqualValues(t, 2048, l.AlignToPhysicalBlockSize(3, true))
+	assert.EqualValues(t, 2048, l.AlignToPhysicalBlockSize(4, true))
+	assert.EqualValues(t, 2048, l.AlignToPhysicalBlockSize(2048, true))
+	assert.EqualValues(t, 4096, l.AlignToPhysicalBlockSize(2049, true))
+	assert.EqualValues(t, 2048, l.AlignToPhysicalBlockSize(2049, false))
+}
+
+func TestAlignToPhysicalBlockSize(t *testing.T) {
+	l := lba.LBA{ //nolint: exhaustivestruct
+		PhysicalBlockSize: 2 * 1048576,
+		LogicalBlockSize:  512,
+	}
+
+	assert.EqualValues(t, 0, l.AlignToPhysicalBlockSize(0, true))
+	assert.EqualValues(t, 4096, l.AlignToPhysicalBlockSize(1, true))
+	assert.EqualValues(t, 4096, l.AlignToPhysicalBlockSize(2, true))
+	assert.EqualValues(t, 4096, l.AlignToPhysicalBlockSize(3, true))
+	assert.EqualValues(t, 4096, l.AlignToPhysicalBlockSize(4, true))
+	assert.EqualValues(t, 4096, l.AlignToPhysicalBlockSize(4096, true))
+	assert.EqualValues(t, 8192, l.AlignToPhysicalBlockSize(4097, true))
+	assert.EqualValues(t, 4096, l.AlignToPhysicalBlockSize(4097, false))
+}
+
+func TestAlignToMinIOkSize(t *testing.T) {
+	l := lba.LBA{ //nolint: exhaustivestruct
+		MinimalIOSize:     4 * 1048576,
+		PhysicalBlockSize: 512,
+		LogicalBlockSize:  512,
+	}
+
+	assert.EqualValues(t, 0, l.AlignToPhysicalBlockSize(0, true))
+	assert.EqualValues(t, 8192, l.AlignToPhysicalBlockSize(1, true))
+	assert.EqualValues(t, 8192, l.AlignToPhysicalBlockSize(2, true))
+	assert.EqualValues(t, 8192, l.AlignToPhysicalBlockSize(3, true))
+	assert.EqualValues(t, 8192, l.AlignToPhysicalBlockSize(4, true))
+	assert.EqualValues(t, 8192, l.AlignToPhysicalBlockSize(8, true))
+	assert.EqualValues(t, 8192, l.AlignToPhysicalBlockSize(8192, true))
+	assert.EqualValues(t, 16384, l.AlignToPhysicalBlockSize(8193, true))
+	assert.EqualValues(t, 8192, l.AlignToPhysicalBlockSize(8193, false))
 }

@@ -263,10 +263,10 @@ func (g *GPT) InsertAt(idx int, size uint64, setters ...PartitionOption) (*Parti
 	// Find partition boundaries.
 	var start, end uint64
 
-	start = g.l.AlignToPhysicalBlockSize(minLBA)
+	start = g.l.AlignToPhysicalBlockSize(minLBA, true)
 
 	if opts.MaximumSize {
-		end = maxLBA
+		end = g.l.AlignToPhysicalBlockSize(maxLBA+1, false) - 1
 
 		if end < start {
 			return nil, outOfSpaceError{fmt.Errorf("requested partition with maximum size, but no space available")}
@@ -338,6 +338,7 @@ func (g *GPT) Resize(part *Partition) (bool, error) {
 	}
 
 	maxLBA := g.h.LastUsableLBA
+	maxLBA = g.l.AlignToPhysicalBlockSize(maxLBA+1, false) - 1
 
 	for i := idx + 1; i < len(g.e.p); i++ {
 		if g.e.p[i] != nil {
