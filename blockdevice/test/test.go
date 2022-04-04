@@ -56,6 +56,8 @@ func (suite *BlockDeviceSuite) TearDownTest() {
 		suite.T().Logf("Freeing %s", suite.LoopbackDevice.Name())
 
 		suite.Assert().NoError(loopback.Unloop(suite.LoopbackDevice))
+		suite.Assert().NoError(suite.LoopbackDevice.Close())
+
 		suite.LoopbackDevice = nil
 	}
 

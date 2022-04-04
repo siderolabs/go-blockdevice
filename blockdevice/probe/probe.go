@@ -14,6 +14,7 @@ import (
 	"github.com/talos-systems/go-blockdevice/blockdevice"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/iso9660"
+	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/msdos"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/vfat"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/xfs"
 	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
@@ -59,6 +60,11 @@ func WithFileSystemLabel(label string) SelectOption {
 					return true, nil
 				}
 			case *vfat.SuperBlock:
+				trimmed := bytes.Trim(sb.Label[:], " \x00")
+				if bytes.Equal(trimmed, []byte(label)) {
+					return true, nil
+				}
+			case *msdos.SuperBlock:
 				trimmed := bytes.Trim(sb.Label[:], " \x00")
 				if bytes.Equal(trimmed, []byte(label)) {
 					return true, nil

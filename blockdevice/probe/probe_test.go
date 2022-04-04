@@ -6,8 +6,10 @@ package probe_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -25,7 +27,7 @@ func (suite *ProbeSuite) SetupTest() {
 	suite.CreateBlockDevice(1024 * 1024 * 1024)
 }
 
-func (suite *ProbeSuite) addPartition(name string, size uint64) *gpt.Partition {
+func (suite *ProbeSuite) addPartition(name string, size uint64, fatBits int) *gpt.Partition {
 	var (
 		g   *gpt.GPT
 		err error
@@ -48,31 +50,48 @@ func (suite *ProbeSuite) addPartition(name string, size uint64) *gpt.Partition {
 	partPath, err := partition.Path()
 	suite.Require().NoError(err)
 
-	cmd := exec.Command("mkfs.vfat", "-F", "32", "-n", name, partPath)
+	cmd := exec.Command("mkfs.vfat", "-F", strconv.Itoa(fatBits), "-n", name, partPath)
 	suite.Require().NoError(cmd.Run())
 
 	return partition
 }
 
-func (suite *ProbeSuite) setSystemLabel(name string) {
-	cmd := exec.Command("mkfs.vfat", "-F", "32", "-n", name, suite.LoopbackDevice.Name())
+func (suite *ProbeSuite) setSystemLabel(name string, fatBits int) {
+	cmd := exec.Command("mkfs.vfat", "-F", strconv.Itoa(fatBits), "-n", name, suite.LoopbackDevice.Name())
 	suite.Require().NoError(cmd.Run())
 }
 
 func (suite *ProbeSuite) TestDevForPartitionLabel() {
-	size := uint64(1024 * 1024 * 256)
-	part := suite.addPartition("devpart1", size)
+	part12 := suite.addPartition("devpart12", 1024*1024, 12)
+	part32 := suite.addPartition("devpart32", 1024*1024*256, 32)
 
-	dev, err := probe.DevForPartitionLabel(suite.LoopbackDevice.Name(), "devpart1")
-	suite.Require().NoError(err)
-	path, err := part.Path()
-	suite.Require().NoError(err)
-	suite.Require().Equal(path, dev.Device().Name())
+	for _, tc := range []struct {
+		part  *gpt.Partition
+		label string
+	}{
+		{
+			label: "devpart12",
+			part:  part12,
+		},
+		{
+			label: "devpart32",
+			part:  part32,
+		},
+	} {
+		suite.T().Run(tc.label, func(t *testing.T) {
+			dev, err := probe.DevForPartitionLabel(suite.LoopbackDevice.Name(), tc.label)
+			suite.Require().NoError(err)
+
+			path, err := tc.part.Path()
+			suite.Require().NoError(err)
+			suite.Require().Equal(path, dev.Device().Name())
+		})
+	}
 }
 
 func (suite *ProbeSuite) TestGetDevWithPartitionName() {
 	size := uint64(1024 * 1024 * 512)
-	part := suite.addPartition("devlabel", size)
+	part := suite.addPartition("devlabel", size, 32)
 
 	dev, err := probe.GetDevWithPartitionName("devlabel")
 	suite.Require().NoError(err)
@@ -81,18 +100,27 @@ func (suite *ProbeSuite) TestGetDevWithPartitionName() {
 	suite.Require().Equal(devpath, dev.Path)
 }
 
-func (suite *ProbeSuite) TestGetDevWithFileSystemLabel() {
-	suite.setSystemLabel("GETLABELSYS")
+func (suite *ProbeSuite) testGetDevWithFileSystemLabel(fatBits int) {
+	label := fmt.Sprintf("LABELSYS%d", fatBits)
 
-	dev, err := probe.GetDevWithFileSystemLabel("GETLABELSYS")
+	suite.setSystemLabel(label, fatBits)
+
+	dev, err := probe.GetDevWithFileSystemLabel(label)
 	suite.Require().NoError(err)
 	suite.Require().Equal(suite.LoopbackDevice.Name(), dev.Path)
 }
 
+func (suite *ProbeSuite) TestGetDevWithFileSystemLabel16() {
+	suite.testGetDevWithFileSystemLabel(16)
+}
+
+func (suite *ProbeSuite) TestGetDevWithFileSystemLabel32() {
+	suite.testGetDevWithFileSystemLabel(32)
+}
+
 func (suite *ProbeSuite) TestProbeByPartitionLabel() {
-	size := uint64(1024 * 1024 * 256)
-	suite.addPartition("test", size)
-	suite.addPartition("test2", size)
+	suite.addPartition("test", 1024*1024, 12)
+	suite.addPartition("test2", 1024*1024*256, 32)
 
 	probed, err := probe.All(probe.WithPartitionLabel("test"), probe.WithSingleResult())
 	suite.Require().NoError(err)
@@ -102,7 +130,7 @@ func (suite *ProbeSuite) TestProbeByPartitionLabel() {
 }
 
 func (suite *ProbeSuite) TestProbeByFilesystemLabelBlockdevice() {
-	suite.setSystemLabel("FSLBABELBD")
+	suite.setSystemLabel("FSLBABELBD", 32)
 
 	probed, err := probe.All(probe.WithFileSystemLabel("FSLBABELBD"))
 	suite.Require().NoError(err)
@@ -113,9 +141,8 @@ func (suite *ProbeSuite) TestProbeByFilesystemLabelBlockdevice() {
 }
 
 func (suite *ProbeSuite) TestProbeByFilesystemLabelPartition() {
-	size := uint64(1024 * 1024 * 256)
-	suite.addPartition("FOO", size)
-	suite.addPartition("FSLABELPART", size)
+	suite.addPartition("FOO", 1024*1024*256, 16)
+	suite.addPartition("FSLABELPART", 1024*1024*2, 12)
 
 	probed, err := probe.All(probe.WithFileSystemLabel("FSLABELPART"))
 	suite.Require().NoError(err)

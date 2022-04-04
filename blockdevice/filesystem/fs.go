@@ -15,6 +15,7 @@ import (
 
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/iso9660"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/luks"
+	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/msdos"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/vfat"
 	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/xfs"
 )
@@ -59,6 +60,7 @@ func Probe(path string) (sb SuperBlocker, err error) {
 	superblocks := []SuperBlocker{
 		&iso9660.SuperBlock{},
 		&vfat.SuperBlock{},
+		&msdos.SuperBlock{},
 		&xfs.SuperBlock{},
 		&luks.SuperBlock{},
 	}
