@@ -12,7 +12,7 @@ import (
 )
 
 // PartNo returns the partition number.
-func PartNo(partname string) (partno string, err error) {
+func PartNo(partname string) (string, error) {
 	partname = strings.TrimPrefix(partname, "/dev/")
 
 	switch p := partname; {
@@ -38,10 +38,13 @@ func PartNo(partname string) (partno string, err error) {
 }
 
 // DevnameFromPartname returns the device name from a partition name.
-func DevnameFromPartname(partname string) (devname string, err error) {
+func DevnameFromPartname(partname string) (string, error) {
 	partname = strings.TrimPrefix(partname, "/dev/")
 
-	var partno string
+	var (
+		partno string
+		err    error
+	)
 
 	if partno, err = PartNo(partname); err != nil {
 		return "", err

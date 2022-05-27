@@ -1,7 +1,7 @@
 ---
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2021-11-15T13:28:14Z by kres c4d092b.
+# Generated on 2022-05-27T15:56:20Z by kres 65530e7.
 
 kind: pipeline
 type: kubernetes
@@ -19,7 +19,7 @@ steps:
   - sleep 5
   - git fetch --tags
   - install-ci-key
-  - docker buildx create --driver docker-container --platform linux/amd64 --name local-insecure-v2 --buildkitd-flags '--allow-insecure-entitlement security.insecure' --driver-opt image=ghcr.io/smira/buildkit:cap-fix --use unix:///var/outer-run/docker.sock
+  - docker buildx create --driver docker-container --platform linux/amd64 --name local-insecure --buildkitd-flags '--allow-insecure-entitlement security.insecure' --use unix:///var/outer-run/docker.sock
   - docker buildx inspect --bootstrap
   environment:
     SSH_KEY:
@@ -174,7 +174,7 @@ steps:
 
 services:
 - name: docker
-  image: ghcr.io/smira/docker:20.10-dind-hacked
+  image: docker:20.10-dind
   entrypoint:
   - dockerd
   commands:

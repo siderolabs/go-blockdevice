@@ -34,8 +34,12 @@ const (
 )
 
 // Probe checks partition type.
-func Probe(path string) (sb SuperBlocker, err error) {
-	var f *os.File
+func Probe(path string) (SuperBlocker, error) { //nolint:ireturn
+	var (
+		f   *os.File
+		err error
+	)
+
 	// Sleep for up to 5s to wait for kernel to create the necessary device files.
 	// If we dont sleep this becomes racy in that the device file does not exist
 	// and it will fail to open.
@@ -80,5 +84,5 @@ func Probe(path string) (sb SuperBlocker, err error) {
 		}
 	}
 
-	return nil, nil
+	return nil, nil //nolint:nilnil
 }

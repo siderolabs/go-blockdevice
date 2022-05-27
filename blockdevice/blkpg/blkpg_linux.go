@@ -37,10 +37,11 @@ func InformKernelOfDelete(f *os.File, first, length uint64, n int32) error {
 	return inform(f, first, length, n, unix.BLKPG_DEL_PARTITION)
 }
 
-func inform(f *os.File, first, length uint64, n, op int32) (err error) {
+func inform(f *os.File, first, length uint64, n, op int32) error {
 	var (
 		start int64
 		end   int64
+		err   error
 	)
 
 	switch op {

@@ -37,7 +37,7 @@ type Header struct {
 	PartitionEntriesChecksum uint32
 }
 
-func (h *Header) verifySignature() (err error) {
+func (h *Header) verifySignature() error {
 	b, err := h.LBA.ReadAt(1, 0, 8)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func (h *Header) verifySignature() (err error) {
 	return nil
 }
 
-func (h *Header) read() (err error) {
+func (h *Header) read() error {
 	b, err := h.LBA.ReadAt(1, 0, HeaderSize)
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func (h *Header) read() (err error) {
 	return nil
 }
 
-func (h *Header) write() (err error) {
+func (h *Header) write() error {
 	p, err := h.primary()
 	if err != nil {
 		return err
@@ -135,8 +135,8 @@ func (h *Header) write() (err error) {
 }
 
 // primary returns the serialized primary header.
-func (h *Header) primary() (b []byte, err error) {
-	b = make([]byte, h.LBA.LogicalBlockSize)
+func (h *Header) primary() ([]byte, error) {
+	b := make([]byte, h.LBA.LogicalBlockSize)
 
 	copy(b[:8], MagicEFIPart)
 

@@ -20,7 +20,7 @@ const (
 )
 
 // NewLBA initializes and returns an `LBA`.
-func NewLBA(f *os.File) (lba *LBA, err error) {
+func NewLBA(f *os.File) (*LBA, error) {
 	st, err := f.Stat()
 	if err != nil {
 		return nil, fmt.Errorf("stat disk error: %w", err)
@@ -88,7 +88,7 @@ func NewLBA(f *os.File) (lba *LBA, err error) {
 
 	tsize := size / lsize
 
-	lba = &LBA{
+	lba := &LBA{
 		PhysicalBlockSize: psize,
 		LogicalBlockSize:  lsize,
 		MinimalIOSize:     minio,
@@ -101,8 +101,8 @@ func NewLBA(f *os.File) (lba *LBA, err error) {
 }
 
 // ReadAt reads from a file in units of LBA.
-func (l *LBA) ReadAt(lba, off, length int64) (b []byte, err error) {
-	b = make([]byte, length)
+func (l *LBA) ReadAt(lba, off, length int64) ([]byte, error) {
+	b := make([]byte, length)
 
 	off = lba*l.LogicalBlockSize + off
 
@@ -121,7 +121,7 @@ func (l *LBA) ReadAt(lba, off, length int64) (b []byte, err error) {
 }
 
 // WriteAt writes to a file in units of LBA.
-func (l *LBA) WriteAt(lba, off int64, b []byte) (err error) {
+func (l *LBA) WriteAt(lba, off int64, b []byte) error {
 	off = lba*l.LogicalBlockSize + off
 
 	n, err := l.f.WriteAt(b, off)

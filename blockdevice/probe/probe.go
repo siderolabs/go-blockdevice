@@ -97,12 +97,13 @@ func WithSingleResult() SelectOption {
 }
 
 // All probes a block device's file system for the given label.
-func All(options ...SelectOption) (all []*ProbedBlockDevice, err error) {
-	var infos []os.FileInfo
-
-	if infos, err = ioutil.ReadDir("/sys/block"); err != nil {
+func All(options ...SelectOption) ([]*ProbedBlockDevice, error) {
+	infos, err := ioutil.ReadDir("/sys/block")
+	if err != nil {
 		return nil, err
 	}
+
+	var all []*ProbedBlockDevice
 
 	for _, info := range infos {
 		devpath := "/dev/" + info.Name()
@@ -150,8 +151,8 @@ func DevForPartitionLabel(devname, label string) (*blockdevice.BlockDevice, erro
 	return bd.OpenPartition(label)
 }
 
-func probe(devpath string) (devpaths []string) {
-	devpaths = []string{}
+func probe(devpath string) []string {
+	devpaths := []string{}
 
 	// Start by opening the block device.
 	// If a partition table was not found, it is still possible that a
@@ -206,7 +207,7 @@ func probe(devpath string) (devpaths []string) {
 
 // GetDevWithPartitionName probes all known block device's partition
 // table for a parition with the specified name.
-func GetDevWithPartitionName(name string) (bd *ProbedBlockDevice, err error) {
+func GetDevWithPartitionName(name string) (*ProbedBlockDevice, error) {
 	probed, err := All(WithPartitionLabel(name), WithSingleResult())
 	if err != nil {
 		return nil, err
@@ -221,10 +222,9 @@ func GetDevWithPartitionName(name string) (bd *ProbedBlockDevice, err error) {
 
 // GetDevWithFileSystemLabel probes all known block device's file systems for
 // the given label.
-func GetDevWithFileSystemLabel(value string) (probe *ProbedBlockDevice, err error) {
-	var probed []*ProbedBlockDevice
-
-	if probed, err = All(WithFileSystemLabel(value), WithSingleResult()); err != nil {
+func GetDevWithFileSystemLabel(value string) (*ProbedBlockDevice, error) {
+	probed, err := All(WithFileSystemLabel(value), WithSingleResult())
+	if err != nil {
 		return nil, err
 	}
 
@@ -237,7 +237,7 @@ func GetDevWithFileSystemLabel(value string) (probe *ProbedBlockDevice, err erro
 
 // GetPartitionWithName probes all known block device's partition
 // table for a parition with the specified name.
-func GetPartitionWithName(name string) (part *gpt.Partition, err error) {
+func GetPartitionWithName(name string) (*gpt.Partition, error) {
 	device, err := GetDevWithPartitionName(name)
 	if err != nil {
 		return nil, err
@@ -247,7 +247,9 @@ func GetPartitionWithName(name string) (part *gpt.Partition, err error) {
 }
 
 // Returns array with partitions or root readable device.
-func probePartitions(devpath string) (probed []*ProbedBlockDevice) {
+func probePartitions(devpath string) []*ProbedBlockDevice {
+	var probed []*ProbedBlockDevice //nolint:prealloc
+
 	for _, path := range probe(devpath) {
 		var (
 			bd  *blockdevice.BlockDevice

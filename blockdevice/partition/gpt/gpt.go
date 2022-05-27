@@ -49,14 +49,12 @@ type GPT struct {
 }
 
 // Open attempts to open a partition table on f.
-func Open(f *os.File) (g *GPT, err error) {
+func Open(f *os.File) (*GPT, error) {
 	buf := make([]byte, 16)
 
 	// PMBR protective entry starts at 446. The partition type is at offset
 	// 4 from the start of the PMBR protective entry.
-	var n int
-
-	n, err = f.ReadAt(buf, 446)
+	n, err := f.ReadAt(buf, 446)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +76,7 @@ func Open(f *os.File) (g *GPT, err error) {
 			return nil, ErrPartitionTableDoesNotExist
 		}
 
-		g = &GPT{
+		g := &GPT{
 			f:               f,
 			l:               l,
 			h:               h,
@@ -93,7 +91,7 @@ func Open(f *os.File) (g *GPT, err error) {
 }
 
 // New creates an in-memory partition table.
-func New(f *os.File, setters ...Option) (g *GPT, err error) {
+func New(f *os.File, setters ...Option) (*GPT, error) {
 	opts, err := NewDefaultOptions(setters...)
 	if err != nil {
 		return nil, err
@@ -124,7 +122,7 @@ func New(f *os.File, setters ...Option) (g *GPT, err error) {
 
 	h.GUUID = guuid
 
-	g = &GPT{
+	g := &GPT{
 		f:               f,
 		l:               l,
 		h:               h,
@@ -136,8 +134,8 @@ func New(f *os.File, setters ...Option) (g *GPT, err error) {
 }
 
 // Read reads the partition table on disk and updates the in-memory representation.
-func (g *GPT) Read() (err error) {
-	err = g.h.read()
+func (g *GPT) Read() error {
+	err := g.h.read()
 	if err != nil {
 		return err
 	}
@@ -152,10 +150,8 @@ func (g *GPT) Read() (err error) {
 	return nil
 }
 
-func (g *GPT) Write() (err error) {
-	var pmbr []byte
-
-	pmbr, err = g.newPMBR(g.h)
+func (g *GPT) Write() error {
+	pmbr, err := g.newPMBR(g.h)
 	if err != nil {
 		return err
 	}

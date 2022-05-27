@@ -65,7 +65,7 @@ func (p *Partition) Length() uint64 {
 	return p.LastLBA - p.FirstLBA + 1
 }
 
-func (p *Partitions) read() (err error) {
+func (p *Partitions) read() error {
 	partitions := make([]*Partition, 0, p.h.NumberOfPartitionEntries)
 
 	checksummer := crc32.NewIEEE()
@@ -103,15 +103,15 @@ func (p *Partitions) read() (err error) {
 	return nil
 }
 
-func (p *Partitions) write() (data []byte, err error) {
-	data = make([]byte, p.h.NumberOfPartitionEntries*p.h.PartitionEntrySize)
+func (p *Partitions) write() ([]byte, error) {
+	data := make([]byte, p.h.NumberOfPartitionEntries*p.h.PartitionEntrySize)
 
 	for i, part := range p.p {
 		if part == nil {
 			continue
 		}
 
-		if err = part.serialize(data[i*int(p.h.PartitionEntrySize):]); err != nil {
+		if err := part.serialize(data[i*int(p.h.PartitionEntrySize):]); err != nil {
 			return nil, err
 		}
 	}
@@ -123,7 +123,9 @@ func (p *Partitions) write() (data []byte, err error) {
 
 var utf16 = unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
 
-func (p *Partition) deserialize(b []byte) (err error) {
+func (p *Partition) deserialize(b []byte) error {
+	var err error
+
 	p.Type, err = uuid.FromBytes(endianness.FromMiddleEndian(b[:16]))
 	if err != nil {
 		return fmt.Errorf("invalid GUUID: %w", err)
@@ -187,7 +189,7 @@ func (p *Partition) serialize(b []byte) error {
 // SuperBlock read partition superblock.
 // if partition is encrypted it will always return superblock of the physical partition,
 // instead of a mapped device partition.
-func (p *Partition) SuperBlock() (filesystem.SuperBlocker, error) {
+func (p *Partition) SuperBlock() (filesystem.SuperBlocker, error) { //nolint:ireturn
 	path, err := p.Path()
 	if err != nil {
 		return nil, err

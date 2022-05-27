@@ -47,11 +47,14 @@ type BlockDevice struct {
 
 // Open initializes and returns a block device.
 // TODO(andrewrynhard): Use BLKGETSIZE ioctl to get the size.
-func Open(devname string, setters ...Option) (bd *BlockDevice, err error) {
+func Open(devname string, setters ...Option) (_ *BlockDevice, rerr error) { //nolint:nonamedreturns
 	opts := NewDefaultOptions(setters...)
-	bd = &BlockDevice{}
+	bd := &BlockDevice{}
 
-	var f *os.File
+	var (
+		f   *os.File
+		err error
+	)
 
 	if f, err = os.OpenFile(devname, opts.Mode, os.ModeDevice); err != nil {
 		return nil, err
@@ -60,7 +63,7 @@ func Open(devname string, setters ...Option) (bd *BlockDevice, err error) {
 	bd.f = f
 
 	defer func() {
-		if err != nil {
+		if rerr != nil {
 			//nolint: errcheck
 			f.Close()
 		}
@@ -131,7 +134,7 @@ func (bd *BlockDevice) RereadPartitionTable() error {
 	}
 	// Flush the block device buffers.
 	if _, _, ret := unix.Syscall(unix.SYS_IOCTL, bd.f.Fd(), unix.BLKFLSBUF, 0); ret != 0 {
-		return fmt.Errorf("flush block device buffers: %v", ret)
+		return fmt.Errorf("flush block device buffers: %w", ret)
 	}
 
 	var (

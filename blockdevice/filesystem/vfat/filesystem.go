@@ -125,13 +125,13 @@ func (fs *FileSystem) Open(path string) (*File, error) {
 
 // fatChain results list of clusters for a file (or directory) based on first
 // cluster number and FAT.
-func (fs *FileSystem) fatChain(firstCluster uint32) (chain []uint32) {
-	chain = []uint32{firstCluster}
+func (fs *FileSystem) fatChain(firstCluster uint32) []uint32 {
+	chain := []uint32{firstCluster}
 
 	for {
 		next := fs.fat[firstCluster]
 		if next == 0 || next&0xFFFFFF8 == 0xFFFFFF8 {
-			return
+			return chain
 		}
 
 		chain = append(chain, next)
@@ -216,14 +216,19 @@ type File struct {
 	size   uint32
 }
 
-func (f *File) Read(p []byte) (n int, err error) {
+func (f *File) Read(p []byte) (int, error) {
+	var (
+		n   int
+		err error
+	)
+
 	remaining := len(p)
 	if uint32(remaining) > f.size-f.offset {
 		remaining = int(f.size - f.offset)
 		if remaining == 0 {
 			err = io.EOF
 
-			return
+			return n, err
 		}
 	}
 
@@ -234,7 +239,7 @@ func (f *File) Read(p []byte) (n int, err error) {
 		if clusterIdx > uint32(len(f.chain)) {
 			err = fmt.Errorf("FAT chain overrun")
 
-			return
+			return n, err
 		}
 
 		cluster := f.chain[clusterIdx]
@@ -245,7 +250,7 @@ func (f *File) Read(p []byte) (n int, err error) {
 		}
 
 		if err = readAtFull(f.fs.f, int64(f.fs.dataStart)+int64(cluster-2)*int64(f.fs.clusterSize)+int64(clusterOffset), p[:readLen]); err != nil {
-			return
+			return n, err
 		}
 
 		remaining -= int(readLen)

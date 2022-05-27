@@ -237,7 +237,7 @@ func Find(matchers ...Matcher) (*Disk, error) {
 		}
 	}
 
-	return nil, nil
+	return nil, nil //nolint:nilnil
 }
 
 // Matcher is a function that can handle some custom disk matching logic.
