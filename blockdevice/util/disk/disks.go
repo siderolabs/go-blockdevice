@@ -90,6 +90,8 @@ type Disk struct {
 	Type Type
 	// BusPath PCI bus path.
 	BusPath string
+	// ReadOnly indicates that the kernel has marked this disk as read-only.
+	ReadOnly bool
 }
 
 // List returns list of disks by reading /sys/block.
@@ -209,6 +211,13 @@ func Get(dev string) *Disk {
 		serial = readFile(sysblock, dev, "device/serial")
 	}
 
+	var readOnlyBool bool
+
+	readOnly := readFile(sysblock, dev, "ro")
+	if readOnly == "1" {
+		readOnlyBool = true
+	}
+
 	return &Disk{
 		DeviceName: fmt.Sprintf("/dev/%s", dev),
 		Size:       size,
@@ -220,6 +229,7 @@ func Get(dev string) *Disk {
 		UUID:       uuid,
 		Type:       diskType,
 		BusPath:    busPath,
+		ReadOnly:   readOnlyBool,
 	}
 }
 
