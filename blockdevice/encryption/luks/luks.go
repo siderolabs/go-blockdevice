@@ -241,9 +241,9 @@ func (l *LUKS) CheckKey(devname string, key *encryption.Key) (bool, error) {
 	return true, nil
 }
 
-// RemoveKey adds a new key at the LUKS encryption slot.
+// RemoveKey removes a key at the specified LUKS encryption slot.
 func (l *LUKS) RemoveKey(devname string, slot int, key *encryption.Key) error {
-	return l.runCommand([]string{"luksKillSlot", devname, fmt.Sprintf("%d", slot), "--key-file=-", fmt.Sprintf("--key-slot=%d", key.Slot)}, key.Value)
+	return l.runCommand([]string{"luksKillSlot", devname, fmt.Sprintf("%d", slot), "--key-file=-"}, key.Value)
 }
 
 // ReadKeyslots returns deserialized LUKS2 keyslots JSON.
@@ -294,7 +294,7 @@ func (l *LUKS) runCommand(args []string, stdin []byte) error {
 		if errors.As(err, &exitError) {
 			switch exitError.ExitCode {
 			case 1:
-				if strings.Contains(string(exitError.Output), "Keyslot open failed.\nNo usable keyslot is available.") {
+				if strings.Contains(string(exitError.Output), "No usable keyslot is available.") {
 					return encryption.ErrEncryptionKeyRejected
 				}
 			case 2:
