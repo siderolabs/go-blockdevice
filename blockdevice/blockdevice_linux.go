@@ -16,7 +16,7 @@ import (
 	"github.com/talos-systems/go-retry/retry"
 	"golang.org/x/sys/unix"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
+	"github.com/siderolabs/go-blockdevice/blockdevice/partition/gpt"
 )
 
 // Linux headers constants.
@@ -180,10 +180,10 @@ func (bd *BlockDevice) Size() (uint64, error) {
 // Wipe the blockdevice contents.
 //
 // In order of availability this tries to perform the following:
-//   * secure discard (secure erase)
-//   * discard with zeros
-//   * zero out via ioctl
-//   * zero out from userland
+//   - secure discard (secure erase)
+//   - discard with zeros
+//   - zero out via ioctl
+//   - zero out from userland
 func (bd *BlockDevice) Wipe() (string, error) {
 	size, err := bd.Size()
 	if err != nil {

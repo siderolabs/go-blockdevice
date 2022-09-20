@@ -13,11 +13,11 @@ import (
 
 	"github.com/talos-systems/go-retry/retry"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/iso9660"
-	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/luks"
-	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/msdos"
-	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/vfat"
-	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/xfs"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/iso9660"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/luks"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/msdos"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/vfat"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/xfs"
 )
 
 // SuperBlocker describes the requirements for file system super blocks.

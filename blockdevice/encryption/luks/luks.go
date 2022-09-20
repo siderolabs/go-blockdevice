@@ -19,9 +19,9 @@ import (
 	"github.com/talos-systems/go-cmd/pkg/cmd"
 	"golang.org/x/sys/unix"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice/encryption"
-	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/luks"
-	"github.com/talos-systems/go-blockdevice/blockdevice/util"
+	"github.com/siderolabs/go-blockdevice/blockdevice/encryption"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/luks"
+	"github.com/siderolabs/go-blockdevice/blockdevice/util"
 )
 
 // Cipher LUKS2 cipher type.

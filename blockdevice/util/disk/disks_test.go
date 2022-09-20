@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice/util/disk"
+	"github.com/siderolabs/go-blockdevice/blockdevice/util/disk"
 )
 
 type DisksSuite struct {

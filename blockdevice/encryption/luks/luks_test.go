@@ -5,7 +5,6 @@
 package luks_test
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
@@ -14,11 +13,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/sys/unix"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice"
-	"github.com/talos-systems/go-blockdevice/blockdevice/encryption"
-	"github.com/talos-systems/go-blockdevice/blockdevice/encryption/luks"
-	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
-	"github.com/talos-systems/go-blockdevice/blockdevice/test"
+	"github.com/siderolabs/go-blockdevice/blockdevice"
+	"github.com/siderolabs/go-blockdevice/blockdevice/encryption"
+	"github.com/siderolabs/go-blockdevice/blockdevice/encryption/luks"
+	"github.com/siderolabs/go-blockdevice/blockdevice/partition/gpt"
+	"github.com/siderolabs/go-blockdevice/blockdevice/test"
 )
 
 const (
@@ -100,8 +99,7 @@ func (suite *LUKSSuite) TestEncrypt() {
 	suite.Require().NoError(err)
 	suite.Require().True(encrypted)
 
-	mountPath, err := ioutil.TempDir("", "mnt")
-	suite.Require().NoError(err)
+	mountPath := suite.T().TempDir()
 
 	cmd := exec.Command("mkfs.vfat", "-F", "32", "-n", part.Name, encryptedPath)
 	suite.Require().NoError(cmd.Run())

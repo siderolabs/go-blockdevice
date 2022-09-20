@@ -13,8 +13,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice/blkpg"
-	"github.com/talos-systems/go-blockdevice/blockdevice/lba"
+	"github.com/siderolabs/go-blockdevice/blockdevice/blkpg"
+	"github.com/siderolabs/go-blockdevice/blockdevice/lba"
 )
 
 const (
@@ -364,10 +364,10 @@ func (g *GPT) Repair() error {
 }
 
 // References:
-// 	- https://en.wikipedia.org/wiki/GUID_Partition_Table#Protective_MBR_(LBA_0)
-// 	- https://www.syslinux.org/wiki/index.php?title=Doc/gpt
-// 	- https://en.wikipedia.org/wiki/Master_boot_record
-// 	- http://www.rodsbooks.com/gdisk/bios.html
+//   - https://en.wikipedia.org/wiki/GUID_Partition_Table#Protective_MBR_(LBA_0)
+//   - https://www.syslinux.org/wiki/index.php?title=Doc/gpt
+//   - https://en.wikipedia.org/wiki/Master_boot_record
+//   - http://www.rodsbooks.com/gdisk/bios.html
 func (g *GPT) newPMBR(h *Header) ([]byte, error) {
 	p, err := g.l.ReadAt(0, 0, 512)
 	if err != nil {

@@ -12,11 +12,11 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice"
-	"github.com/talos-systems/go-blockdevice/blockdevice/lba"
-	"github.com/talos-systems/go-blockdevice/blockdevice/loopback"
-	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
-	"github.com/talos-systems/go-blockdevice/blockdevice/test"
+	"github.com/siderolabs/go-blockdevice/blockdevice"
+	"github.com/siderolabs/go-blockdevice/blockdevice/lba"
+	"github.com/siderolabs/go-blockdevice/blockdevice/loopback"
+	"github.com/siderolabs/go-blockdevice/blockdevice/partition/gpt"
+	"github.com/siderolabs/go-blockdevice/blockdevice/test"
 )
 
 const (

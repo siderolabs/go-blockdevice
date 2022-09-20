@@ -6,7 +6,6 @@ package blkpg
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -18,8 +17,8 @@ import (
 	"github.com/talos-systems/go-retry/retry"
 	"golang.org/x/sys/unix"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice/lba"
-	"github.com/talos-systems/go-blockdevice/blockdevice/util"
+	"github.com/siderolabs/go-blockdevice/blockdevice/lba"
+	"github.com/siderolabs/go-blockdevice/blockdevice/util"
 )
 
 // InformKernelOfAdd invokes the BLKPG_ADD_PARTITION ioctl.
@@ -122,12 +121,12 @@ func GetKernelPartitions(f *os.File) ([]KernelPartition, error) {
 			return nil, err
 		}
 
-		startS, err := ioutil.ReadFile(filepath.Join(partPath, "start"))
+		startS, err := os.ReadFile(filepath.Join(partPath, "start"))
 		if err != nil {
 			return nil, err
 		}
 
-		sizeS, err := ioutil.ReadFile(filepath.Join(partPath, "size"))
+		sizeS, err := os.ReadFile(filepath.Join(partPath, "size"))
 		if err != nil {
 			return nil, err
 		}

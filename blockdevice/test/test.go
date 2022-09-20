@@ -6,12 +6,11 @@
 package test
 
 import (
-	"io/ioutil"
 	"os"
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice/loopback"
+	"github.com/siderolabs/go-blockdevice/blockdevice/loopback"
 )
 
 // BlockDeviceSuite is a common base for all tests that rely on loopback device creation.
@@ -27,7 +26,7 @@ type BlockDeviceSuite struct {
 func (suite *BlockDeviceSuite) CreateBlockDevice(size int64) {
 	var err error
 
-	suite.File, err = ioutil.TempFile("", "blockDevice")
+	suite.File, err = os.CreateTemp("", "blockDevice")
 	suite.Require().NoError(err)
 
 	suite.Require().NoError(suite.File.Truncate(size))

@@ -7,18 +7,17 @@ package probe
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice"
-	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem"
-	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/iso9660"
-	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/msdos"
-	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/vfat"
-	"github.com/talos-systems/go-blockdevice/blockdevice/filesystem/xfs"
-	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
-	"github.com/talos-systems/go-blockdevice/blockdevice/util"
+	"github.com/siderolabs/go-blockdevice/blockdevice"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/iso9660"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/msdos"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/vfat"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/xfs"
+	"github.com/siderolabs/go-blockdevice/blockdevice/partition/gpt"
+	"github.com/siderolabs/go-blockdevice/blockdevice/util"
 )
 
 // ProbedBlockDevice represents a probed block device.
@@ -98,7 +97,7 @@ func WithSingleResult() SelectOption {
 
 // All probes a block device's file system for the given label.
 func All(options ...SelectOption) ([]*ProbedBlockDevice, error) {
-	infos, err := ioutil.ReadDir("/sys/block")
+	infos, err := os.ReadDir("/sys/block")
 	if err != nil {
 		return nil, err
 	}

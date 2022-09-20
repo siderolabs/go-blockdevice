@@ -14,9 +14,9 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice/partition/gpt"
-	"github.com/talos-systems/go-blockdevice/blockdevice/probe"
-	"github.com/talos-systems/go-blockdevice/blockdevice/test"
+	"github.com/siderolabs/go-blockdevice/blockdevice/partition/gpt"
+	"github.com/siderolabs/go-blockdevice/blockdevice/probe"
+	"github.com/siderolabs/go-blockdevice/blockdevice/test"
 )
 
 type ProbeSuite struct {

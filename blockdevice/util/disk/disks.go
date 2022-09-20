@@ -7,7 +7,7 @@ package disk
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -100,7 +100,7 @@ func List() ([]*Disk, error) {
 
 	sysblock := "/sys/block"
 
-	devices, err := ioutil.ReadDir(sysblock)
+	devices, err := os.ReadDir(sysblock)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read /sys/block directory %w", err)
 	}
@@ -151,7 +151,7 @@ func Get(dev string) *Disk {
 			return ""
 		}
 
-		data, e := ioutil.ReadAll(f)
+		data, e := io.ReadAll(f)
 		if e != nil {
 			return ""
 		}

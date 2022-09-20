@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2022-05-27T15:56:20Z by kres 65530e7.
+# Generated on 2022-09-20T19:46:00Z by kres 255fc05.
 
 # options for analysis running
 run:
@@ -36,7 +36,7 @@ linters-settings:
     lines: 60
     statements: 40
   gci:
-    local-prefixes: github.com/talos-systems/go-blockdevice
+    local-prefixes: github.com/siderolabs/go-blockdevice
   gocognit:
     min-complexity: 30
   ireturn:
@@ -65,7 +65,7 @@ linters-settings:
   gofmt:
     simplify: true
   goimports:
-    local-prefixes: github.com/talos-systems/go-blockdevice
+    local-prefixes: github.com/siderolabs/go-blockdevice
   golint:
     min-confidence: 0.8
   gomnd:
@@ -135,7 +135,10 @@ linters:
     - goerr113
     - gomnd
     - gomoddirectives
+    - ireturn
     - nestif
+    - nonamedreturns
+    - nosnakecase
     - paralleltest
     - tagliatelle
     - thelper

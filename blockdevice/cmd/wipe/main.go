@@ -2,13 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+// main is the entrypoint for the wipe command.
 package main
 
 import (
 	"flag"
 	"log"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice"
+	"github.com/siderolabs/go-blockdevice/blockdevice"
 )
 
 func main() {

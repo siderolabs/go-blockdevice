@@ -2,13 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//nolint: scopelint
+//nolint:scopelint
 package util_test
 
 import (
 	"testing"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice/util"
+	"github.com/siderolabs/go-blockdevice/blockdevice/util"
 )
 
 func Test_PartNo(t *testing.T) {

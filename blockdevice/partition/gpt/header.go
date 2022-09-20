@@ -12,8 +12,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/talos-systems/go-blockdevice/blockdevice/endianness"
-	"github.com/talos-systems/go-blockdevice/blockdevice/lba"
+	"github.com/siderolabs/go-blockdevice/blockdevice/endianness"
+	"github.com/siderolabs/go-blockdevice/blockdevice/lba"
 )
 
 // Header represents the GPT header.
