@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/talos-systems/go-cmd/pkg/cmd"
+	"github.com/siderolabs/go-cmd/pkg/cmd"
 	"golang.org/x/sys/unix"
 
 	"github.com/siderolabs/go-blockdevice/blockdevice/encryption"

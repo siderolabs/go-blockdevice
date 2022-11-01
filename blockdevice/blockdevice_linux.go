@@ -13,7 +13,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/talos-systems/go-retry/retry"
+	"github.com/siderolabs/go-retry/retry"
 	"golang.org/x/sys/unix"
 
 	"github.com/siderolabs/go-blockdevice/blockdevice/partition/gpt"
@@ -152,7 +152,7 @@ func (bd *BlockDevice) RereadPartitionTable() error {
 		case syscall.EBUSY:
 			return retry.ExpectedError(err)
 		default:
-			return retry.UnexpectedError(err)
+			return err
 		}
 	})
 	if err != nil {

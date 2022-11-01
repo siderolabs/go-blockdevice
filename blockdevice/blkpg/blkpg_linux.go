@@ -14,7 +14,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/talos-systems/go-retry/retry"
+	"github.com/siderolabs/go-retry/retry"
 	"golang.org/x/sys/unix"
 
 	"github.com/siderolabs/go-blockdevice/blockdevice/lba"
@@ -86,12 +86,12 @@ func inform(f *os.File, first, length uint64, n, op int32) error {
 			case unix.EBUSY:
 				return retry.ExpectedError(errno)
 			default:
-				return retry.UnexpectedError(errno)
+				return errno
 			}
 		}
 
 		if err = f.Sync(); err != nil {
-			return retry.UnexpectedError(err)
+			return err
 		}
 
 		return nil

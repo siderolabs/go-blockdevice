@@ -2,5 +2,5 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package blkpg provices functions for working the the BLKPG family of iotctls.
+// Package blkpg provices functions for working with the BLKPG family of iotctls.
 package blkpg

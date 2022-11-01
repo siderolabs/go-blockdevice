@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/talos-systems/go-retry/retry"
+	"github.com/siderolabs/go-retry/retry"
 
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/iso9660"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/luks"
@@ -49,7 +49,7 @@ func Probe(path string) (SuperBlocker, error) { //nolint:ireturn
 				return retry.ExpectedError(err)
 			}
 
-			return retry.UnexpectedError(err)
+			return err
 		}
 
 		return nil

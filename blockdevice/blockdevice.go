@@ -9,7 +9,7 @@ import (
 	"errors"
 )
 
-// ErrMissingPartitionTable indicates that the the block device does not have a
+// ErrMissingPartitionTable indicates that the block device does not have a
 // partition table.
 var ErrMissingPartitionTable = errors.New("missing partition table")
 
