@@ -12,6 +12,7 @@ import (
 
 	"github.com/siderolabs/go-blockdevice/blockdevice"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/ext4"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/iso9660"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/msdos"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/vfat"
@@ -70,6 +71,11 @@ func WithFileSystemLabel(label string) SelectOption {
 				}
 			case *xfs.SuperBlock:
 				trimmed := bytes.Trim(sb.Fname[:], " \x00")
+				if bytes.Equal(trimmed, []byte(label)) {
+					return true, nil
+				}
+			case *ext4.SuperBlock:
+				trimmed := bytes.Trim(sb.Label[:], " \x00")
 				if bytes.Equal(trimmed, []byte(label)) {
 					return true, nil
 				}

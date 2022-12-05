@@ -56,8 +56,13 @@ func (suite *ProbeSuite) addPartition(name string, size uint64, fatBits int) *gp
 	return partition
 }
 
-func (suite *ProbeSuite) setSystemLabel(name string, fatBits int) {
+func (suite *ProbeSuite) setSystemLabelVFAT(name string, fatBits int) {
 	cmd := exec.Command("mkfs.vfat", "-F", strconv.Itoa(fatBits), "-n", name, suite.LoopbackDevice.Name())
+	suite.Require().NoError(cmd.Run())
+}
+
+func (suite *ProbeSuite) setSystemLabelEXT4(name string) {
+	cmd := exec.Command("mkfs.ext4", "-L", name, suite.LoopbackDevice.Name())
 	suite.Require().NoError(cmd.Run())
 }
 
@@ -103,7 +108,7 @@ func (suite *ProbeSuite) TestGetDevWithPartitionName() {
 func (suite *ProbeSuite) testGetDevWithFileSystemLabel(fatBits int) {
 	label := fmt.Sprintf("LABELSYS%d", fatBits)
 
-	suite.setSystemLabel(label, fatBits)
+	suite.setSystemLabelVFAT(label, fatBits)
 
 	dev, err := probe.GetDevWithFileSystemLabel(label)
 	suite.Require().NoError(err)
@@ -129,10 +134,21 @@ func (suite *ProbeSuite) TestProbeByPartitionLabel() {
 	suite.Require().Equal(suite.LoopbackDevice.Name(), probed[0].Device().Name())
 }
 
-func (suite *ProbeSuite) TestProbeByFilesystemLabelBlockdevice() {
-	suite.setSystemLabel("FSLBABELBD", 32)
+func (suite *ProbeSuite) TestProbeByFilesystemLabelBlockdeviceVFAT() {
+	suite.setSystemLabelVFAT("FSLBABELBD", 32)
 
 	probed, err := probe.All(probe.WithFileSystemLabel("FSLBABELBD"))
+	suite.Require().NoError(err)
+	suite.Require().Equal(1, len(probed))
+
+	suite.Require().Equal(suite.LoopbackDevice.Name(), probed[0].Device().Name())
+	suite.Require().Equal(suite.LoopbackDevice.Name(), probed[0].Path)
+}
+
+func (suite *ProbeSuite) TestProbeByFilesystemLabelBlockdeviceEXT4() {
+	suite.setSystemLabelEXT4("EXTBD")
+
+	probed, err := probe.All(probe.WithFileSystemLabel("EXTBD"))
 	suite.Require().NoError(err)
 	suite.Require().Equal(1, len(probed))
 

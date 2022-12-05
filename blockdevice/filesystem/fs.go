@@ -13,6 +13,7 @@ import (
 
 	"github.com/siderolabs/go-retry/retry"
 
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/ext4"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/iso9660"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/luks"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/msdos"
@@ -67,6 +68,7 @@ func Probe(path string) (SuperBlocker, error) { //nolint:ireturn
 		&msdos.SuperBlock{},
 		&xfs.SuperBlock{},
 		&luks.SuperBlock{},
+		&ext4.SuperBlock{},
 	}
 
 	for _, sb := range superblocks {
