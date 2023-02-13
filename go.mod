@@ -1,6 +1,6 @@
 module github.com/siderolabs/go-blockdevice
 
-go 1.19
+go 1.20
 
 require (
 	github.com/google/uuid v1.3.0
@@ -8,8 +8,8 @@ require (
 	github.com/siderolabs/go-cmd v0.1.1
 	github.com/siderolabs/go-retry v0.3.2
 	github.com/stretchr/testify v1.8.1
-	golang.org/x/sys v0.1.0
-	golang.org/x/text v0.4.0
+	golang.org/x/sys v0.5.0
+	golang.org/x/text v0.7.0
 )
 
 require (

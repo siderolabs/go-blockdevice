@@ -159,13 +159,6 @@ func Get(dev string) *Disk {
 		return strings.TrimSpace(string(data))
 	}
 
-	blockSizeString := readFile(
-		fmt.Sprintf("/sys/class/block/%s/queue/logical_block_size", dev),
-	)
-	if blockSizeString == "" {
-		blockSizeString = "512"
-	}
-
 	var size uint64
 
 	s := readFile(sysblock, dev, "size")
@@ -177,9 +170,7 @@ func Get(dev string) *Disk {
 			size = 0
 		}
 
-		blockSize, _ := strconv.ParseUint(strings.TrimSpace(blockSizeString), 10, 64) //nolint:errcheck
-
-		size *= blockSize
+		size *= 512
 	}
 
 	diskType := TypeUnknown
