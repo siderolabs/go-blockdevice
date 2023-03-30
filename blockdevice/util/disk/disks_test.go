@@ -26,6 +26,7 @@ func (suite *DisksSuite) TestDisks() {
 		for _, d := range disks {
 			suite.Require().NotEmpty(d.DeviceName)
 			suite.Require().NotEmpty(d.Model)
+			suite.Require().NotEmpty(d.SubSystem)
 		}
 	}
 }

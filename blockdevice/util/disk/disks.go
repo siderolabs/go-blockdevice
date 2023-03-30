@@ -90,6 +90,8 @@ type Disk struct {
 	Type Type
 	// BusPath PCI bus path.
 	BusPath string
+	// SubSystem is the dest path of symlink /sys/block/<dev>/subsystem.
+	SubSystem string
 	// ReadOnly indicates that the kernel has marked this disk as read-only.
 	ReadOnly bool
 }
@@ -209,7 +211,7 @@ func Get(dev string) *Disk {
 		readOnlyBool = true
 	}
 
-	return &Disk{
+	disk := &Disk{
 		DeviceName: fmt.Sprintf("/dev/%s", dev),
 		Size:       size,
 		Model:      readFile(sysblock, dev, "device/model"),
@@ -222,6 +224,13 @@ func Get(dev string) *Disk {
 		BusPath:    busPath,
 		ReadOnly:   readOnlyBool,
 	}
+
+	path, err := filepath.EvalSymlinks(filepath.Join(sysblock, dev, "subsystem"))
+	if err == nil {
+		disk.SubSystem = path
+	}
+
+	return disk
 }
 
 // Find disk matching provided spec.
