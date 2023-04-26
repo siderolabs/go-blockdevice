@@ -1,8 +1,8 @@
-# syntax = docker/dockerfile-upstream:1.2.0-labs
+# syntax = docker/dockerfile-upstream:1.5.2-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-02-13T11:37:21Z by kres latest.
+# Generated on 2023-04-26T10:18:59Z by kres latest.
 
 ARG TOOLCHAIN
 
@@ -10,7 +10,7 @@ ARG TOOLCHAIN
 FROM scratch AS generate
 
 # runs markdownlint
-FROM docker.io/node:19.6.0-alpine3.16 AS lint-markdown
+FROM docker.io/node:20.0.0-alpine3.16 AS lint-markdown
 WORKDIR /src
 RUN npm i -g markdownlint-cli@0.33.0
 RUN npm i sentences-per-line@0.2.1

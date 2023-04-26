@@ -90,11 +90,7 @@ func inform(f *os.File, first, length uint64, n, op int32) error {
 			}
 		}
 
-		if err = f.Sync(); err != nil {
-			return err
-		}
-
-		return nil
+		return f.Sync()
 	})
 
 	if err != nil {

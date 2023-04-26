@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"syscall"
 	"time"
 	"unsafe"
@@ -55,6 +56,11 @@ func Open(devname string, setters ...Option) (_ *BlockDevice, rerr error) { //no
 		f   *os.File
 		err error
 	)
+
+	devname, err = filepath.EvalSymlinks(devname)
+	if err != nil {
+		return nil, fmt.Errorf("error resolving device symlink: %w", err)
+	}
 
 	if f, err = os.OpenFile(devname, opts.Mode, os.ModeDevice); err != nil {
 		return nil, err

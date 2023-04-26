@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/siderolabs/go-blockdevice/blockdevice"
 	"github.com/siderolabs/go-blockdevice/blockdevice/partition/gpt"
 	"github.com/siderolabs/go-blockdevice/blockdevice/probe"
 	"github.com/siderolabs/go-blockdevice/blockdevice/test"
@@ -64,6 +65,18 @@ func (suite *ProbeSuite) setSystemLabelVFAT(name string, fatBits int) {
 func (suite *ProbeSuite) setSystemLabelEXT4(name string) {
 	cmd := exec.Command("mkfs.ext4", "-L", name, suite.LoopbackDevice.Name())
 	suite.Require().NoError(cmd.Run())
+}
+
+func (suite *ProbeSuite) TestBlockDeviceWithSymlinkResolves() {
+	// Create a symlink to the block device
+	symlink := suite.Dev.Name() + ".link"
+	suite.Require().NoError(os.Symlink(suite.Dev.Name(), symlink))
+
+	defer os.Remove(symlink) //nolint:errcheck
+
+	bd, err := blockdevice.Open(symlink)
+	suite.Require().NoError(err)
+	suite.Require().Equal(suite.Dev.Name(), bd.Device().Name())
 }
 
 func (suite *ProbeSuite) TestDevForPartitionLabel() {

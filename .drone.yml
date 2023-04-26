@@ -1,7 +1,7 @@
 ---
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2022-09-20T19:45:44Z by kres 255fc05.
+# Generated on 2023-04-26T10:18:59Z by kres latest.
 
 kind: pipeline
 type: kubernetes
@@ -174,7 +174,7 @@ steps:
 
 services:
 - name: docker
-  image: docker:20.10-dind
+  image: docker:23.0-dind
   entrypoint:
   - dockerd
   commands:
@@ -212,6 +212,10 @@ trigger:
     exclude:
     - renovate/*
     - dependabot/*
+  event:
+    exclude:
+    - promote
+    - cron
 
 ---
 kind: pipeline
