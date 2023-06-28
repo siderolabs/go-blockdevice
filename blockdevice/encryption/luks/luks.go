@@ -20,6 +20,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/siderolabs/go-blockdevice/blockdevice/encryption"
+	"github.com/siderolabs/go-blockdevice/blockdevice/encryption/token"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/luks"
 	"github.com/siderolabs/go-blockdevice/blockdevice/util"
 )
@@ -140,7 +141,7 @@ func (l *LUKS) Open(deviceName string, key *encryption.Key) (string, error) {
 	args = append(args, keyslotArgs(key)...)
 	args = append(args, l.perfArgs()...)
 
-	err := l.runCommand(args, key.Value)
+	_, err := l.runCommand(args, key.Value)
 	if err != nil {
 		return "", err
 	}
@@ -164,17 +165,16 @@ func (l *LUKS) Encrypt(deviceName string, key *encryption.Key) error {
 		args = append(args, fmt.Sprintf("--sector-size=%d", l.blockSize))
 	}
 
-	err = l.runCommand(args, key.Value)
-	if err != nil {
-		return err
-	}
+	_, err = l.runCommand(args, key.Value)
 
 	return err
 }
 
 // Close implements encryption.Provider.
 func (l *LUKS) Close(devname string) error {
-	return l.runCommand([]string{"luksClose", devname}, nil)
+	_, err := l.runCommand([]string{"luksClose", devname}, nil)
+
+	return err
 }
 
 // AddKey adds a new key at the LUKS encryption slot.
@@ -195,7 +195,9 @@ func (l *LUKS) AddKey(devname string, key, newKey *encryption.Key) error {
 	args = append(args, l.encryptionArgs()...)
 	args = append(args, keyslotArgs(newKey)...)
 
-	return l.runCommand(args, buffer.Bytes())
+	_, err := l.runCommand(args, buffer.Bytes())
+
+	return err
 }
 
 // SetKey sets new key value at the LUKS encryption slot.
@@ -220,7 +222,9 @@ func (l *LUKS) SetKey(devname string, oldKey, newKey *encryption.Key) error {
 	args = append(args, l.argonArgs()...)
 	args = append(args, l.perfArgs()...)
 
-	return l.runCommand(args, buffer.Bytes())
+	_, err := l.runCommand(args, buffer.Bytes())
+
+	return err
 }
 
 // CheckKey checks if the key is valid.
@@ -229,7 +233,7 @@ func (l *LUKS) CheckKey(devname string, key *encryption.Key) (bool, error) {
 
 	args = append(args, keyslotArgs(key)...)
 
-	err := l.runCommand(args, key.Value)
+	_, err := l.runCommand(args, key.Value)
 	if err != nil {
 		if err == encryption.ErrEncryptionKeyRejected { //nolint:errorlint
 			return false, nil
@@ -243,7 +247,16 @@ func (l *LUKS) CheckKey(devname string, key *encryption.Key) (bool, error) {
 
 // RemoveKey removes a key at the specified LUKS encryption slot.
 func (l *LUKS) RemoveKey(devname string, slot int, key *encryption.Key) error {
-	return l.runCommand([]string{"luksKillSlot", devname, fmt.Sprintf("%d", slot), "--key-file=-"}, key.Value)
+	_, err := l.runCommand([]string{"luksKillSlot", devname, fmt.Sprintf("%d", slot), "--key-file=-"}, key.Value)
+	if err != nil {
+		return err
+	}
+
+	if err = l.RemoveToken(devname, slot); err != nil && !errors.Is(err, encryption.ErrTokenNotFound) {
+		return err
+	}
+
+	return nil
 }
 
 // ReadKeyslots returns deserialized LUKS2 keyslots JSON.
@@ -283,9 +296,41 @@ func (l *LUKS) ReadKeyslots(deviceName string) (*encryption.Keyslots, error) {
 	return keyslots, nil
 }
 
+// SetToken adds arbitrary token to the key slot.
+// Token id == slot id: only one token per key slot is supported.
+func (l *LUKS) SetToken(devname string, slot int, token token.Token) error {
+	data, err := token.Bytes()
+	if err != nil {
+		return err
+	}
+
+	id := fmt.Sprintf("%d", slot)
+
+	_, err = l.runCommand([]string{"token", "import", "-q", devname, "--key-slot", id, "--token-id", id, "--json-file=-", "--token-replace"}, data)
+
+	return err
+}
+
+// ReadToken reads arbitrary token from the luks metadata.
+func (l *LUKS) ReadToken(devname string, slot int, token token.Token) error {
+	stdout, err := l.runCommand([]string{"token", "export", "-q", devname, "--token-id", fmt.Sprintf("%d", slot), "--json-file=-"}, nil)
+	if err != nil {
+		return err
+	}
+
+	return token.Decode([]byte(stdout))
+}
+
+// RemoveToken removes token from the luks metadata.
+func (l *LUKS) RemoveToken(devname string, slot int) error {
+	_, err := l.runCommand([]string{"token", "remove", "--token-id", fmt.Sprintf("%d", slot), devname}, nil)
+
+	return err
+}
+
 // runCommand executes cryptsetup with arguments.
-func (l *LUKS) runCommand(args []string, stdin []byte) error {
-	_, err := cmd.RunContext(cmd.WithStdin(
+func (l *LUKS) runCommand(args []string, stdin []byte) (string, error) {
+	stdout, err := cmd.RunContext(cmd.WithStdin(
 		context.Background(),
 		bytes.NewBuffer(stdin)), "cryptsetup", args...)
 	if err != nil {
@@ -295,19 +340,23 @@ func (l *LUKS) runCommand(args []string, stdin []byte) error {
 			switch exitError.ExitCode {
 			case 1:
 				if strings.Contains(string(exitError.Output), "No usable keyslot is available.") {
-					return encryption.ErrEncryptionKeyRejected
+					return "", encryption.ErrEncryptionKeyRejected
+				}
+
+				if strings.Contains(string(exitError.Output), "is not in use") {
+					return "", encryption.ErrTokenNotFound
 				}
 			case 2:
-				return encryption.ErrEncryptionKeyRejected
+				return "", encryption.ErrEncryptionKeyRejected
 			case 5:
-				return encryption.ErrDeviceBusy
+				return "", encryption.ErrDeviceBusy
 			}
 		}
 
-		return fmt.Errorf("failed to call cryptsetup: %w", err)
+		return "", fmt.Errorf("failed to call cryptsetup: %w", err)
 	}
 
-	return nil
+	return stdout, nil
 }
 
 func (l *LUKS) argonArgs() []string {

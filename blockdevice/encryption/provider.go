@@ -6,6 +6,8 @@ package encryption
 
 import (
 	"fmt"
+
+	"github.com/siderolabs/go-blockdevice/blockdevice/encryption/token"
 )
 
 const (
@@ -17,6 +19,7 @@ const (
 
 // Provider represents encryption utility methods.
 type Provider interface {
+	TokenProvider
 	Encrypt(devname string, key *Key) error
 	Open(devname string, key *Key) (string, error)
 	Close(devname string) error
@@ -27,11 +30,23 @@ type Provider interface {
 	ReadKeyslots(deviceName string) (*Keyslots, error)
 }
 
-// ErrEncryptionKeyRejected triggered when encryption key does not match.
-var ErrEncryptionKeyRejected = fmt.Errorf("encryption key rejected")
+// TokenProvider represents token management methods.
+type TokenProvider interface {
+	SetToken(devname string, slot int, token token.Token) error
+	ReadToken(devname string, slot int, token token.Token) error
+	RemoveToken(devname string, slot int) error
+}
 
-// ErrDeviceBusy returned when mapped device is still in use.
-var ErrDeviceBusy = fmt.Errorf("mapped device is still in use")
+var (
+	// ErrEncryptionKeyRejected triggered when encryption key does not match.
+	ErrEncryptionKeyRejected = fmt.Errorf("encryption key rejected")
+
+	// ErrDeviceBusy returned when mapped device is still in use.
+	ErrDeviceBusy = fmt.Errorf("mapped device is still in use")
+
+	// ErrTokenNotFound returned when trying to get/delete not existing token.
+	ErrTokenNotFound = fmt.Errorf("no token with supplied id exists")
+)
 
 // Keyslots represents LUKS2 keyslots metadata.
 type Keyslots struct {

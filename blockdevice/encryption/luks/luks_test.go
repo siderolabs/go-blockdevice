@@ -104,6 +104,37 @@ func (suite *LUKSSuite) TestEncrypt() {
 	cmd := exec.Command("mkfs.vfat", "-F", "32", "-n", part.Name, encryptedPath)
 	suite.Require().NoError(cmd.Run())
 
+	type SealedKey struct {
+		SealedKey string `json:"sealed_key"`
+	}
+
+	token := &luks.Token[SealedKey]{
+		UserData: SealedKey{
+			SealedKey: "aaaa",
+		},
+		Type: "sealedkey",
+	}
+
+	err = provider.SetToken(path, 0, token)
+	suite.Require().NoError(err)
+
+	err = provider.ReadToken(path, 0, token)
+	suite.Require().NoError(err)
+
+	suite.Require().Equal(token.UserData.SealedKey, "aaaa")
+
+	suite.Require().NoError(provider.RemoveToken(path, 0))
+	suite.Require().Error(provider.ReadToken(path, 0, token))
+
+	// create and replace token
+	err = provider.SetToken(path, 0, token)
+	suite.Require().NoError(err)
+
+	token.UserData.SealedKey = "bbbb"
+
+	err = provider.SetToken(path, 0, token)
+	suite.Require().NoError(err)
+
 	suite.Require().NoError(unix.Mount(encryptedPath, mountPath, "vfat", 0, ""))
 	suite.Require().NoError(unix.Unmount(mountPath, 0))
 
