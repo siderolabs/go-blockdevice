@@ -306,7 +306,7 @@ func (l *LUKS) SetToken(devname string, slot int, token token.Token) error {
 
 	id := fmt.Sprintf("%d", slot)
 
-	_, err = l.runCommand([]string{"token", "import", "-q", devname, "--key-slot", id, "--token-id", id, "--json-file=-", "--token-replace"}, data)
+	_, err = l.runCommand([]string{"token", "import", "-q", devname, "--token-id", id, "--json-file=-", "--token-replace"}, data)
 
 	return err
 }
