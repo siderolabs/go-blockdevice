@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -328,6 +329,8 @@ func (l *LUKS) RemoveToken(devname string, slot int) error {
 	return err
 }
 
+var notFoundMatcher = regexp.MustCompile("(is not in use|Failed to get token)")
+
 // runCommand executes cryptsetup with arguments.
 func (l *LUKS) runCommand(args []string, stdin []byte) (string, error) {
 	stdout, err := cmd.RunContext(cmd.WithStdin(
@@ -343,7 +346,7 @@ func (l *LUKS) runCommand(args []string, stdin []byte) (string, error) {
 					return "", encryption.ErrEncryptionKeyRejected
 				}
 
-				if strings.Contains(string(exitError.Output), "is not in use") {
+				if notFoundMatcher.Match(exitError.Output) {
 					return "", encryption.ErrTokenNotFound
 				}
 			case 2:
