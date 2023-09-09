@@ -171,6 +171,16 @@ func (l *LUKS) Encrypt(deviceName string, key *encryption.Key) error {
 	return err
 }
 
+// Resize implements encryption.Provider.
+func (l *LUKS) Resize(devname string, key *encryption.Key) error {
+	args := []string{"resize", devname, "--key-file=-"}
+	args = append(args, keyslotArgs(key)...)
+
+	_, err := l.runCommand(args, key.Value)
+
+	return err
+}
+
 // Close implements encryption.Provider.
 func (l *LUKS) Close(devname string) error {
 	_, err := l.runCommand([]string{"luksClose", devname}, nil)

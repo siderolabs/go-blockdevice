@@ -79,6 +79,9 @@ func (suite *LUKSSuite) TestEncrypt() {
 	encryptedPath, err := provider.Open(path, key)
 	suite.Require().NoError(err)
 
+	err = provider.Resize(encryptedPath, key)
+	suite.Require().NoError(err)
+
 	suite.Require().NoError(provider.AddKey(path, key, keyExtra))
 	suite.Require().NoError(provider.SetKey(path, keyExtra, keyExtra))
 	valid, err := provider.CheckKey(path, keyExtra)
