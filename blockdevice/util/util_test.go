@@ -119,6 +119,13 @@ func Test_PartNo(t *testing.T) {
 			},
 			want: "3",
 		},
+		{
+			name: "md0p2",
+			args: args{
+				devname: "md0p2",
+			},
+			want: "2",
+		},
 	}
 
 	for _, tt := range tests {
@@ -205,6 +212,14 @@ func Test_DevnameFromPartname(t *testing.T) {
 				partno:  "3",
 			},
 			want: "mmcblk0",
+		},
+		{
+			name: "md0p1",
+			args: args{
+				devname: "md0p1",
+				partno:  "1",
+			},
+			want: "md0",
 		},
 	}
 

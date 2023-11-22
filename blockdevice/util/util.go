@@ -24,6 +24,10 @@ func PartNo(partname string) (string, error) {
 		idx := strings.LastIndex(partname, "p")
 
 		return partname[idx+1:], nil
+	case strings.HasPrefix(p, "md"):
+		idx := strings.LastIndex(partname, "p")
+
+		return partname[idx+1:], nil
 	case strings.HasPrefix(p, "sd"):
 		fallthrough
 	case strings.HasPrefix(p, "hd"):
@@ -57,6 +61,8 @@ func DevnameFromPartname(partname string) (string, error) {
 		fallthrough
 	case strings.HasPrefix(p, "loop"):
 		return strings.TrimSuffix(p, "p"+partno), nil
+	case strings.HasPrefix(p, "md"):
+		return strings.TrimSuffix(p, "p"+partno), nil
 	case strings.HasPrefix(p, "sd"):
 		fallthrough
 	case strings.HasPrefix(p, "hd"):
@@ -80,6 +86,8 @@ func PartName(d string, n int) string {
 	case strings.HasPrefix(p, "mmcblk"):
 		fallthrough
 	case strings.HasPrefix(p, "loop"):
+		partname = fmt.Sprintf("%sp%d", p, n)
+	case strings.HasPrefix(p, "md"):
 		partname = fmt.Sprintf("%sp%d", p, n)
 	default:
 		partname = fmt.Sprintf("%s%d", p, n)
