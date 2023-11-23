@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -258,7 +259,7 @@ func (l *LUKS) CheckKey(devname string, key *encryption.Key) (bool, error) {
 
 // RemoveKey removes a key at the specified LUKS encryption slot.
 func (l *LUKS) RemoveKey(devname string, slot int, key *encryption.Key) error {
-	_, err := l.runCommand([]string{"luksKillSlot", devname, fmt.Sprintf("%d", slot), "--key-file=-"}, key.Value)
+	_, err := l.runCommand([]string{"luksKillSlot", devname, strconv.Itoa(slot), "--key-file=-"}, key.Value)
 	if err != nil {
 		return err
 	}
@@ -315,7 +316,7 @@ func (l *LUKS) SetToken(devname string, slot int, token token.Token) error {
 		return err
 	}
 
-	id := fmt.Sprintf("%d", slot)
+	id := strconv.Itoa(slot)
 
 	_, err = l.runCommand([]string{"token", "import", "-q", devname, "--token-id", id, "--json-file=-", "--token-replace"}, data)
 
@@ -324,7 +325,7 @@ func (l *LUKS) SetToken(devname string, slot int, token token.Token) error {
 
 // ReadToken reads arbitrary token from the luks metadata.
 func (l *LUKS) ReadToken(devname string, slot int, token token.Token) error {
-	stdout, err := l.runCommand([]string{"token", "export", "-q", devname, "--token-id", fmt.Sprintf("%d", slot), "--json-file=-"}, nil)
+	stdout, err := l.runCommand([]string{"token", "export", "-q", devname, "--token-id", strconv.Itoa(slot), "--json-file=-"}, nil)
 	if err != nil {
 		return err
 	}
@@ -334,7 +335,7 @@ func (l *LUKS) ReadToken(devname string, slot int, token token.Token) error {
 
 // RemoveToken removes token from the luks metadata.
 func (l *LUKS) RemoveToken(devname string, slot int) error {
-	_, err := l.runCommand([]string{"token", "remove", "--token-id", fmt.Sprintf("%d", slot), devname}, nil)
+	_, err := l.runCommand([]string{"token", "remove", "--token-id", strconv.Itoa(slot), devname}, nil)
 
 	return err
 }

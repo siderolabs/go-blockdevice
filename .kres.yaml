@@ -8,3 +8,7 @@ kind: golang.UnitTests
 name: unit-tests
 spec:
     requiresInsecure: true
+---
+kind: service.CodeCov
+spec:
+  targetThreshold: 35 # the actual coverage is much higher and reported from the integration test
