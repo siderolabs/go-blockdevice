@@ -9,12 +9,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/siderolabs/go-blockdevice/blockdevice"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/ext4"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/iso9660"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/mdraid"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/msdos"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/swap"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/vfat"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/xfs"
 	"github.com/siderolabs/go-blockdevice/blockdevice/partition/gpt"
@@ -77,6 +80,18 @@ func WithFileSystemLabel(label string) SelectOption {
 			case *ext4.SuperBlock:
 				trimmed := bytes.Trim(sb.Label[:], " \x00")
 				if bytes.Equal(trimmed, []byte(label)) {
+					return true, nil
+				}
+			case *swap.SuperBlock:
+				trimmed := bytes.TrimRight(sb.Label[:], "\x00")
+				if bytes.Equal(trimmed, []byte(label)) {
+					return true, nil
+				}
+			case *mdraid.SuperBlock:
+				trimmed := bytes.Trim(sb.Name[:], "\x00")
+				mdlabel := strings.Split(string(trimmed), ":")
+
+				if len(mdlabel) == 2 && mdlabel[1] == label {
 					return true, nil
 				}
 			}

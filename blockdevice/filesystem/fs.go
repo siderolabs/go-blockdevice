@@ -16,7 +16,9 @@ import (
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/ext4"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/iso9660"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/luks"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/mdraid"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/msdos"
+	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/swap"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/vfat"
 	"github.com/siderolabs/go-blockdevice/blockdevice/filesystem/xfs"
 )
@@ -69,6 +71,8 @@ func Probe(path string) (SuperBlocker, error) { //nolint:ireturn
 		&xfs.SuperBlock{},
 		&luks.SuperBlock{},
 		&ext4.SuperBlock{},
+		&swap.SuperBlock{},
+		&mdraid.SuperBlock{},
 	}
 
 	for _, sb := range superblocks {
