@@ -2,5 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package blkid provides information about blockdevice filesystem types and IDs.
-package blkid
+package block
+
+func isPowerOf2[T uint8 | uint16 | uint32 | uint64](num T) bool {
+	return (num != 0 && ((num & (num - 1)) == 0))
+}

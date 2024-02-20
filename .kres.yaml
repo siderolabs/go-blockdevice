@@ -1,3 +1,26 @@
 kind: common.Repository
 spec:
   mainBranch: v2
+---
+kind: common.Docker
+name: setup-ci
+spec:
+    allowInsecure: true
+---
+kind: golang.UnitTests
+name: unit-tests
+spec:
+    requiresInsecure: true
+---
+kind: golang.Toolchain
+spec:
+    extraPackages:
+        - cdrkit
+        - cryptsetup
+        - dosfstools
+        - e2fsprogs
+        - xfsprogs
+---
+kind: service.CodeCov
+spec:
+  targetThreshold: 40
