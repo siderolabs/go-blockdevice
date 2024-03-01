@@ -19,6 +19,8 @@ spec:
         - cryptsetup
         - dosfstools
         - e2fsprogs
+        - parted
+        - util-linux
         - xfsprogs
 ---
 kind: service.CodeCov

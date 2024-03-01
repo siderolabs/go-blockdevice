@@ -21,9 +21,9 @@ func (d *Device) GetSize() (uint64, error) {
 }
 
 // GetIOSize returns blockdevice optimal I/O size in bytes.
-func (d *Device) GetIOSize() (uint64, error) {
+func (d *Device) GetIOSize() (uint, error) {
 	for _, ioctl := range []int{unix.BLKIOOPT, unix.BLKIOMIN, unix.BLKBSZGET} {
-		var size uint64
+		var size uint
 		if _, _, errno := unix.Syscall(unix.SYS_IOCTL, d.f.Fd(), uintptr(ioctl), uintptr(unsafe.Pointer(&size))); errno != 0 {
 			continue
 		}
@@ -34,4 +34,15 @@ func (d *Device) GetIOSize() (uint64, error) {
 	}
 
 	return DefaultBlockSize, nil
+}
+
+// GetSectorSize returns blockdevice sector size in bytes.
+func (d *Device) GetSectorSize() uint {
+	var size uint
+
+	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, d.f.Fd(), uintptr(unix.BLKSSZGET), uintptr(unsafe.Pointer(&size))); errno != 0 {
+		return DefaultBlockSize
+	}
+
+	return size
 }

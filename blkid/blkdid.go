@@ -19,15 +19,46 @@ type Info struct { //nolint:govet
 	// Overall size of the probed device (in bytes).
 	Size uint64
 
-	// Optimal I/O size for the device (in bytes).
-	IOSize uint64
+	// Sector size of the device (in bytes).
+	SectorSize uint
 
-	// TODO: API might be different.
+	// Optimal I/O size for the device (in bytes).
+	IOSize uint
+
+	// ProbeResult is the result of probing the device.
+	ProbeResult
+
+	// Parts is the result of probing the nested filesystem/partitions.
+	Parts []NestedProbeResult
+}
+
+// ProbeResult is a result of probing a single filesystem/partition.
+type ProbeResult struct { //nolint:govet
 	Name  string
 	UUID  *uuid.UUID
 	Label *string
 
 	BlockSize           uint32
 	FilesystemBlockSize uint32
-	FilesystemSize      uint64
+	ProbedSize          uint64
+}
+
+// NestedResult is result of probing a nested filesystem/partition.
+//
+// It annotates the ProbeResult with the partition information.
+type NestedResult struct {
+	PartitionUUID  *uuid.UUID
+	PartitionType  *uuid.UUID
+	PartitionLabel *string
+	PartitionIndex uint // 1-based index
+
+	PartitionOffset, PartitionSize uint64
+}
+
+// NestedProbeResult is a result of probing a nested filesystem/partition.
+type NestedProbeResult struct { //nolint:govet
+	NestedResult
+	ProbeResult
+
+	Parts []NestedProbeResult
 }

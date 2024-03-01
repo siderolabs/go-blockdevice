@@ -6,10 +6,8 @@
 package bluestore
 
 import (
-	"io"
-
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
-	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/result"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
 )
 
 var blueStoreMagic = magic.Magic{
@@ -31,6 +29,6 @@ func (p *Probe) Name() string {
 }
 
 // Probe runs the further inspection and returns the result if successful.
-func (p *Probe) Probe(io.ReaderAt) (*result.Result, error) {
-	return &result.Result{}, nil
+func (p *Probe) Probe(probe.Reader) (*probe.Result, error) {
+	return &probe.Result{}, nil
 }

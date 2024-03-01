@@ -5,6 +5,7 @@ go 1.22.0
 require (
 	github.com/freddierice/go-losetup/v2 v2.0.1
 	github.com/google/uuid v1.6.0
+	github.com/siderolabs/gen v0.4.7
 	github.com/siderolabs/go-pointer v1.0.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/sys v0.16.0

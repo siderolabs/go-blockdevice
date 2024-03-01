@@ -10,10 +10,8 @@ package vfat
 //go:generate go run ../../cstruct/cstruct.go -pkg vfat -struct VFATSB -input vfat.h -endianness LittleEndian
 
 import (
-	"io"
-
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
-	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/result"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
 )
 
@@ -70,7 +68,7 @@ func (p *Probe) Name() string {
 }
 
 // Probe runs the further inspection and returns the result if successful.
-func (p *Probe) Probe(r io.ReaderAt) (*result.Result, error) {
+func (p *Probe) Probe(r probe.Reader) (*probe.Result, error) {
 	vfatBuf := make([]byte, VFATSB_SIZE)
 	msdosBuf := make([]byte, MSDOSSB_SIZE)
 
@@ -96,10 +94,10 @@ func (p *Probe) Probe(r io.ReaderAt) (*result.Result, error) {
 
 	sectorSize := uint32(msdosSB.Get_ms_sector_size())
 
-	res := &result.Result{
+	res := &probe.Result{
 		BlockSize:           sectorSize,
 		FilesystemBlockSize: uint32(vfatSB.Get_vs_cluster_size()) * sectorSize,
-		FilesystemSize:      uint64(sectorCount) * uint64(sectorSize),
+		ProbedSize:          uint64(sectorCount) * uint64(sectorSize),
 	}
 
 	return res, nil

@@ -2,8 +2,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package block
+package gpt
 
-func isPowerOf2[T uint8 | uint16 | uint32 | uint64 | uint](num T) bool {
-	return (num != 0 && ((num & (num - 1)) == 0))
+func guidToUUID(g []byte) []byte {
+	return append(
+		[]byte{
+			g[3], g[2], g[1], g[0],
+			g[5], g[4],
+			g[7], g[6],
+			g[8], g[9],
+		},
+		g[10:16]...,
+	)
 }

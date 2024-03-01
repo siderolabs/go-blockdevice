@@ -9,13 +9,12 @@ package xfs
 
 import (
 	"bytes"
-	"io"
 
 	"github.com/google/uuid"
 	"github.com/siderolabs/go-pointer"
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
-	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/result"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
 )
 
 var xfsMagic = magic.Magic{
@@ -37,7 +36,7 @@ func (p *Probe) Name() string {
 }
 
 // Probe runs the further inspection and returns the result if successful.
-func (p *Probe) Probe(r io.ReaderAt) (*result.Result, error) {
+func (p *Probe) Probe(r probe.Reader) (*probe.Result, error) {
 	buf := make([]byte, SUPERBLOCK_SIZE)
 
 	if _, err := r.ReadAt(buf, 0); err != nil {
@@ -54,12 +53,12 @@ func (p *Probe) Probe(r io.ReaderAt) (*result.Result, error) {
 		return nil, err
 	}
 
-	res := &result.Result{
+	res := &probe.Result{
 		UUID: &uuid,
 
 		BlockSize:           uint32(sb.Get_sb_sectsize()),
 		FilesystemBlockSize: sb.Get_sb_blocksize(),
-		FilesystemSize:      sb.FilesystemSize(),
+		ProbedSize:          sb.FilesystemSize(),
 	}
 
 	lbl := sb.Get_sb_fname()

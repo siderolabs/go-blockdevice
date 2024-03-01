@@ -8,14 +8,13 @@ package iso9660
 //go:generate go run ../../cstruct/cstruct.go -pkg iso9660 -struct VolumeDescriptor -input volume.h -endianness NativeEndian
 
 import (
-	"io"
 	"strings"
 
 	"github.com/siderolabs/go-pointer"
 	"golang.org/x/text/encoding/unicode"
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
-	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/result"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
 )
 
 const (
@@ -55,7 +54,7 @@ func isonum16(b []byte) uint16 {
 }
 
 // Probe runs the further inspection and returns the result if successful.
-func (p *Probe) Probe(r io.ReaderAt) (*result.Result, error) {
+func (p *Probe) Probe(r probe.Reader) (*probe.Result, error) {
 	var pvd, joilet VolumeDescriptor
 
 vdLoop:
@@ -91,10 +90,10 @@ vdLoop:
 	logicalBlockSize := isonum16(pvd.Get_logical_block_size())
 	spaceSize := isonum16(pvd.Get_space_size())
 
-	res := &result.Result{
+	res := &probe.Result{
 		BlockSize:           uint32(logicalBlockSize),
 		FilesystemBlockSize: uint32(logicalBlockSize),
-		FilesystemSize:      uint64(spaceSize) * uint64(logicalBlockSize),
+		ProbedSize:          uint64(spaceSize) * uint64(logicalBlockSize),
 	}
 
 	if joilet != nil {

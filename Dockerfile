@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-02-23T15:08:58Z by kres latest.
+# Generated on 2024-03-01T13:44:11Z by kres latest.
 
 ARG TOOLCHAIN
 
@@ -11,7 +11,7 @@ FROM scratch AS generate
 
 # base toolchain image
 FROM ${TOOLCHAIN} AS toolchain
-RUN apk --update --no-cache add bash curl build-base protoc protobuf-dev cdrkit cryptsetup dosfstools e2fsprogs xfsprogs
+RUN apk --update --no-cache add bash curl build-base protoc protobuf-dev cdrkit cryptsetup dosfstools e2fsprogs parted util-linux xfsprogs
 
 # build tools
 FROM --platform=${BUILDPLATFORM} toolchain AS tools
