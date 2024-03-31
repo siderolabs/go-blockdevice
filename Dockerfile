@@ -11,7 +11,7 @@ FROM scratch AS generate
 
 # base toolchain image
 FROM ${TOOLCHAIN} AS toolchain
-RUN apk --update --no-cache add bash curl build-base protoc protobuf-dev cdrkit cryptsetup dosfstools e2fsprogs parted util-linux xfsprogs
+RUN apk --update --no-cache add bash curl build-base protoc protobuf-dev cdrkit cryptsetup dosfstools e2fsprogs parted util-linux xfsprogs lvm2
 
 # build tools
 FROM --platform=${BUILDPLATFORM} toolchain AS tools

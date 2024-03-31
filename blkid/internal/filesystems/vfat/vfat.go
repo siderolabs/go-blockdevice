@@ -68,7 +68,7 @@ func (p *Probe) Name() string {
 }
 
 // Probe runs the further inspection and returns the result if successful.
-func (p *Probe) Probe(r probe.Reader) (*probe.Result, error) {
+func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	vfatBuf := make([]byte, VFATSB_SIZE)
 	msdosBuf := make([]byte, MSDOSSB_SIZE)
 

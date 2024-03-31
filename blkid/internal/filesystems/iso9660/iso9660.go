@@ -54,7 +54,7 @@ func isonum16(b []byte) uint16 {
 }
 
 // Probe runs the further inspection and returns the result if successful.
-func (p *Probe) Probe(r probe.Reader) (*probe.Result, error) {
+func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	var pvd, joilet VolumeDescriptor
 
 vdLoop:

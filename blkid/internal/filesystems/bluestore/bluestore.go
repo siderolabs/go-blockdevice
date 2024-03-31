@@ -29,6 +29,6 @@ func (p *Probe) Name() string {
 }
 
 // Probe runs the further inspection and returns the result if successful.
-func (p *Probe) Probe(probe.Reader) (*probe.Result, error) {
+func (p *Probe) Probe(probe.Reader, magic.Magic) (*probe.Result, error) {
 	return &probe.Result{}, nil
 }

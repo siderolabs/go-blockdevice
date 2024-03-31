@@ -10,6 +10,8 @@ import (
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/ext"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/iso9660"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/luks"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/lvm2"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/swap"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/vfat"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/xfs"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/partitions/gpt"
@@ -35,13 +37,13 @@ func (chain Chain) MaxMagicSize() int {
 }
 
 // MagicMatches returns the prober that matches the magic value in the buffer.
-func (chain Chain) MagicMatches(buf []byte) []probe.Prober {
-	var matches []probe.Prober
+func (chain Chain) MagicMatches(buf []byte) []probe.MagicMatch {
+	var matches []probe.MagicMatch
 
 	for _, prober := range chain {
 		for _, magic := range prober.Magic() {
 			if magic.Matches(buf) {
-				matches = append(matches, prober)
+				matches = append(matches, probe.MagicMatch{Magic: *magic, Prober: prober})
 
 				continue
 			}
@@ -57,6 +59,8 @@ func Default() Chain {
 		&xfs.Probe{},
 		&ext.Probe{},
 		&vfat.Probe{},
+		&swap.Probe{},
+		&lvm2.Probe{},
 		&gpt.Probe{},
 		&luks.Probe{},
 		&iso9660.Probe{},

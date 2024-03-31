@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -104,19 +105,51 @@ func isoSetup(useJoilet bool) func(t *testing.T, path string) {
 	}
 }
 
-//nolint:gocognit
+func swapSetup(t *testing.T, path string) {
+	t.Helper()
+
+	cmd := exec.Command("mkswap", "--label", "swaplabel", "-p", "8192", path)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	require.NoError(t, cmd.Run())
+}
+
+func swapSetup2(t *testing.T, path string) {
+	t.Helper()
+
+	cmd := exec.Command("mkswap", "--label", "swapswap", "-p", "4096", path)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	require.NoError(t, cmd.Run())
+}
+
+func lvm2Setup(t *testing.T, path string) {
+	t.Helper()
+
+	cmd := exec.Command("pvcreate", "-v", path)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	require.NoError(t, cmd.Run())
+}
+
+//nolint:gocognit,maintidx
 func TestProbePathFilesystems(t *testing.T) {
 	for _, test := range []struct { //nolint:govet
 		name string
 
-		noLoop bool
+		noLoop   bool
+		loopOnly bool
 
 		size  uint64
 		setup func(*testing.T, string)
 
-		expectedName  string
-		expectedLabel string
-		expectUUID    bool
+		expectedName       string
+		expectedLabel      string
+		expectedLabelRegex *regexp.Regexp
+		expectUUID         bool
 
 		expectedBlockSize   []uint32
 		expectedFSBlockSize []uint32
@@ -210,6 +243,58 @@ func TestProbePathFilesystems(t *testing.T) {
 			expectedFSBlockSize: []uint32{2048},
 			expectedFSSize:      0x15b000,
 		},
+		{
+			name: "swap 8k",
+
+			size:  500 * MiB,
+			setup: swapSetup,
+
+			expectedName:  "swap",
+			expectedLabel: "swaplabel",
+			expectUUID:    true,
+
+			expectedBlockSize:   []uint32{8192},
+			expectedFSBlockSize: []uint32{8192},
+			expectedFSSize:      524279808,
+		},
+		{
+			name: "swap 4k",
+
+			size:  500 * MiB,
+			setup: swapSetup2,
+
+			expectedName:  "swap",
+			expectedLabel: "swapswap",
+			expectUUID:    true,
+
+			expectedBlockSize:   []uint32{4096},
+			expectedFSBlockSize: []uint32{4096},
+			expectedFSSize:      524283904,
+		},
+		{
+			name: "swap 200 MiB",
+
+			size:  200 * MiB,
+			setup: swapSetup,
+
+			expectedName:  "swap",
+			expectedLabel: "swaplabel",
+			expectUUID:    true,
+
+			expectedBlockSize:   []uint32{8192},
+			expectedFSBlockSize: []uint32{8192},
+			expectedFSSize:      209707008,
+		},
+		{
+			name:     "lvm2-pv",
+			loopOnly: true,
+
+			size:  500 * MiB,
+			setup: lvm2Setup,
+
+			expectedName:       "lvm2-pv",
+			expectedLabelRegex: regexp.MustCompile(`(?m)^[0-9a-zA-Z]{6}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{6}$`),
+		},
 	} {
 		for _, useLoopDevice := range []bool{false, true} {
 			t.Run(fmt.Sprintf("loop=%v", useLoopDevice), func(t *testing.T) {
@@ -220,6 +305,10 @@ func TestProbePathFilesystems(t *testing.T) {
 
 					if useLoopDevice && test.noLoop {
 						t.Skip("test does not support loop devices")
+					}
+
+					if !useLoopDevice && test.loopOnly {
+						t.Skip("test does not support running without loop devices")
 					}
 
 					tmpDir := t.TempDir()
@@ -268,10 +357,13 @@ func TestProbePathFilesystems(t *testing.T) {
 
 					assert.Equal(t, test.expectedName, info.Name)
 
-					if test.expectedLabel != "" {
+					switch {
+					case test.expectedLabel != "":
 						require.NotNil(t, info.Label)
 						assert.Equal(t, test.expectedLabel, *info.Label)
-					} else {
+					case test.expectedLabelRegex != nil:
+						assert.True(t, test.expectedLabelRegex.MatchString(*info.Label))
+					default:
 						assert.Nil(t, info.Label)
 					}
 

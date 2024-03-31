@@ -126,13 +126,13 @@ func (i *Info) probe(f *os.File, chain chain.Chain, offset, length uint64) (*pro
 	}
 
 	for _, matched := range chain.MagicMatches(buf) {
-		res, err := matched.Probe(pR)
+		res, err := matched.Prober.Probe(pR, matched.Magic)
 		if err != nil || res == nil {
 			// skip failed probes
 			continue
 		}
 
-		return res, matched, nil
+		return res, matched.Prober, nil
 	}
 
 	return nil, nil, nil

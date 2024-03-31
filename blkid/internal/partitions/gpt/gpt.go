@@ -43,7 +43,7 @@ const (
 )
 
 // Probe runs the further inspection and returns the result if successful.
-func (p *Probe) Probe(r probe.Reader) (*probe.Result, error) {
+func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	lastLBA, ok := lastLBA(r)
 	if !ok {
 		return nil, nil //nolint:nilnil

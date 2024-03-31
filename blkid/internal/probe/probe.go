@@ -28,7 +28,13 @@ type Prober interface {
 	// Magic returns the magic value for the filesystem or volume manager.
 	Magic() []*magic.Magic
 	// Probe runs the further inspection and returns the result if successful.
-	Probe(Reader) (*Result, error)
+	Probe(Reader, magic.Magic) (*Result, error)
+}
+
+// MagicMatch is a magic detection result.
+type MagicMatch struct {
+	Prober Prober
+	Magic  magic.Magic
 }
 
 // Result is a probe result.
