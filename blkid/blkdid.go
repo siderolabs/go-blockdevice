@@ -16,6 +16,16 @@ type Info struct { //nolint:govet
 	// Link to the block device, only if the probed file is a blockdevice.
 	BlockDevice *block.Device
 
+	// DevNo is the device number of the probed device.
+	//
+	// Only available if the probed file is a blockdevice.
+	DevNo uint64
+
+	// WholeDisk is true if the probed device is a whole disk.
+	//
+	// Only available if the probed file is a blockdevice.
+	WholeDisk bool
+
 	// Overall size of the probed device (in bytes).
 	Size uint64
 

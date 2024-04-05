@@ -7,8 +7,10 @@
 package blkid
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -45,6 +47,7 @@ func Probe(f *os.File) (*Info, error) {
 	case unix.S_IFBLK:
 		// block device, initialize full support
 		info.BlockDevice = block.NewFromFile(f)
+		info.DevNo = sysStat.Rdev
 
 		if size, err := info.BlockDevice.GetSize(); err == nil {
 			info.Size = size
@@ -59,6 +62,8 @@ func Probe(f *os.File) (*Info, error) {
 		}
 
 		info.SectorSize = info.BlockDevice.GetSectorSize()
+
+		info.WholeDisk = info.isWholeDisk()
 	case unix.S_IFREG:
 		// regular file (an image?), so use different settings
 		info.Size = uint64(st.Size())
@@ -68,9 +73,77 @@ func Probe(f *os.File) (*Info, error) {
 		return nil, fmt.Errorf("unsupported file type: %s", st.Mode().Type())
 	}
 
+	if info.isPrivateDeviceMapper() {
+		// don't probe device-mapper devices
+		return info, nil
+	}
+
+	if info.BlockDevice != nil && info.isWholeDisk() {
+		if info.BlockDevice.IsCD() && info.BlockDevice.IsCDNoMedia() {
+			// don't probe CD-ROM devices without media
+			return info, nil
+		}
+	}
+
 	if err := info.fillProbeResult(f); err != nil {
 		return nil, fmt.Errorf("failed to probe: %w", err)
 	}
 
 	return info, nil
+}
+
+func (i *Info) sysFsPath() string {
+	return fmt.Sprintf("/sys/dev/block/%d:%d", unix.Major(i.DevNo), unix.Minor(i.DevNo))
+}
+
+func (i *Info) isPrivateDeviceMapper() bool {
+	if i.DevNo == 0 {
+		return false
+	}
+
+	sysFsPath := i.sysFsPath()
+
+	contents, err := os.ReadFile(filepath.Join(sysFsPath, "dm", "uuid"))
+	if err != nil {
+		return false
+	}
+
+	// check for pattern "LVM-<uuid>-name"
+	prefix, rest, ok := bytes.Cut(contents, []byte("-"))
+	if !ok {
+		return false
+	}
+
+	if !bytes.Equal(prefix, []byte("LVM")) {
+		return false
+	}
+
+	_, _, ok = bytes.Cut(rest, []byte("-"))
+
+	return ok
+}
+
+func (i *Info) isWholeDisk() bool {
+	if i.DevNo == 0 {
+		return false
+	}
+
+	sysFsPath := i.sysFsPath()
+
+	// check if this is a partition
+	_, err := os.Stat(filepath.Join(sysFsPath, "partition"))
+	isPartition := err == nil
+
+	if isPartition {
+		return false
+	}
+
+	// device-mapper check
+	contents, err := os.ReadFile(filepath.Join(sysFsPath, "dm", "uuid"))
+	if err != nil {
+		// not devmapper
+		return true
+	}
+
+	return !bytes.HasPrefix(contents, []byte("part-"))
 }
