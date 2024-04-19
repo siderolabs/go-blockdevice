@@ -71,6 +71,16 @@ func luksSetup(t *testing.T, path string) {
 	require.NoError(t, cmd.Run())
 }
 
+func zfsSetup(t *testing.T, path string) {
+	t.Helper()
+
+	cmd := exec.Command("cp", "/usr/share/zfs.img", path)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	require.NoError(t, cmd.Run())
+}
+
 func isoSetup(useJoilet bool) func(t *testing.T, path string) {
 	return func(t *testing.T, path string) {
 		t.Helper()
@@ -294,6 +304,16 @@ func TestProbePathFilesystems(t *testing.T) {
 
 			expectedName:       "lvm2-pv",
 			expectedLabelRegex: regexp.MustCompile(`(?m)^[0-9a-zA-Z]{6}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{4}-[0-9a-zA-Z]{6}$`),
+		},
+		{
+			name:   "zfs",
+			noLoop: true,
+
+			size:  0,
+			setup: zfsSetup,
+
+			expectedName:       "zfs",
+			expectedLabelRegex: regexp.MustCompile(`^[0-9a-f]{16}$`),
 		},
 	} {
 		for _, useLoopDevice := range []bool{false, true} {

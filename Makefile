@@ -1,28 +1,29 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-02-22T13:08:42Z by kres 615351f.
+# Generated on 2024-05-06T07:45:41Z by kres d15226e-dirty.
 
 # common variables
 
 SHA := $(shell git describe --match=none --always --abbrev=8 --dirty)
-TAG := $(shell git describe --tag --always --dirty)
+TAG := $(shell git describe --tag --always --dirty --match v[0-9]\*)
 ABBREV_TAG := $(shell git describe --tags >/dev/null 2>/dev/null && git describe --tag --always --match v[0-9]\* --abbrev=0 || echo 'undefined')
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 ARTIFACTS := _out
+IMAGE_TAG ?= $(TAG)
 WITH_DEBUG ?= false
 WITH_RACE ?= false
 REGISTRY ?= ghcr.io
 USERNAME ?= siderolabs
 REGISTRY_AND_USERNAME ?= $(REGISTRY)/$(USERNAME)
-PROTOBUF_GO_VERSION ?= 1.32.0
+PROTOBUF_GO_VERSION ?= 1.33.0
 GRPC_GO_VERSION ?= 1.3.0
 GRPC_GATEWAY_VERSION ?= 2.19.1
 VTPROTOBUF_VERSION ?= 0.6.0
 DEEPCOPY_VERSION ?= v0.5.6
-GOLANGCILINT_VERSION ?= v1.56.2
+GOLANGCILINT_VERSION ?= v1.57.2
 GOFUMPT_VERSION ?= v0.6.0
-GO_VERSION ?= 1.22.0
-GOIMPORTS_VERSION ?= v0.18.0
+GO_VERSION ?= 1.22.2
+GOIMPORTS_VERSION ?= v0.20.0
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
@@ -110,7 +111,7 @@ If you already have a compatible builder instance, you may use that instead.
 ## Artifacts
 
 All artifacts will be output to ./$(ARTIFACTS). Images will be tagged with the
-registry "$(REGISTRY)", username "$(USERNAME)", and a dynamic tag (e.g. $(IMAGE):$(TAG)).
+registry "$(REGISTRY)", username "$(USERNAME)", and a dynamic tag (e.g. $(IMAGE):$(IMAGE_TAG)).
 The registry and username can be overridden by exporting REGISTRY, and USERNAME
 respectively.
 
@@ -128,7 +129,7 @@ else
 GO_LDFLAGS += -s
 endif
 
-all: unit-tests lint
+all: unit-tests zfs-img lint
 
 .PHONY: clean
 clean:  ## Cleans up all artifacts.
@@ -171,10 +172,6 @@ unit-tests:  ## Performs unit tests
 .PHONY: unit-tests-race
 unit-tests-race:  ## Performs unit tests with race detection enabled.
 	@$(MAKE) target-$@  TARGET_ARGS="--allow security.insecure"
-
-.PHONY: coverage
-coverage:  ## Upload coverage data to codecov.io.
-	bash -c "bash <(curl -s https://codecov.io/bash) -f $(ARTIFACTS)/coverage-unit-tests.txt -X fix"
 
 .PHONY: lint
 lint: lint-golangci-lint lint-gofumpt lint-govulncheck lint-goimports  ## Run all linters for the project.
