@@ -7,7 +7,10 @@
 package blkid_test
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -73,6 +76,10 @@ func luksSetup(t *testing.T, path string) {
 
 func zfsSetup(t *testing.T, path string) {
 	t.Helper()
+
+	if _, err := os.Stat("/usr/share/zfs.img"); os.IsNotExist(err) {
+		t.Skip("zfs.img not found")
+	}
 
 	cmd := exec.Command("cp", "/usr/share/zfs.img", path)
 	cmd.Stdout = os.Stdout
@@ -143,6 +150,53 @@ func lvm2Setup(t *testing.T, path string) {
 	cmd.Stderr = os.Stderr
 
 	require.NoError(t, cmd.Run())
+}
+
+func squashfsSetup(t *testing.T, path string) {
+	t.Helper()
+
+	contents := t.TempDir()
+
+	f, err := os.Create(filepath.Join(contents, "fileA"))
+	require.NoError(t, err)
+
+	_, err = io.Copy(f, io.LimitReader(rand.Reader, 1024*1024))
+	require.NoError(t, err)
+
+	require.NoError(t, f.Close())
+
+	f, err = os.Create(filepath.Join(contents, "fileB"))
+	require.NoError(t, err)
+
+	_, err = io.Copy(f, io.LimitReader(rand.Reader, 1024))
+	require.NoError(t, err)
+
+	require.NoError(t, f.Close())
+
+	cmd := exec.Command("mksquashfs", contents, path, "-all-root", "-noappend", "-no-progress", "-no-compression")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	require.NoError(t, cmd.Run())
+}
+
+func talosmetaSetup(t *testing.T, path string) {
+	t.Helper()
+
+	f, err := os.OpenFile(path, os.O_RDWR, 0)
+	require.NoError(t, err)
+
+	metaSlice := make([]byte, 256*1024)
+	binary.BigEndian.PutUint32(metaSlice, 0x5a4b3c2d)
+	binary.BigEndian.PutUint32(metaSlice[len(metaSlice)-4:], 0xa5b4c3d2)
+
+	_, err = f.Write(metaSlice)
+	require.NoError(t, err)
+
+	_, err = f.Write(metaSlice)
+	require.NoError(t, err)
+
+	require.NoError(t, f.Close())
 }
 
 //nolint:gocognit,maintidx
@@ -314,6 +368,29 @@ func TestProbePathFilesystems(t *testing.T) {
 
 			expectedName:       "zfs",
 			expectedLabelRegex: regexp.MustCompile(`^[0-9a-f]{16}$`),
+		},
+		{
+			name:   "squashfs",
+			noLoop: true,
+
+			size:  0,
+			setup: squashfsSetup,
+
+			expectedName: "squashfs",
+
+			expectedBlockSize:   []uint32{0x20000},
+			expectedFSBlockSize: []uint32{0x20000},
+			expectedFSSize:      0x100554,
+		},
+		{
+			name: "talosmeta",
+
+			size:  2 * 256 * 1024,
+			setup: talosmetaSetup,
+
+			expectedName: "talosmeta",
+
+			expectedFSSize: 2 * 256 * 1024,
 		},
 	} {
 		for _, useLoopDevice := range []bool{false, true} {

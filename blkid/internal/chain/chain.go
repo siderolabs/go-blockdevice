@@ -11,7 +11,9 @@ import (
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/iso9660"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/luks"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/lvm2"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/squashfs"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/swap"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/talosmeta"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/vfat"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/xfs"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/zfs"
@@ -64,6 +66,8 @@ func Default() Chain {
 		&lvm2.Probe{},
 		&gpt.Probe{},
 		&zfs.Probe{},
+		&squashfs.Probe{},
+		&talosmeta.Probe{},
 		&luks.Probe{},
 		&iso9660.Probe{},
 		&bluestore.Probe{},

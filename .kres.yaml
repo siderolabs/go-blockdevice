@@ -15,10 +15,11 @@ spec:
         - cryptsetup
         - dosfstools
         - e2fsprogs
+        - lvm2
         - parted
         - util-linux
+        - squashfs-tools
         - xfsprogs
-        - lvm2
 ---
 kind: service.CodeCov
 spec:
