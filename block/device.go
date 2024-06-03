@@ -9,12 +9,26 @@ import "os"
 
 // Device wraps blockdevice operations.
 type Device struct {
-	f *os.File
+	f         *os.File
+	ownedFile bool
+
+	devNo uint64
 }
 
 // NewFromFile returns a new Device from the specified file.
 func NewFromFile(f *os.File) *Device {
 	return &Device{f: f}
+}
+
+// Close the device.
+//
+// No-op if the device was created from a file.
+func (d *Device) Close() error {
+	if d.ownedFile {
+		return d.f.Close()
+	}
+
+	return nil
 }
 
 // DefaultBlockSize is the default block size in bytes.

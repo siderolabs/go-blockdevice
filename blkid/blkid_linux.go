@@ -7,10 +7,9 @@
 package blkid
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -19,7 +18,7 @@ import (
 )
 
 // ProbePath returns the probe information for the specified path.
-func ProbePath(devpath string) (*Info, error) {
+func ProbePath(devpath string, opts ...ProbeOption) (*Info, error) {
 	f, err := os.OpenFile(devpath, os.O_RDONLY|unix.O_CLOEXEC|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, err
@@ -27,11 +26,15 @@ func ProbePath(devpath string) (*Info, error) {
 
 	defer f.Close() //nolint:errcheck
 
-	return Probe(f)
+	return Probe(f, opts...)
 }
 
 // Probe returns the probe information for the specified file.
-func Probe(f *os.File) (*Info, error) {
+//
+//nolint:cyclop
+func Probe(f *os.File, opts ...ProbeOption) (*Info, error) {
+	options := applyProbeOptions(opts...)
+
 	unix.Fadvise(int(f.Fd()), 0, 0, unix.FADV_RANDOM) //nolint:errcheck // best-effort: we don't care if this fails
 
 	st, err := f.Stat()
@@ -47,15 +50,24 @@ func Probe(f *os.File) (*Info, error) {
 	case unix.S_IFBLK:
 		// block device, initialize full support
 		info.BlockDevice = block.NewFromFile(f)
-		info.DevNo = sysStat.Rdev
 
-		if size, err := info.BlockDevice.GetSize(); err == nil {
+		info.DevNo, err = info.BlockDevice.GetDevNo()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get device number: %w", err)
+		}
+
+		var (
+			size   uint64
+			ioSize uint
+		)
+
+		if size, err = info.BlockDevice.GetSize(); err == nil {
 			info.Size = size
 		} else {
 			return nil, fmt.Errorf("failed to get block device size: %w", err)
 		}
 
-		if ioSize, err := info.BlockDevice.GetIOSize(); err == nil {
+		if ioSize, err = info.BlockDevice.GetIOSize(); err == nil {
 			info.IOSize = ioSize
 		} else {
 			return nil, fmt.Errorf("failed to get block device I/O size: %w", err)
@@ -63,7 +75,10 @@ func Probe(f *os.File) (*Info, error) {
 
 		info.SectorSize = info.BlockDevice.GetSectorSize()
 
-		info.WholeDisk = info.isWholeDisk()
+		info.WholeDisk, err = info.BlockDevice.IsWholeDisk()
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if block device is whole disk: %w", err)
+		}
 	case unix.S_IFREG:
 		// regular file (an image?), so use different settings
 		info.Size = uint64(st.Size())
@@ -73,16 +88,40 @@ func Probe(f *os.File) (*Info, error) {
 		return nil, fmt.Errorf("unsupported file type: %s", st.Mode().Type())
 	}
 
-	if info.isPrivateDeviceMapper() {
-		// don't probe device-mapper devices
+	if info.BlockDevice != nil {
+		if private, err := info.BlockDevice.IsPrivateDeviceMapper(); private && err == nil {
+			// don't probe device-mapper devices
+			options.Logger.Debug("skipping private device-mapper device")
+
+			return info, nil
+		}
+	}
+
+	if info.WholeDisk && info.BlockDevice.IsCD() && info.BlockDevice.IsCDNoMedia() {
+		// don't probe CD-ROM devices without media
+		options.Logger.Debug("skipping CD-ROM device without media")
+
 		return info, nil
 	}
 
-	if info.BlockDevice != nil && info.isWholeDisk() {
-		if info.BlockDevice.IsCD() && info.BlockDevice.IsCDNoMedia() {
-			// don't probe CD-ROM devices without media
-			return info, nil
+	if !options.SkipLocking && info.BlockDevice != nil {
+		// we need to lock the whole disk device (if probing a partition, we lock the whole disk)
+		wholeDisk, err := info.BlockDevice.GetWholeDisk()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get whole disk: %w", err)
 		}
+
+		defer wholeDisk.Close() //nolint:errcheck
+
+		if err = wholeDisk.TryLock(false); err != nil {
+			if errors.Is(err, unix.EWOULDBLOCK) {
+				return nil, ErrFailedLock
+			}
+
+			return nil, fmt.Errorf("failed to lock whole disk: %w", err)
+		}
+
+		defer wholeDisk.Unlock() //nolint:errcheck
 	}
 
 	if err := info.fillProbeResult(f); err != nil {
@@ -90,60 +129,4 @@ func Probe(f *os.File) (*Info, error) {
 	}
 
 	return info, nil
-}
-
-func (i *Info) sysFsPath() string {
-	return fmt.Sprintf("/sys/dev/block/%d:%d", unix.Major(i.DevNo), unix.Minor(i.DevNo))
-}
-
-func (i *Info) isPrivateDeviceMapper() bool {
-	if i.DevNo == 0 {
-		return false
-	}
-
-	sysFsPath := i.sysFsPath()
-
-	contents, err := os.ReadFile(filepath.Join(sysFsPath, "dm", "uuid"))
-	if err != nil {
-		return false
-	}
-
-	// check for pattern "LVM-<uuid>-name"
-	prefix, rest, ok := bytes.Cut(contents, []byte("-"))
-	if !ok {
-		return false
-	}
-
-	if !bytes.Equal(prefix, []byte("LVM")) {
-		return false
-	}
-
-	_, _, ok = bytes.Cut(rest, []byte("-"))
-
-	return ok
-}
-
-func (i *Info) isWholeDisk() bool {
-	if i.DevNo == 0 {
-		return false
-	}
-
-	sysFsPath := i.sysFsPath()
-
-	// check if this is a partition
-	_, err := os.Stat(filepath.Join(sysFsPath, "partition"))
-	isPartition := err == nil
-
-	if isPartition {
-		return false
-	}
-
-	// device-mapper check
-	contents, err := os.ReadFile(filepath.Join(sysFsPath, "dm", "uuid"))
-	if err != nil {
-		// not devmapper
-		return true
-	}
-
-	return !bytes.HasPrefix(contents, []byte("part-"))
 }

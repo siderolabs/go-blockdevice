@@ -6,9 +6,17 @@
 package blkid
 
 import (
+	"errors"
+
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"github.com/siderolabs/go-blockdevice/v2/block"
+)
+
+// Common errors.
+var (
+	ErrFailedLock = errors.New("failed to acquire shared lock while probing blockdevice")
 )
 
 // Info represents the result of the probe.
@@ -71,4 +79,41 @@ type NestedProbeResult struct { //nolint:govet
 	ProbeResult
 
 	Parts []NestedProbeResult
+}
+
+// ProbeOptions is the options for probing.
+type ProbeOptions struct {
+	// Logger to use for logging.
+	Logger *zap.Logger
+	// SkipLocking blockdevices in shared mode.
+	SkipLocking bool
+}
+
+// ProbeOption is an option for probing.
+type ProbeOption func(*ProbeOptions)
+
+// WithProbeLogger sets the logger for the probe.
+func WithProbeLogger(logger *zap.Logger) ProbeOption {
+	return func(o *ProbeOptions) {
+		o.Logger = logger
+	}
+}
+
+// WithSkipLocking skips locking blockdevices in shared mode.
+func WithSkipLocking(skip bool) ProbeOption {
+	return func(o *ProbeOptions) {
+		o.SkipLocking = skip
+	}
+}
+
+func applyProbeOptions(opts ...ProbeOption) ProbeOptions {
+	o := ProbeOptions{
+		Logger: zap.NewNop(),
+	}
+
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	return o
 }
