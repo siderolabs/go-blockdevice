@@ -15,6 +15,7 @@ import (
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
 )
 
 //go:generate go run ../../cstruct/cstruct.go -pkg gpt -struct Header -input header.h -endianness LittleEndian
@@ -144,7 +145,7 @@ func readHeader(r probe.Reader, lba, lastLBA uint64) (*Header, []Entry, error) {
 	sectorSize := r.GetSectorSize()
 	buf := make([]byte, sectorSize)
 
-	if _, err := r.ReadAt(buf, int64(lba)*int64(sectorSize)); err != nil {
+	if err := utils.ReadFullAt(r, buf, int64(lba)*int64(sectorSize)); err != nil {
 		return nil, nil, err
 	}
 
@@ -196,7 +197,7 @@ func readHeader(r probe.Reader, lba, lastLBA uint64) (*Header, []Entry, error) {
 	// read partition entries, verify checksum
 	entriesBuffer := make([]byte, hdr.Get_num_partition_entries()*ENTRY_SIZE)
 
-	if _, err := r.ReadAt(entriesBuffer, int64(hdr.Get_partition_entries_lba())*int64(sectorSize)); err != nil {
+	if err := utils.ReadFullAt(r, entriesBuffer, int64(hdr.Get_partition_entries_lba())*int64(sectorSize)); err != nil {
 		return nil, nil, err
 	}
 

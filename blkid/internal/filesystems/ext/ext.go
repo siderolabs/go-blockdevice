@@ -49,7 +49,7 @@ func (p *Probe) Name() string {
 func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	buf := make([]byte, SUPERBLOCK_SIZE)
 
-	if _, err := r.ReadAt(buf, sbOffset); err != nil {
+	if err := utils.ReadFullAt(r, buf, sbOffset); err != nil {
 		return nil, err
 	}
 

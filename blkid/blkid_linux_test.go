@@ -24,6 +24,7 @@ import (
 	"github.com/siderolabs/go-pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid"
 	"github.com/siderolabs/go-blockdevice/v2/block"
@@ -437,7 +438,9 @@ func TestProbePathFilesystems(t *testing.T) {
 
 					test.setup(t, probePath)
 
-					info, err := blkid.ProbePath(probePath)
+					logger := zaptest.NewLogger(t)
+
+					info, err := blkid.ProbePath(probePath, blkid.WithProbeLogger(logger))
 					require.NoError(t, err)
 
 					if useLoopDevice {
@@ -652,7 +655,9 @@ func TestProbePathGPT(t *testing.T) {
 
 					test.setup(t, probePath)
 
-					info, err := blkid.ProbePath(probePath)
+					logger := zaptest.NewLogger(t)
+
+					info, err := blkid.ProbePath(probePath, blkid.WithProbeLogger(logger))
 					require.NoError(t, err)
 
 					if useLoopDevice {
@@ -745,7 +750,9 @@ func TestProbePathNested(t *testing.T) {
 
 			test.setup(t, probePath)
 
-			info, err := blkid.ProbePath(probePath)
+			logger := zaptest.NewLogger(t)
+
+			info, err := blkid.ProbePath(probePath, blkid.WithProbeLogger(logger))
 			require.NoError(t, err)
 
 			assert.NotNil(t, info.BlockDevice)

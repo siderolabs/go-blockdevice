@@ -12,6 +12,7 @@ import (
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
 )
 
 // https://github.com/util-linux/util-linux/blob/c0207d354ee47fb56acfa64b03b5b559bb301280/libblkid/src/superblocks/zfs.c
@@ -65,7 +66,7 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 		size - zfsStartOffset - lastLabelOffset,
 	} {
 		labelBuf := make([]byte, zfsVdevLabelSize)
-		if _, err := r.ReadAt(labelBuf, int64(labelOffset)); err != nil {
+		if err := utils.ReadFullAt(r, labelBuf, int64(labelOffset)); err != nil {
 			return nil, err
 		}
 

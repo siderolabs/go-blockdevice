@@ -7,6 +7,7 @@ package utils
 
 import (
 	"hash/crc32"
+	"io"
 	"sync"
 )
 
@@ -22,4 +23,28 @@ func CRC32c(buf []byte) uint32 {
 // IsPowerOf2 returns true if num is a power of 2.
 func IsPowerOf2[T uint8 | uint16 | uint32 | uint64](num T) bool {
 	return (num != 0 && ((num & (num - 1)) == 0))
+}
+
+// ReadFullAt is io.ReadFull for io.ReaderAt.
+func ReadFullAt(r io.ReaderAt, buf []byte, offset int64) error {
+	for n := 0; n < len(buf); {
+		m, err := r.ReadAt(buf[n:], offset)
+
+		n += m
+		offset += int64(m)
+
+		if err != nil {
+			if err == io.EOF && n == len(buf) {
+				return nil
+			}
+
+			if err == io.EOF {
+				err = io.ErrUnexpectedEOF
+			}
+
+			return err
+		}
+	}
+
+	return nil
 }

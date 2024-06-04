@@ -10,6 +10,7 @@ package lvm2
 import (
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
 )
 
 var (
@@ -43,7 +44,7 @@ func (p *Probe) Name() string {
 func (p *Probe) probe(r probe.Reader, offset int64) (LVM2Header, error) {
 	buf := make([]byte, LVM2HEADER_SIZE)
 
-	if _, err := r.ReadAt(buf, offset); err != nil {
+	if err := utils.ReadFullAt(r, buf, offset); err != nil {
 		return nil, err
 	}
 

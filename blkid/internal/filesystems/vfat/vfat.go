@@ -72,11 +72,11 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	vfatBuf := make([]byte, VFATSB_SIZE)
 	msdosBuf := make([]byte, MSDOSSB_SIZE)
 
-	if _, err := r.ReadAt(vfatBuf, 0); err != nil {
+	if err := utils.ReadFullAt(r, vfatBuf, 0); err != nil {
 		return nil, err
 	}
 
-	if _, err := r.ReadAt(msdosBuf, 0); err != nil {
+	if err := utils.ReadFullAt(r, msdosBuf, 0); err != nil {
 		return nil, err
 	}
 

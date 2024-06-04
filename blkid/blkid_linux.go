@@ -124,7 +124,7 @@ func Probe(f *os.File, opts ...ProbeOption) (*Info, error) {
 		defer wholeDisk.Unlock() //nolint:errcheck
 	}
 
-	if err := info.fillProbeResult(f); err != nil {
+	if err := info.fillProbeResult(f, options); err != nil {
 		return nil, fmt.Errorf("failed to probe: %w", err)
 	}
 

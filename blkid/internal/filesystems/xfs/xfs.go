@@ -9,12 +9,14 @@ package xfs
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/siderolabs/go-pointer"
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
 )
 
 var xfsMagic = magic.Magic{
@@ -39,13 +41,13 @@ func (p *Probe) Name() string {
 func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	buf := make([]byte, SUPERBLOCK_SIZE)
 
-	if _, err := r.ReadAt(buf, 0); err != nil {
+	if err := utils.ReadFullAt(r, buf, 0); err != nil {
 		return nil, err
 	}
 
 	sb := SuperBlock(buf)
 	if !sb.Valid() {
-		return nil, nil //nolint:nilnil
+		return nil, fmt.Errorf("xfs superblock is not valid")
 	}
 
 	uuid, err := uuid.FromBytes(sb.Get_sb_uuid())
