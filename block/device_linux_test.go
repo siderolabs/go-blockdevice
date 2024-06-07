@@ -216,4 +216,13 @@ func TestDevice(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, readOnly)
 	})
+
+	t.Run("properties", func(t *testing.T) {
+		props, err := devWhole.GetProperties()
+		require.NoError(t, err)
+
+		assert.Equal(t, "/virtual", props.BusPath)
+		assert.Equal(t, "/sys/class/block", props.SubSystem)
+		assert.False(t, props.Rotational)
+	})
 }

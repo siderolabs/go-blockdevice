@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -278,4 +280,136 @@ func (d *Device) lock(exclusive bool, flag int) error {
 			return err
 		}
 	}
+}
+
+// GetProperties returns the properties of the block device.
+func (d *Device) GetProperties() (*DeviceProperties, error) {
+	sysFsPath, err := d.sysFsPath()
+	if err != nil {
+		return nil, err
+	}
+
+	props := &DeviceProperties{
+		Model:    readSysFsFile(filepath.Join(sysFsPath, "device", "model")),
+		Serial:   readSysFsFile(filepath.Join(sysFsPath, "device", "serial")),
+		Modalias: readSysFsFile(filepath.Join(sysFsPath, "device", "modalias")),
+		WWID:     readSysFsFile(filepath.Join(sysFsPath, "wwid")),
+	}
+
+	if props.WWID == "" {
+		props.WWID = readSysFsFile(filepath.Join(sysFsPath, "device", "wwid"))
+	}
+
+	fullPath, err := os.Readlink(sysFsPath)
+	if err == nil {
+		props.BusPath = filepath.Dir(filepath.Dir(strings.TrimPrefix(fullPath, "../../devices")))
+		props.DeviceName = filepath.Base(fullPath)
+	}
+
+	props.Rotational = readSysFsFile(filepath.Join(sysFsPath, "queue", "rotational")) == "1"
+
+	if subsystemPath, err := filepath.EvalSymlinks(filepath.Join(sysFsPath, "subsystem")); err == nil {
+		props.SubSystem = subsystemPath
+	}
+
+	props.Transport = d.getTransport(sysFsPath, props.DeviceName)
+
+	return props, nil
+}
+
+func (d *Device) getTransport(sysFsPath, deviceName string) string {
+	switch {
+	case strings.HasPrefix(deviceName, "nvme"):
+		return "nvme"
+	case strings.HasPrefix(deviceName, "vd"):
+		return "virtio"
+	case strings.HasPrefix(deviceName, "mmcblk"):
+		return "mmc"
+	}
+
+	devicePath, err := os.Readlink(filepath.Join(sysFsPath, "device"))
+	if err != nil {
+		return ""
+	}
+
+	devicePath = filepath.Base(devicePath)
+
+	hostStr, _, ok := strings.Cut(devicePath, ":")
+	if !ok {
+		return ""
+	}
+
+	host, err := strconv.Atoi(hostStr)
+	if err != nil {
+		return ""
+	}
+
+	switch {
+	case isScsiHost(host, "sas"):
+		return "sas"
+	case isScsiHost(host, "fc"):
+		return "fc"
+	case isScsiHost(host, "sas") && scsiHasAttribute(devicePath, "sas_device"):
+		return "sas"
+	case scsiHasAttribute(devicePath, "ieee1394_id"):
+		return "ibp"
+	case isScsiHost(host, "iscsi"):
+		return "iscsi"
+	case scsiPathContains(devicePath, "usb"):
+		return "usb"
+	case isScsiHost(host, "scsi"):
+		procName := readScsiHostAttribute(host, "scsi", "proc_name")
+
+		switch {
+		case procName == "ahci", procName == "sata":
+			return "sata"
+		case strings.Contains(procName, "ata"):
+			return "ata"
+		case procName == "virtio_scsi":
+			return "virtio"
+		}
+	}
+
+	return ""
+}
+
+func isScsiHost(host int, typ string) bool {
+	path := filepath.Join("/sys/class", typ+"_host", "host"+strconv.Itoa(host))
+
+	st, err := os.Stat(path)
+
+	return err == nil && st.IsDir()
+}
+
+func readScsiHostAttribute(host int, typ, attr string) string {
+	path := filepath.Join("/sys/class", typ+"_host", "host"+strconv.Itoa(host), attr)
+
+	contents, _ := os.ReadFile(path) //nolint:errcheck
+
+	return string(bytes.TrimSpace(contents))
+}
+
+func scsiHasAttribute(devicePath, attribute string) bool {
+	path := filepath.Join("/sys/bus/scsi/devices", devicePath, attribute)
+
+	_, err := os.Stat(path)
+
+	return err == nil
+}
+
+func scsiPathContains(devicePath, what string) bool {
+	path := filepath.Join("/sys/bus/scsi/devices", devicePath)
+
+	dest, _ := os.Readlink(path) //nolint:errcheck
+
+	return strings.Contains(dest, what)
+}
+
+func readSysFsFile(path string) string {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+
+	return string(bytes.TrimSpace(contents))
 }

@@ -33,3 +33,26 @@ func (d *Device) Close() error {
 
 // DefaultBlockSize is the default block size in bytes.
 const DefaultBlockSize = 512
+
+// DeviceProperties contains the properties of a block device.
+type DeviceProperties struct {
+	// Device name, as in 'sda'.
+	DeviceName string
+	// Model from /sys/block/*/device/model.
+	Model string
+	// Serial /sys/block/<dev>/device/serial.
+	Serial string
+	// Modalias /sys/block/<dev>/device/modalias.
+	Modalias string
+	// WWID /sys/block/<dev>/wwid.
+	WWID string
+	// UUID /sys/block/<dev>/uuid.
+	// BusPath PCI bus path.
+	BusPath string
+	// SubSystem is the dest path of symlink /sys/block/<dev>/subsystem.
+	SubSystem string
+	// Transport of the device: SCSI, ata, ahci, nvme, etc.
+	Transport string
+	// Rotational is true if the device is a rotational disk.
+	Rotational bool
+}
