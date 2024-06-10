@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -45,6 +46,8 @@ func (d *Device) GetSize() (uint64, error) {
 		return 0, errno
 	}
 
+	runtime.KeepAlive(d)
+
 	return devsize, nil
 }
 
@@ -61,6 +64,8 @@ func (d *Device) GetIOSize() (uint, error) {
 		}
 	}
 
+	runtime.KeepAlive(d)
+
 	return DefaultBlockSize, nil
 }
 
@@ -71,6 +76,8 @@ func (d *Device) GetSectorSize() uint {
 	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, d.f.Fd(), uintptr(unix.BLKSSZGET), uintptr(unsafe.Pointer(&size))); errno != 0 {
 		return DefaultBlockSize
 	}
+
+	runtime.KeepAlive(d)
 
 	return size
 }
@@ -83,6 +90,8 @@ func (d *Device) IsCD() bool {
 		return false
 	}
 
+	runtime.KeepAlive(d)
+
 	return true
 }
 
@@ -91,6 +100,8 @@ func (d *Device) IsCDNoMedia() bool {
 	const CDROM_DRIVE_STATUS = 0x5326 //nolint:revive,stylecheck
 
 	arg, _, errno := unix.Syscall(unix.SYS_IOCTL, d.f.Fd(), uintptr(CDROM_DRIVE_STATUS), 0)
+
+	runtime.KeepAlive(d)
 
 	return errno == 0 && (arg == 1 || arg == 2)
 }
@@ -105,6 +116,8 @@ func (d *Device) GetDevNo() (uint64, error) {
 	if err := unix.Fstat(int(d.f.Fd()), &st); err != nil {
 		return 0, err
 	}
+
+	runtime.KeepAlive(d)
 
 	d.devNo = st.Rdev
 
@@ -142,6 +155,8 @@ func (d *Device) IsReadOnly() (bool, error) {
 	if _, _, errno := unix.Syscall(unix.SYS_IOCTL, d.f.Fd(), unix.BLKROGET, uintptr(unsafe.Pointer(&flags))); errno != 0 {
 		return false, errno
 	}
+
+	runtime.KeepAlive(d)
 
 	return flags != 0, nil
 }
@@ -279,6 +294,8 @@ func (d *Device) lock(exclusive bool, flag int) error {
 		if err := unix.Flock(int(d.f.Fd()), flag); !errors.Is(err, unix.EINTR) {
 			return err
 		}
+
+		runtime.KeepAlive(d)
 	}
 }
 
