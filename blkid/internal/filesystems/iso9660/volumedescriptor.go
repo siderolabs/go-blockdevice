@@ -18,9 +18,19 @@ func (s VolumeDescriptor) Get_vd_type() byte {
 	return s[0]
 }
 
+// Put_vd_type sets vd_type.
+func (s VolumeDescriptor) Put_vd_type(v byte) {
+	s[0] = v
+}
+
 // Get_vd_id returns vd_id.
 func (s VolumeDescriptor) Get_vd_id() []byte {
 	return s[1:6]
+}
+
+// Put_vd_id sets vd_id.
+func (s VolumeDescriptor) Put_vd_id(v []byte) {
+	copy(s[1:6], v)
 }
 
 // Get_vd_version returns vd_version.
@@ -28,9 +38,19 @@ func (s VolumeDescriptor) Get_vd_version() byte {
 	return s[6]
 }
 
+// Put_vd_version sets vd_version.
+func (s VolumeDescriptor) Put_vd_version(v byte) {
+	s[6] = v
+}
+
 // Get_flags returns flags.
 func (s VolumeDescriptor) Get_flags() byte {
 	return s[7]
+}
+
+// Put_flags sets flags.
+func (s VolumeDescriptor) Put_flags(v byte) {
+	s[7] = v
 }
 
 // Get_system_id returns system_id.
@@ -38,9 +58,19 @@ func (s VolumeDescriptor) Get_system_id() []byte {
 	return s[8:40]
 }
 
+// Put_system_id sets system_id.
+func (s VolumeDescriptor) Put_system_id(v []byte) {
+	copy(s[8:40], v)
+}
+
 // Get_volume_id returns volume_id.
 func (s VolumeDescriptor) Get_volume_id() []byte {
 	return s[40:72]
+}
+
+// Put_volume_id sets volume_id.
+func (s VolumeDescriptor) Put_volume_id(v []byte) {
+	copy(s[40:72], v)
 }
 
 // Get_unused returns unused.
@@ -48,9 +78,19 @@ func (s VolumeDescriptor) Get_unused() []byte {
 	return s[72:80]
 }
 
+// Put_unused sets unused.
+func (s VolumeDescriptor) Put_unused(v []byte) {
+	copy(s[72:80], v)
+}
+
 // Get_space_size returns space_size.
 func (s VolumeDescriptor) Get_space_size() []byte {
 	return s[80:88]
+}
+
+// Put_space_size sets space_size.
+func (s VolumeDescriptor) Put_space_size(v []byte) {
+	copy(s[80:88], v)
 }
 
 // Get_escape_sequences returns escape_sequences.
@@ -58,9 +98,19 @@ func (s VolumeDescriptor) Get_escape_sequences() []byte {
 	return s[88:120]
 }
 
+// Put_escape_sequences sets escape_sequences.
+func (s VolumeDescriptor) Put_escape_sequences(v []byte) {
+	copy(s[88:120], v)
+}
+
 // Get_set_size returns set_size.
 func (s VolumeDescriptor) Get_set_size() []byte {
 	return s[120:124]
+}
+
+// Put_set_size sets set_size.
+func (s VolumeDescriptor) Put_set_size(v []byte) {
+	copy(s[120:124], v)
 }
 
 // Get_vol_seq_num returns vol_seq_num.
@@ -68,9 +118,19 @@ func (s VolumeDescriptor) Get_vol_seq_num() []byte {
 	return s[124:128]
 }
 
+// Put_vol_seq_num sets vol_seq_num.
+func (s VolumeDescriptor) Put_vol_seq_num(v []byte) {
+	copy(s[124:128], v)
+}
+
 // Get_logical_block_size returns logical_block_size.
 func (s VolumeDescriptor) Get_logical_block_size() []byte {
 	return s[128:132]
+}
+
+// Put_logical_block_size sets logical_block_size.
+func (s VolumeDescriptor) Put_logical_block_size(v []byte) {
+	copy(s[128:132], v)
 }
 
 // Get_path_table_size returns path_table_size.
@@ -78,9 +138,19 @@ func (s VolumeDescriptor) Get_path_table_size() []byte {
 	return s[132:140]
 }
 
+// Put_path_table_size sets path_table_size.
+func (s VolumeDescriptor) Put_path_table_size(v []byte) {
+	copy(s[132:140], v)
+}
+
 // Get_type_l_path_table returns type_l_path_table.
 func (s VolumeDescriptor) Get_type_l_path_table() []byte {
 	return s[140:144]
+}
+
+// Put_type_l_path_table sets type_l_path_table.
+func (s VolumeDescriptor) Put_type_l_path_table(v []byte) {
+	copy(s[140:144], v)
 }
 
 // Get_opt_type_l_path_table returns opt_type_l_path_table.
@@ -88,9 +158,19 @@ func (s VolumeDescriptor) Get_opt_type_l_path_table() []byte {
 	return s[144:148]
 }
 
+// Put_opt_type_l_path_table sets opt_type_l_path_table.
+func (s VolumeDescriptor) Put_opt_type_l_path_table(v []byte) {
+	copy(s[144:148], v)
+}
+
 // Get_type_m_path_table returns type_m_path_table.
 func (s VolumeDescriptor) Get_type_m_path_table() []byte {
 	return s[148:152]
+}
+
+// Put_type_m_path_table sets type_m_path_table.
+func (s VolumeDescriptor) Put_type_m_path_table(v []byte) {
+	copy(s[148:152], v)
 }
 
 // Get_opt_type_m_path_table returns opt_type_m_path_table.
@@ -98,9 +178,19 @@ func (s VolumeDescriptor) Get_opt_type_m_path_table() []byte {
 	return s[152:156]
 }
 
+// Put_opt_type_m_path_table sets opt_type_m_path_table.
+func (s VolumeDescriptor) Put_opt_type_m_path_table(v []byte) {
+	copy(s[152:156], v)
+}
+
 // Get_root_dir_record returns root_dir_record.
 func (s VolumeDescriptor) Get_root_dir_record() []byte {
 	return s[156:190]
+}
+
+// Put_root_dir_record sets root_dir_record.
+func (s VolumeDescriptor) Put_root_dir_record(v []byte) {
+	copy(s[156:190], v)
 }
 
 // Get_volume_set_id returns volume_set_id.
@@ -108,9 +198,19 @@ func (s VolumeDescriptor) Get_volume_set_id() []byte {
 	return s[190:318]
 }
 
+// Put_volume_set_id sets volume_set_id.
+func (s VolumeDescriptor) Put_volume_set_id(v []byte) {
+	copy(s[190:318], v)
+}
+
 // Get_publisher_id returns publisher_id.
 func (s VolumeDescriptor) Get_publisher_id() []byte {
 	return s[318:446]
+}
+
+// Put_publisher_id sets publisher_id.
+func (s VolumeDescriptor) Put_publisher_id(v []byte) {
+	copy(s[318:446], v)
 }
 
 // Get_data_preparer_id returns data_preparer_id.
@@ -118,9 +218,19 @@ func (s VolumeDescriptor) Get_data_preparer_id() []byte {
 	return s[446:574]
 }
 
+// Put_data_preparer_id sets data_preparer_id.
+func (s VolumeDescriptor) Put_data_preparer_id(v []byte) {
+	copy(s[446:574], v)
+}
+
 // Get_application_id returns application_id.
 func (s VolumeDescriptor) Get_application_id() []byte {
 	return s[574:702]
+}
+
+// Put_application_id sets application_id.
+func (s VolumeDescriptor) Put_application_id(v []byte) {
+	copy(s[574:702], v)
 }
 
 // Get_copyright_file_id returns copyright_file_id.
@@ -128,9 +238,19 @@ func (s VolumeDescriptor) Get_copyright_file_id() []byte {
 	return s[702:739]
 }
 
+// Put_copyright_file_id sets copyright_file_id.
+func (s VolumeDescriptor) Put_copyright_file_id(v []byte) {
+	copy(s[702:739], v)
+}
+
 // Get_abstract_file_id returns abstract_file_id.
 func (s VolumeDescriptor) Get_abstract_file_id() []byte {
 	return s[739:776]
+}
+
+// Put_abstract_file_id sets abstract_file_id.
+func (s VolumeDescriptor) Put_abstract_file_id(v []byte) {
+	copy(s[739:776], v)
 }
 
 // Get_bibliographic_file_id returns bibliographic_file_id.
@@ -138,9 +258,19 @@ func (s VolumeDescriptor) Get_bibliographic_file_id() []byte {
 	return s[776:813]
 }
 
+// Put_bibliographic_file_id sets bibliographic_file_id.
+func (s VolumeDescriptor) Put_bibliographic_file_id(v []byte) {
+	copy(s[776:813], v)
+}
+
 // Get_created returns created.
 func (s VolumeDescriptor) Get_created() []byte {
 	return s[813:830]
+}
+
+// Put_created sets created.
+func (s VolumeDescriptor) Put_created(v []byte) {
+	copy(s[813:830], v)
 }
 
 // Get_modified returns modified.
@@ -148,9 +278,19 @@ func (s VolumeDescriptor) Get_modified() []byte {
 	return s[830:847]
 }
 
+// Put_modified sets modified.
+func (s VolumeDescriptor) Put_modified(v []byte) {
+	copy(s[830:847], v)
+}
+
 // Get_expiration returns expiration.
 func (s VolumeDescriptor) Get_expiration() []byte {
 	return s[847:864]
+}
+
+// Put_expiration sets expiration.
+func (s VolumeDescriptor) Put_expiration(v []byte) {
+	copy(s[847:864], v)
 }
 
 // Get_effective returns effective.
@@ -158,9 +298,19 @@ func (s VolumeDescriptor) Get_effective() []byte {
 	return s[864:881]
 }
 
+// Put_effective sets effective.
+func (s VolumeDescriptor) Put_effective(v []byte) {
+	copy(s[864:881], v)
+}
+
 // Get_std_version returns std_version.
 func (s VolumeDescriptor) Get_std_version() byte {
 	return s[881]
+}
+
+// Put_std_version sets std_version.
+func (s VolumeDescriptor) Put_std_version(v byte) {
+	s[881] = v
 }
 
 // VOLUMEDESCRIPTOR_SIZE is the size of the VolumeDescriptor struct.

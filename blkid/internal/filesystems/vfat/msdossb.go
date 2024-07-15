@@ -18,9 +18,19 @@ func (s MSDOSSB) Get_ms_ignored() []byte {
 	return s[0:3]
 }
 
+// Put_ms_ignored sets ms_ignored.
+func (s MSDOSSB) Put_ms_ignored(v []byte) {
+	copy(s[0:3], v)
+}
+
 // Get_ms_sysid returns ms_sysid.
 func (s MSDOSSB) Get_ms_sysid() []byte {
 	return s[3:11]
+}
+
+// Put_ms_sysid sets ms_sysid.
+func (s MSDOSSB) Put_ms_sysid(v []byte) {
+	copy(s[3:11], v)
 }
 
 // Get_ms_sector_size returns ms_sector_size.
@@ -28,9 +38,19 @@ func (s MSDOSSB) Get_ms_sector_size() uint16 {
 	return binary.LittleEndian.Uint16(s[11:13])
 }
 
+// Put_ms_sector_size sets ms_sector_size.
+func (s MSDOSSB) Put_ms_sector_size(v uint16) {
+	binary.LittleEndian.PutUint16(s[11:13], v)
+}
+
 // Get_ms_cluster_size returns ms_cluster_size.
 func (s MSDOSSB) Get_ms_cluster_size() byte {
 	return s[13]
+}
+
+// Put_ms_cluster_size sets ms_cluster_size.
+func (s MSDOSSB) Put_ms_cluster_size(v byte) {
+	s[13] = v
 }
 
 // Get_ms_reserved returns ms_reserved.
@@ -38,9 +58,19 @@ func (s MSDOSSB) Get_ms_reserved() uint16 {
 	return binary.LittleEndian.Uint16(s[14:16])
 }
 
+// Put_ms_reserved sets ms_reserved.
+func (s MSDOSSB) Put_ms_reserved(v uint16) {
+	binary.LittleEndian.PutUint16(s[14:16], v)
+}
+
 // Get_ms_fats returns ms_fats.
 func (s MSDOSSB) Get_ms_fats() byte {
 	return s[16]
+}
+
+// Put_ms_fats sets ms_fats.
+func (s MSDOSSB) Put_ms_fats(v byte) {
+	s[16] = v
 }
 
 // Get_ms_dir_entries returns ms_dir_entries.
@@ -48,9 +78,19 @@ func (s MSDOSSB) Get_ms_dir_entries() uint16 {
 	return binary.LittleEndian.Uint16(s[17:19])
 }
 
+// Put_ms_dir_entries sets ms_dir_entries.
+func (s MSDOSSB) Put_ms_dir_entries(v uint16) {
+	binary.LittleEndian.PutUint16(s[17:19], v)
+}
+
 // Get_ms_sectors returns =0 iff V3 or later.
 func (s MSDOSSB) Get_ms_sectors() uint16 {
 	return binary.LittleEndian.Uint16(s[19:21])
+}
+
+// Put_ms_sectors sets =0 iff V3 or later.
+func (s MSDOSSB) Put_ms_sectors(v uint16) {
+	binary.LittleEndian.PutUint16(s[19:21], v)
 }
 
 // Get_ms_media returns ms_media.
@@ -58,9 +98,19 @@ func (s MSDOSSB) Get_ms_media() byte {
 	return s[21]
 }
 
+// Put_ms_media sets ms_media.
+func (s MSDOSSB) Put_ms_media(v byte) {
+	s[21] = v
+}
+
 // Get_ms_fat_length returns Sectors per FAT.
 func (s MSDOSSB) Get_ms_fat_length() uint16 {
 	return binary.LittleEndian.Uint16(s[22:24])
+}
+
+// Put_ms_fat_length sets Sectors per FAT.
+func (s MSDOSSB) Put_ms_fat_length(v uint16) {
+	binary.LittleEndian.PutUint16(s[22:24], v)
 }
 
 // Get_ms_secs_track returns ms_secs_track.
@@ -68,9 +118,19 @@ func (s MSDOSSB) Get_ms_secs_track() uint16 {
 	return binary.LittleEndian.Uint16(s[24:26])
 }
 
+// Put_ms_secs_track sets ms_secs_track.
+func (s MSDOSSB) Put_ms_secs_track(v uint16) {
+	binary.LittleEndian.PutUint16(s[24:26], v)
+}
+
 // Get_ms_heads returns ms_heads.
 func (s MSDOSSB) Get_ms_heads() uint16 {
 	return binary.LittleEndian.Uint16(s[26:28])
+}
+
+// Put_ms_heads sets ms_heads.
+func (s MSDOSSB) Put_ms_heads(v uint16) {
+	binary.LittleEndian.PutUint16(s[26:28], v)
 }
 
 // Get_ms_hidden returns ms_hidden.
@@ -78,9 +138,19 @@ func (s MSDOSSB) Get_ms_hidden() uint32 {
 	return binary.LittleEndian.Uint32(s[28:32])
 }
 
+// Put_ms_hidden sets ms_hidden.
+func (s MSDOSSB) Put_ms_hidden(v uint32) {
+	binary.LittleEndian.PutUint32(s[28:32], v)
+}
+
 // Get_ms_total_sect returns iff ms_sectors == 0.
 func (s MSDOSSB) Get_ms_total_sect() uint32 {
 	return binary.LittleEndian.Uint32(s[32:36])
+}
+
+// Put_ms_total_sect sets iff ms_sectors == 0.
+func (s MSDOSSB) Put_ms_total_sect(v uint32) {
+	binary.LittleEndian.PutUint32(s[32:36], v)
 }
 
 // Get_ms_drive_number returns ms_drive_number.
@@ -88,9 +158,19 @@ func (s MSDOSSB) Get_ms_drive_number() byte {
 	return s[36]
 }
 
+// Put_ms_drive_number sets ms_drive_number.
+func (s MSDOSSB) Put_ms_drive_number(v byte) {
+	s[36] = v
+}
+
 // Get_ms_boot_flags returns ms_boot_flags.
 func (s MSDOSSB) Get_ms_boot_flags() byte {
 	return s[37]
+}
+
+// Put_ms_boot_flags sets ms_boot_flags.
+func (s MSDOSSB) Put_ms_boot_flags(v byte) {
+	s[37] = v
 }
 
 // Get_ms_ext_boot_sign returns 0x28 - DOS 3.4 EBPB; 0x29 - DOS 4.0 EBPB.
@@ -98,9 +178,19 @@ func (s MSDOSSB) Get_ms_ext_boot_sign() byte {
 	return s[38]
 }
 
+// Put_ms_ext_boot_sign sets 0x28 - DOS 3.4 EBPB; 0x29 - DOS 4.0 EBPB.
+func (s MSDOSSB) Put_ms_ext_boot_sign(v byte) {
+	s[38] = v
+}
+
 // Get_ms_serno returns ms_serno.
 func (s MSDOSSB) Get_ms_serno() []byte {
 	return s[39:43]
+}
+
+// Put_ms_serno sets ms_serno.
+func (s MSDOSSB) Put_ms_serno(v []byte) {
+	copy(s[39:43], v)
 }
 
 // Get_ms_label returns ms_label.
@@ -108,9 +198,19 @@ func (s MSDOSSB) Get_ms_label() []byte {
 	return s[43:54]
 }
 
+// Put_ms_label sets ms_label.
+func (s MSDOSSB) Put_ms_label(v []byte) {
+	copy(s[43:54], v)
+}
+
 // Get_ms_magic returns ms_magic.
 func (s MSDOSSB) Get_ms_magic() []byte {
 	return s[54:62]
+}
+
+// Put_ms_magic sets ms_magic.
+func (s MSDOSSB) Put_ms_magic(v []byte) {
+	copy(s[54:62], v)
 }
 
 // Get_ms_dummy2 returns ms_dummy2.
@@ -118,9 +218,19 @@ func (s MSDOSSB) Get_ms_dummy2() []byte {
 	return s[62:510]
 }
 
+// Put_ms_dummy2 sets ms_dummy2.
+func (s MSDOSSB) Put_ms_dummy2(v []byte) {
+	copy(s[62:510], v)
+}
+
 // Get_ms_pmagic returns ms_pmagic.
 func (s MSDOSSB) Get_ms_pmagic() []byte {
 	return s[510:512]
+}
+
+// Put_ms_pmagic sets ms_pmagic.
+func (s MSDOSSB) Put_ms_pmagic(v []byte) {
+	copy(s[510:512], v)
 }
 
 // MSDOSSB_SIZE is the size of the MSDOSSB struct.

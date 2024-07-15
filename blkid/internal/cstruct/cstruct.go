@@ -85,23 +85,33 @@ func main() {
 				comment = name
 			}
 
-			g.Printf("// Get_%s returns %s.\n", name, comment)
-
 			switch typ {
 			case "uint64_t":
+				g.Printf("// Get_%s returns %s.\n", name, comment)
 				g.Printf("func (s %s) Get_%s() uint64 {\nreturn binary.%s.Uint64(s[%d:%d])\n}\n", structName, name, endianness, size, size+8)
+				g.Printf("// Put_%s sets %s.\n", name, comment)
+				g.Printf("func (s %s) Put_%s(v uint64) {\nbinary.%s.PutUint64(s[%d:%d], v)\n}\n", structName, name, endianness, size, size+8)
 
 				size += 8
 			case "uint32_t":
+				g.Printf("// Get_%s returns %s.\n", name, comment)
 				g.Printf("func (s %s) Get_%s() uint32 {\nreturn binary.%s.Uint32(s[%d:%d])\n}\n", structName, name, endianness, size, size+4)
+				g.Printf("// Put_%s sets %s.\n", name, comment)
+				g.Printf("func (s %s) Put_%s(v uint32) {\nbinary.%s.PutUint32(s[%d:%d], v)\n}\n", structName, name, endianness, size, size+4)
 
 				size += 4
 			case "uint16_t":
+				g.Printf("// Get_%s returns %s.\n", name, comment)
 				g.Printf("func (s %s) Get_%s() uint16 {\nreturn binary.%s.Uint16(s[%d:%d])\n}\n", structName, name, endianness, size, size+2)
+				g.Printf("// Put_%s sets %s.\n", name, comment)
+				g.Printf("func (s %s) Put_%s(v uint16) {\nbinary.%s.PutUint16(s[%d:%d], v)\n}\n", structName, name, endianness, size, size+2)
 
 				size += 2
 			case "uint8_t", "unsigned char":
+				g.Printf("// Get_%s returns %s.\n", name, comment)
 				g.Printf("func (s %s) Get_%s() byte {\nreturn s[%d]\n}\n", structName, name, size)
+				g.Printf("// Put_%s sets %s.\n", name, comment)
+				g.Printf("func (s %s) Put_%s(v byte) {\ns[%d] = v\n}\n", structName, name, size)
 
 				size++
 			}
@@ -121,6 +131,8 @@ func main() {
 
 			g.Printf("// Get_%s returns %s.\n", name, comment)
 			g.Printf("func (s %s) Get_%s() []byte {\nreturn s[%d:%d]\n}\n", structName, name, size, size+fieldSize)
+			g.Printf("// Put_%s sets %s.\n", name, comment)
+			g.Printf("func (s %s) Put_%s(v []byte) {\ncopy(s[%d:%d], v)\n}\n", structName, name, size, size+fieldSize)
 
 			size += fieldSize
 		case uintSliceRe.MatchString(line):

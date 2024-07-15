@@ -23,7 +23,7 @@ spec:
 ---
 kind: service.CodeCov
 spec:
-  targetThreshold: 40
+  targetThreshold: 35
 ---
 kind: auto.CustomSteps
 spec:

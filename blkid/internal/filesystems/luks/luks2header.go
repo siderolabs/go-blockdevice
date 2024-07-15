@@ -18,9 +18,19 @@ func (s Luks2Header) Get_magic() []byte {
 	return s[0:6]
 }
 
+// Put_magic sets magic.
+func (s Luks2Header) Put_magic(v []byte) {
+	copy(s[0:6], v)
+}
+
 // Get_version returns version.
 func (s Luks2Header) Get_version() uint16 {
 	return binary.BigEndian.Uint16(s[6:8])
+}
+
+// Put_version sets version.
+func (s Luks2Header) Put_version(v uint16) {
+	binary.BigEndian.PutUint16(s[6:8], v)
 }
 
 // Get_hdr_size returns in bytes, including JSON area.
@@ -28,9 +38,19 @@ func (s Luks2Header) Get_hdr_size() uint64 {
 	return binary.BigEndian.Uint64(s[8:16])
 }
 
+// Put_hdr_size sets in bytes, including JSON area.
+func (s Luks2Header) Put_hdr_size(v uint64) {
+	binary.BigEndian.PutUint64(s[8:16], v)
+}
+
 // Get_seqid returns increased on every update.
 func (s Luks2Header) Get_seqid() uint64 {
 	return binary.BigEndian.Uint64(s[16:24])
+}
+
+// Put_seqid sets increased on every update.
+func (s Luks2Header) Put_seqid(v uint64) {
+	binary.BigEndian.PutUint64(s[16:24], v)
 }
 
 // Get_label returns label.
@@ -38,9 +58,19 @@ func (s Luks2Header) Get_label() []byte {
 	return s[24:72]
 }
 
+// Put_label sets label.
+func (s Luks2Header) Put_label(v []byte) {
+	copy(s[24:72], v)
+}
+
 // Get_checksum_alg returns checksum_alg.
 func (s Luks2Header) Get_checksum_alg() []byte {
 	return s[72:104]
+}
+
+// Put_checksum_alg sets checksum_alg.
+func (s Luks2Header) Put_checksum_alg(v []byte) {
+	copy(s[72:104], v)
 }
 
 // Get_salt returns unique for every header/offset.
@@ -48,9 +78,19 @@ func (s Luks2Header) Get_salt() []byte {
 	return s[104:168]
 }
 
+// Put_salt sets unique for every header/offset.
+func (s Luks2Header) Put_salt(v []byte) {
+	copy(s[104:168], v)
+}
+
 // Get_uuid returns uuid.
 func (s Luks2Header) Get_uuid() []byte {
 	return s[168:208]
+}
+
+// Put_uuid sets uuid.
+func (s Luks2Header) Put_uuid(v []byte) {
+	copy(s[168:208], v)
 }
 
 // Get_subsystem returns owner subsystem label.
@@ -58,9 +98,19 @@ func (s Luks2Header) Get_subsystem() []byte {
 	return s[208:256]
 }
 
+// Put_subsystem sets owner subsystem label.
+func (s Luks2Header) Put_subsystem(v []byte) {
+	copy(s[208:256], v)
+}
+
 // Get_hdr_offset returns offset from device start in bytes.
 func (s Luks2Header) Get_hdr_offset() uint64 {
 	return binary.BigEndian.Uint64(s[256:264])
+}
+
+// Put_hdr_offset sets offset from device start in bytes.
+func (s Luks2Header) Put_hdr_offset(v uint64) {
+	binary.BigEndian.PutUint64(s[256:264], v)
 }
 
 // Get__padding returns _padding.
@@ -68,9 +118,19 @@ func (s Luks2Header) Get__padding() []byte {
 	return s[264:448]
 }
 
+// Put__padding sets _padding.
+func (s Luks2Header) Put__padding(v []byte) {
+	copy(s[264:448], v)
+}
+
 // Get_csum returns csum.
 func (s Luks2Header) Get_csum() []byte {
 	return s[448:512]
+}
+
+// Put_csum sets csum.
+func (s Luks2Header) Put_csum(v []byte) {
+	copy(s[448:512], v)
 }
 
 // LUKS2HEADER_SIZE is the size of the Luks2Header struct.

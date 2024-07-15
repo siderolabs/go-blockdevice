@@ -18,9 +18,19 @@ func (s VFATSB) Get_vs_ignored() []byte {
 	return s[0:3]
 }
 
+// Put_vs_ignored sets vs_ignored.
+func (s VFATSB) Put_vs_ignored(v []byte) {
+	copy(s[0:3], v)
+}
+
 // Get_vs_sysid returns vs_sysid.
 func (s VFATSB) Get_vs_sysid() []byte {
 	return s[3:11]
+}
+
+// Put_vs_sysid sets vs_sysid.
+func (s VFATSB) Put_vs_sysid(v []byte) {
+	copy(s[3:11], v)
 }
 
 // Get_vs_sector_size returns vs_sector_size.
@@ -28,9 +38,19 @@ func (s VFATSB) Get_vs_sector_size() []byte {
 	return s[11:13]
 }
 
+// Put_vs_sector_size sets vs_sector_size.
+func (s VFATSB) Put_vs_sector_size(v []byte) {
+	copy(s[11:13], v)
+}
+
 // Get_vs_cluster_size returns vs_cluster_size.
 func (s VFATSB) Get_vs_cluster_size() byte {
 	return s[13]
+}
+
+// Put_vs_cluster_size sets vs_cluster_size.
+func (s VFATSB) Put_vs_cluster_size(v byte) {
+	s[13] = v
 }
 
 // Get_vs_reserved returns vs_reserved.
@@ -38,9 +58,19 @@ func (s VFATSB) Get_vs_reserved() uint16 {
 	return binary.LittleEndian.Uint16(s[14:16])
 }
 
+// Put_vs_reserved sets vs_reserved.
+func (s VFATSB) Put_vs_reserved(v uint16) {
+	binary.LittleEndian.PutUint16(s[14:16], v)
+}
+
 // Get_vs_fats returns vs_fats.
 func (s VFATSB) Get_vs_fats() byte {
 	return s[16]
+}
+
+// Put_vs_fats sets vs_fats.
+func (s VFATSB) Put_vs_fats(v byte) {
+	s[16] = v
 }
 
 // Get_vs_dir_entries returns vs_dir_entries.
@@ -48,9 +78,19 @@ func (s VFATSB) Get_vs_dir_entries() []byte {
 	return s[17:19]
 }
 
+// Put_vs_dir_entries sets vs_dir_entries.
+func (s VFATSB) Put_vs_dir_entries(v []byte) {
+	copy(s[17:19], v)
+}
+
 // Get_vs_sectors returns vs_sectors.
 func (s VFATSB) Get_vs_sectors() []byte {
 	return s[19:21]
+}
+
+// Put_vs_sectors sets vs_sectors.
+func (s VFATSB) Put_vs_sectors(v []byte) {
+	copy(s[19:21], v)
 }
 
 // Get_vs_media returns vs_media.
@@ -58,9 +98,19 @@ func (s VFATSB) Get_vs_media() byte {
 	return s[21]
 }
 
+// Put_vs_media sets vs_media.
+func (s VFATSB) Put_vs_media(v byte) {
+	s[21] = v
+}
+
 // Get_vs_fat_length returns vs_fat_length.
 func (s VFATSB) Get_vs_fat_length() uint16 {
 	return binary.LittleEndian.Uint16(s[22:24])
+}
+
+// Put_vs_fat_length sets vs_fat_length.
+func (s VFATSB) Put_vs_fat_length(v uint16) {
+	binary.LittleEndian.PutUint16(s[22:24], v)
 }
 
 // Get_vs_secs_track returns vs_secs_track.
@@ -68,9 +118,19 @@ func (s VFATSB) Get_vs_secs_track() uint16 {
 	return binary.LittleEndian.Uint16(s[24:26])
 }
 
+// Put_vs_secs_track sets vs_secs_track.
+func (s VFATSB) Put_vs_secs_track(v uint16) {
+	binary.LittleEndian.PutUint16(s[24:26], v)
+}
+
 // Get_vs_heads returns vs_heads.
 func (s VFATSB) Get_vs_heads() uint16 {
 	return binary.LittleEndian.Uint16(s[26:28])
+}
+
+// Put_vs_heads sets vs_heads.
+func (s VFATSB) Put_vs_heads(v uint16) {
+	binary.LittleEndian.PutUint16(s[26:28], v)
 }
 
 // Get_vs_hidden returns vs_hidden.
@@ -78,9 +138,19 @@ func (s VFATSB) Get_vs_hidden() uint32 {
 	return binary.LittleEndian.Uint32(s[28:32])
 }
 
+// Put_vs_hidden sets vs_hidden.
+func (s VFATSB) Put_vs_hidden(v uint32) {
+	binary.LittleEndian.PutUint32(s[28:32], v)
+}
+
 // Get_vs_total_sect returns vs_total_sect.
 func (s VFATSB) Get_vs_total_sect() uint32 {
 	return binary.LittleEndian.Uint32(s[32:36])
+}
+
+// Put_vs_total_sect sets vs_total_sect.
+func (s VFATSB) Put_vs_total_sect(v uint32) {
+	binary.LittleEndian.PutUint32(s[32:36], v)
 }
 
 // Get_vs_fat32_length returns vs_fat32_length.
@@ -88,9 +158,19 @@ func (s VFATSB) Get_vs_fat32_length() uint32 {
 	return binary.LittleEndian.Uint32(s[36:40])
 }
 
+// Put_vs_fat32_length sets vs_fat32_length.
+func (s VFATSB) Put_vs_fat32_length(v uint32) {
+	binary.LittleEndian.PutUint32(s[36:40], v)
+}
+
 // Get_vs_flags returns vs_flags.
 func (s VFATSB) Get_vs_flags() uint16 {
 	return binary.LittleEndian.Uint16(s[40:42])
+}
+
+// Put_vs_flags sets vs_flags.
+func (s VFATSB) Put_vs_flags(v uint16) {
+	binary.LittleEndian.PutUint16(s[40:42], v)
 }
 
 // Get_vs_version returns vs_version.
@@ -98,9 +178,19 @@ func (s VFATSB) Get_vs_version() []byte {
 	return s[42:44]
 }
 
+// Put_vs_version sets vs_version.
+func (s VFATSB) Put_vs_version(v []byte) {
+	copy(s[42:44], v)
+}
+
 // Get_vs_root_cluster returns vs_root_cluster.
 func (s VFATSB) Get_vs_root_cluster() uint32 {
 	return binary.LittleEndian.Uint32(s[44:48])
+}
+
+// Put_vs_root_cluster sets vs_root_cluster.
+func (s VFATSB) Put_vs_root_cluster(v uint32) {
+	binary.LittleEndian.PutUint32(s[44:48], v)
 }
 
 // Get_vs_fsinfo_sector returns vs_fsinfo_sector.
@@ -108,9 +198,19 @@ func (s VFATSB) Get_vs_fsinfo_sector() uint16 {
 	return binary.LittleEndian.Uint16(s[48:50])
 }
 
+// Put_vs_fsinfo_sector sets vs_fsinfo_sector.
+func (s VFATSB) Put_vs_fsinfo_sector(v uint16) {
+	binary.LittleEndian.PutUint16(s[48:50], v)
+}
+
 // Get_vs_backup_boot returns vs_backup_boot.
 func (s VFATSB) Get_vs_backup_boot() uint16 {
 	return binary.LittleEndian.Uint16(s[50:52])
+}
+
+// Put_vs_backup_boot sets vs_backup_boot.
+func (s VFATSB) Put_vs_backup_boot(v uint16) {
+	binary.LittleEndian.PutUint16(s[50:52], v)
 }
 
 // Get_vs_drive_number returns vs_drive_number.
@@ -118,9 +218,19 @@ func (s VFATSB) Get_vs_drive_number() byte {
 	return s[76]
 }
 
+// Put_vs_drive_number sets vs_drive_number.
+func (s VFATSB) Put_vs_drive_number(v byte) {
+	s[76] = v
+}
+
 // Get_vs_boot_flags returns vs_boot_flags.
 func (s VFATSB) Get_vs_boot_flags() byte {
 	return s[77]
+}
+
+// Put_vs_boot_flags sets vs_boot_flags.
+func (s VFATSB) Put_vs_boot_flags(v byte) {
+	s[77] = v
 }
 
 // Get_vs_ext_boot_sign returns 0x28 - without vs_label/vs_magic; 0x29 - with.
@@ -128,9 +238,19 @@ func (s VFATSB) Get_vs_ext_boot_sign() byte {
 	return s[78]
 }
 
+// Put_vs_ext_boot_sign sets 0x28 - without vs_label/vs_magic; 0x29 - with.
+func (s VFATSB) Put_vs_ext_boot_sign(v byte) {
+	s[78] = v
+}
+
 // Get_vs_serno returns vs_serno.
 func (s VFATSB) Get_vs_serno() []byte {
 	return s[79:83]
+}
+
+// Put_vs_serno sets vs_serno.
+func (s VFATSB) Put_vs_serno(v []byte) {
+	copy(s[79:83], v)
 }
 
 // Get_vs_label returns vs_label.
@@ -138,9 +258,19 @@ func (s VFATSB) Get_vs_label() []byte {
 	return s[83:94]
 }
 
+// Put_vs_label sets vs_label.
+func (s VFATSB) Put_vs_label(v []byte) {
+	copy(s[83:94], v)
+}
+
 // Get_vs_magic returns vs_magic.
 func (s VFATSB) Get_vs_magic() []byte {
 	return s[94:102]
+}
+
+// Put_vs_magic sets vs_magic.
+func (s VFATSB) Put_vs_magic(v []byte) {
+	copy(s[94:102], v)
 }
 
 // Get_vs_dummy2 returns vs_dummy2.
@@ -148,9 +278,19 @@ func (s VFATSB) Get_vs_dummy2() []byte {
 	return s[102:522]
 }
 
+// Put_vs_dummy2 sets vs_dummy2.
+func (s VFATSB) Put_vs_dummy2(v []byte) {
+	copy(s[102:522], v)
+}
+
 // Get_vs_pmagic returns vs_pmagic.
 func (s VFATSB) Get_vs_pmagic() []byte {
 	return s[522:524]
+}
+
+// Put_vs_pmagic sets vs_pmagic.
+func (s VFATSB) Put_vs_pmagic(v []byte) {
+	copy(s[522:524], v)
 }
 
 // VFATSB_SIZE is the size of the VFATSB struct.

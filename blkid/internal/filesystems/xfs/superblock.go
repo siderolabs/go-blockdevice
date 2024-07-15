@@ -18,9 +18,19 @@ func (s SuperBlock) Get_sb_magicnum() uint32 {
 	return binary.BigEndian.Uint32(s[0:4])
 }
 
+// Put_sb_magicnum sets magic number == XFS_SB_MAGIC.
+func (s SuperBlock) Put_sb_magicnum(v uint32) {
+	binary.BigEndian.PutUint32(s[0:4], v)
+}
+
 // Get_sb_blocksize returns logical block size, bytes.
 func (s SuperBlock) Get_sb_blocksize() uint32 {
 	return binary.BigEndian.Uint32(s[4:8])
+}
+
+// Put_sb_blocksize sets logical block size, bytes.
+func (s SuperBlock) Put_sb_blocksize(v uint32) {
+	binary.BigEndian.PutUint32(s[4:8], v)
 }
 
 // Get_sb_dblocks returns number of data blocks.
@@ -28,9 +38,19 @@ func (s SuperBlock) Get_sb_dblocks() uint64 {
 	return binary.BigEndian.Uint64(s[8:16])
 }
 
+// Put_sb_dblocks sets number of data blocks.
+func (s SuperBlock) Put_sb_dblocks(v uint64) {
+	binary.BigEndian.PutUint64(s[8:16], v)
+}
+
 // Get_sb_rblocks returns number of realtime blocks.
 func (s SuperBlock) Get_sb_rblocks() uint64 {
 	return binary.BigEndian.Uint64(s[16:24])
+}
+
+// Put_sb_rblocks sets number of realtime blocks.
+func (s SuperBlock) Put_sb_rblocks(v uint64) {
+	binary.BigEndian.PutUint64(s[16:24], v)
 }
 
 // Get_sb_rextents returns number of realtime extents.
@@ -38,9 +58,19 @@ func (s SuperBlock) Get_sb_rextents() uint64 {
 	return binary.BigEndian.Uint64(s[24:32])
 }
 
+// Put_sb_rextents sets number of realtime extents.
+func (s SuperBlock) Put_sb_rextents(v uint64) {
+	binary.BigEndian.PutUint64(s[24:32], v)
+}
+
 // Get_sb_uuid returns file system unique id.
 func (s SuperBlock) Get_sb_uuid() []byte {
 	return s[32:48]
+}
+
+// Put_sb_uuid sets file system unique id.
+func (s SuperBlock) Put_sb_uuid(v []byte) {
+	copy(s[32:48], v)
 }
 
 // Get_sb_logstart returns starting block of log if internal.
@@ -48,9 +78,19 @@ func (s SuperBlock) Get_sb_logstart() uint64 {
 	return binary.BigEndian.Uint64(s[48:56])
 }
 
+// Put_sb_logstart sets starting block of log if internal.
+func (s SuperBlock) Put_sb_logstart(v uint64) {
+	binary.BigEndian.PutUint64(s[48:56], v)
+}
+
 // Get_sb_rootino returns root inode number.
 func (s SuperBlock) Get_sb_rootino() uint64 {
 	return binary.BigEndian.Uint64(s[56:64])
+}
+
+// Put_sb_rootino sets root inode number.
+func (s SuperBlock) Put_sb_rootino(v uint64) {
+	binary.BigEndian.PutUint64(s[56:64], v)
 }
 
 // Get_sb_rbmino returns bitmap inode for realtime extents.
@@ -58,9 +98,19 @@ func (s SuperBlock) Get_sb_rbmino() uint64 {
 	return binary.BigEndian.Uint64(s[64:72])
 }
 
+// Put_sb_rbmino sets bitmap inode for realtime extents.
+func (s SuperBlock) Put_sb_rbmino(v uint64) {
+	binary.BigEndian.PutUint64(s[64:72], v)
+}
+
 // Get_sb_rsumino returns summary inode for rt bitmap.
 func (s SuperBlock) Get_sb_rsumino() uint64 {
 	return binary.BigEndian.Uint64(s[72:80])
+}
+
+// Put_sb_rsumino sets summary inode for rt bitmap.
+func (s SuperBlock) Put_sb_rsumino(v uint64) {
+	binary.BigEndian.PutUint64(s[72:80], v)
 }
 
 // Get_sb_rextsize returns realtime extent size, blocks.
@@ -68,9 +118,19 @@ func (s SuperBlock) Get_sb_rextsize() uint32 {
 	return binary.BigEndian.Uint32(s[80:84])
 }
 
+// Put_sb_rextsize sets realtime extent size, blocks.
+func (s SuperBlock) Put_sb_rextsize(v uint32) {
+	binary.BigEndian.PutUint32(s[80:84], v)
+}
+
 // Get_sb_agblocks returns size of an allocation group.
 func (s SuperBlock) Get_sb_agblocks() uint32 {
 	return binary.BigEndian.Uint32(s[84:88])
+}
+
+// Put_sb_agblocks sets size of an allocation group.
+func (s SuperBlock) Put_sb_agblocks(v uint32) {
+	binary.BigEndian.PutUint32(s[84:88], v)
 }
 
 // Get_sb_agcount returns number of allocation groups.
@@ -78,9 +138,19 @@ func (s SuperBlock) Get_sb_agcount() uint32 {
 	return binary.BigEndian.Uint32(s[88:92])
 }
 
+// Put_sb_agcount sets number of allocation groups.
+func (s SuperBlock) Put_sb_agcount(v uint32) {
+	binary.BigEndian.PutUint32(s[88:92], v)
+}
+
 // Get_sb_rbmblocks returns number of rt bitmap blocks.
 func (s SuperBlock) Get_sb_rbmblocks() uint32 {
 	return binary.BigEndian.Uint32(s[92:96])
+}
+
+// Put_sb_rbmblocks sets number of rt bitmap blocks.
+func (s SuperBlock) Put_sb_rbmblocks(v uint32) {
+	binary.BigEndian.PutUint32(s[92:96], v)
 }
 
 // Get_sb_logblocks returns number of log blocks.
@@ -88,9 +158,19 @@ func (s SuperBlock) Get_sb_logblocks() uint32 {
 	return binary.BigEndian.Uint32(s[96:100])
 }
 
+// Put_sb_logblocks sets number of log blocks.
+func (s SuperBlock) Put_sb_logblocks(v uint32) {
+	binary.BigEndian.PutUint32(s[96:100], v)
+}
+
 // Get_sb_versionnum returns header version == XFS_SB_VERSION.
 func (s SuperBlock) Get_sb_versionnum() uint16 {
 	return binary.BigEndian.Uint16(s[100:102])
+}
+
+// Put_sb_versionnum sets header version == XFS_SB_VERSION.
+func (s SuperBlock) Put_sb_versionnum(v uint16) {
+	binary.BigEndian.PutUint16(s[100:102], v)
 }
 
 // Get_sb_sectsize returns volume sector size, bytes.
@@ -98,9 +178,19 @@ func (s SuperBlock) Get_sb_sectsize() uint16 {
 	return binary.BigEndian.Uint16(s[102:104])
 }
 
+// Put_sb_sectsize sets volume sector size, bytes.
+func (s SuperBlock) Put_sb_sectsize(v uint16) {
+	binary.BigEndian.PutUint16(s[102:104], v)
+}
+
 // Get_sb_inodesize returns inode size, bytes.
 func (s SuperBlock) Get_sb_inodesize() uint16 {
 	return binary.BigEndian.Uint16(s[104:106])
+}
+
+// Put_sb_inodesize sets inode size, bytes.
+func (s SuperBlock) Put_sb_inodesize(v uint16) {
+	binary.BigEndian.PutUint16(s[104:106], v)
 }
 
 // Get_sb_inopblock returns inodes per block.
@@ -108,9 +198,19 @@ func (s SuperBlock) Get_sb_inopblock() uint16 {
 	return binary.BigEndian.Uint16(s[106:108])
 }
 
+// Put_sb_inopblock sets inodes per block.
+func (s SuperBlock) Put_sb_inopblock(v uint16) {
+	binary.BigEndian.PutUint16(s[106:108], v)
+}
+
 // Get_sb_fname returns file system name.
 func (s SuperBlock) Get_sb_fname() []byte {
 	return s[108:120]
+}
+
+// Put_sb_fname sets file system name.
+func (s SuperBlock) Put_sb_fname(v []byte) {
+	copy(s[108:120], v)
 }
 
 // Get_sb_blocklog returns log2 of sb_blocksize.
@@ -118,9 +218,19 @@ func (s SuperBlock) Get_sb_blocklog() byte {
 	return s[120]
 }
 
+// Put_sb_blocklog sets log2 of sb_blocksize.
+func (s SuperBlock) Put_sb_blocklog(v byte) {
+	s[120] = v
+}
+
 // Get_sb_sectlog returns log2 of sb_sectsize.
 func (s SuperBlock) Get_sb_sectlog() byte {
 	return s[121]
+}
+
+// Put_sb_sectlog sets log2 of sb_sectsize.
+func (s SuperBlock) Put_sb_sectlog(v byte) {
+	s[121] = v
 }
 
 // Get_sb_inodelog returns log2 of sb_inodesize.
@@ -128,9 +238,19 @@ func (s SuperBlock) Get_sb_inodelog() byte {
 	return s[122]
 }
 
+// Put_sb_inodelog sets log2 of sb_inodesize.
+func (s SuperBlock) Put_sb_inodelog(v byte) {
+	s[122] = v
+}
+
 // Get_sb_inopblog returns log2 of sb_inopblock.
 func (s SuperBlock) Get_sb_inopblog() byte {
 	return s[123]
+}
+
+// Put_sb_inopblog sets log2 of sb_inopblock.
+func (s SuperBlock) Put_sb_inopblog(v byte) {
+	s[123] = v
 }
 
 // Get_sb_agblklog returns log2 of sb_agblocks (rounded up).
@@ -138,9 +258,19 @@ func (s SuperBlock) Get_sb_agblklog() byte {
 	return s[124]
 }
 
+// Put_sb_agblklog sets log2 of sb_agblocks (rounded up).
+func (s SuperBlock) Put_sb_agblklog(v byte) {
+	s[124] = v
+}
+
 // Get_sb_rextslog returns log2 of sb_rextents.
 func (s SuperBlock) Get_sb_rextslog() byte {
 	return s[125]
+}
+
+// Put_sb_rextslog sets log2 of sb_rextents.
+func (s SuperBlock) Put_sb_rextslog(v byte) {
+	s[125] = v
 }
 
 // Get_sb_inprogress returns mkfs is in progress, don't mount.
@@ -148,9 +278,19 @@ func (s SuperBlock) Get_sb_inprogress() byte {
 	return s[126]
 }
 
+// Put_sb_inprogress sets mkfs is in progress, don't mount.
+func (s SuperBlock) Put_sb_inprogress(v byte) {
+	s[126] = v
+}
+
 // Get_sb_imax_pct returns max % of fs for inode space.
 func (s SuperBlock) Get_sb_imax_pct() byte {
 	return s[127]
+}
+
+// Put_sb_imax_pct sets max % of fs for inode space.
+func (s SuperBlock) Put_sb_imax_pct(v byte) {
+	s[127] = v
 }
 
 // Get_sb_icount returns allocated inodes.
@@ -158,9 +298,19 @@ func (s SuperBlock) Get_sb_icount() uint64 {
 	return binary.BigEndian.Uint64(s[128:136])
 }
 
+// Put_sb_icount sets allocated inodes.
+func (s SuperBlock) Put_sb_icount(v uint64) {
+	binary.BigEndian.PutUint64(s[128:136], v)
+}
+
 // Get_sb_ifree returns free inodes.
 func (s SuperBlock) Get_sb_ifree() uint64 {
 	return binary.BigEndian.Uint64(s[136:144])
+}
+
+// Put_sb_ifree sets free inodes.
+func (s SuperBlock) Put_sb_ifree(v uint64) {
+	binary.BigEndian.PutUint64(s[136:144], v)
 }
 
 // Get_sb_fdblocks returns free data blocks.
@@ -168,9 +318,19 @@ func (s SuperBlock) Get_sb_fdblocks() uint64 {
 	return binary.BigEndian.Uint64(s[144:152])
 }
 
+// Put_sb_fdblocks sets free data blocks.
+func (s SuperBlock) Put_sb_fdblocks(v uint64) {
+	binary.BigEndian.PutUint64(s[144:152], v)
+}
+
 // Get_sb_frextents returns free realtime extents.
 func (s SuperBlock) Get_sb_frextents() uint64 {
 	return binary.BigEndian.Uint64(s[152:160])
+}
+
+// Put_sb_frextents sets free realtime extents.
+func (s SuperBlock) Put_sb_frextents(v uint64) {
+	binary.BigEndian.PutUint64(s[152:160], v)
 }
 
 // Get_sb_uquotino returns inode for user quotas.
@@ -178,9 +338,19 @@ func (s SuperBlock) Get_sb_uquotino() uint64 {
 	return binary.BigEndian.Uint64(s[160:168])
 }
 
+// Put_sb_uquotino sets inode for user quotas.
+func (s SuperBlock) Put_sb_uquotino(v uint64) {
+	binary.BigEndian.PutUint64(s[160:168], v)
+}
+
 // Get_sb_gquotino returns inode for group or project quotas.
 func (s SuperBlock) Get_sb_gquotino() uint64 {
 	return binary.BigEndian.Uint64(s[168:176])
+}
+
+// Put_sb_gquotino sets inode for group or project quotas.
+func (s SuperBlock) Put_sb_gquotino(v uint64) {
+	binary.BigEndian.PutUint64(s[168:176], v)
 }
 
 // Get_sb_qflags returns quota flags.
@@ -188,9 +358,19 @@ func (s SuperBlock) Get_sb_qflags() uint16 {
 	return binary.BigEndian.Uint16(s[176:178])
 }
 
+// Put_sb_qflags sets quota flags.
+func (s SuperBlock) Put_sb_qflags(v uint16) {
+	binary.BigEndian.PutUint16(s[176:178], v)
+}
+
 // Get_sb_flags returns misc flags.
 func (s SuperBlock) Get_sb_flags() byte {
 	return s[178]
+}
+
+// Put_sb_flags sets misc flags.
+func (s SuperBlock) Put_sb_flags(v byte) {
+	s[178] = v
 }
 
 // Get_sb_shared_vn returns reserved, zeroed.
@@ -198,9 +378,19 @@ func (s SuperBlock) Get_sb_shared_vn() byte {
 	return s[179]
 }
 
+// Put_sb_shared_vn sets reserved, zeroed.
+func (s SuperBlock) Put_sb_shared_vn(v byte) {
+	s[179] = v
+}
+
 // Get_sb_inoalignmt returns inode alignment.
 func (s SuperBlock) Get_sb_inoalignmt() uint32 {
 	return binary.BigEndian.Uint32(s[180:184])
+}
+
+// Put_sb_inoalignmt sets inode alignment.
+func (s SuperBlock) Put_sb_inoalignmt(v uint32) {
+	binary.BigEndian.PutUint32(s[180:184], v)
 }
 
 // Get_sb_unit returns stripe or raid unit.
@@ -208,9 +398,19 @@ func (s SuperBlock) Get_sb_unit() uint32 {
 	return binary.BigEndian.Uint32(s[184:188])
 }
 
+// Put_sb_unit sets stripe or raid unit.
+func (s SuperBlock) Put_sb_unit(v uint32) {
+	binary.BigEndian.PutUint32(s[184:188], v)
+}
+
 // Get_sb_width returns stripe or raid width.
 func (s SuperBlock) Get_sb_width() uint32 {
 	return binary.BigEndian.Uint32(s[188:192])
+}
+
+// Put_sb_width sets stripe or raid width.
+func (s SuperBlock) Put_sb_width(v uint32) {
+	binary.BigEndian.PutUint32(s[188:192], v)
 }
 
 // Get_sb_dirblklog returns directory block allocation granularity.
@@ -218,9 +418,19 @@ func (s SuperBlock) Get_sb_dirblklog() byte {
 	return s[192]
 }
 
+// Put_sb_dirblklog sets directory block allocation granularity.
+func (s SuperBlock) Put_sb_dirblklog(v byte) {
+	s[192] = v
+}
+
 // Get_sb_logsectlog returns log sector sector size.
 func (s SuperBlock) Get_sb_logsectlog() byte {
 	return s[193]
+}
+
+// Put_sb_logsectlog sets log sector sector size.
+func (s SuperBlock) Put_sb_logsectlog(v byte) {
+	s[193] = v
 }
 
 // Get_sb_logsectsize returns log sector size.
@@ -228,9 +438,19 @@ func (s SuperBlock) Get_sb_logsectsize() uint16 {
 	return binary.BigEndian.Uint16(s[194:196])
 }
 
+// Put_sb_logsectsize sets log sector size.
+func (s SuperBlock) Put_sb_logsectsize(v uint16) {
+	binary.BigEndian.PutUint16(s[194:196], v)
+}
+
 // Get_sb_logsunit returns log device stripe or raid unit.
 func (s SuperBlock) Get_sb_logsunit() uint32 {
 	return binary.BigEndian.Uint32(s[196:200])
+}
+
+// Put_sb_logsunit sets log device stripe or raid unit.
+func (s SuperBlock) Put_sb_logsunit(v uint32) {
+	binary.BigEndian.PutUint32(s[196:200], v)
 }
 
 // Get_sb_features2 returns additional version flags.
@@ -238,9 +458,19 @@ func (s SuperBlock) Get_sb_features2() uint32 {
 	return binary.BigEndian.Uint32(s[200:204])
 }
 
+// Put_sb_features2 sets additional version flags.
+func (s SuperBlock) Put_sb_features2(v uint32) {
+	binary.BigEndian.PutUint32(s[200:204], v)
+}
+
 // Get_sb_bad_features2 returns mirror of sb_features2.
 func (s SuperBlock) Get_sb_bad_features2() uint32 {
 	return binary.BigEndian.Uint32(s[204:208])
+}
+
+// Put_sb_bad_features2 sets mirror of sb_features2.
+func (s SuperBlock) Put_sb_bad_features2(v uint32) {
+	binary.BigEndian.PutUint32(s[204:208], v)
 }
 
 // SUPERBLOCK_SIZE is the size of the SuperBlock struct.

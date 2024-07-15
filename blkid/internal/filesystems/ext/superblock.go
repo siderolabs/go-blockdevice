@@ -18,9 +18,19 @@ func (s SuperBlock) Get_s_inodes_count() uint32 {
 	return binary.LittleEndian.Uint32(s[0:4])
 }
 
+// Put_s_inodes_count sets s_inodes_count.
+func (s SuperBlock) Put_s_inodes_count(v uint32) {
+	binary.LittleEndian.PutUint32(s[0:4], v)
+}
+
 // Get_s_blocks_count returns s_blocks_count.
 func (s SuperBlock) Get_s_blocks_count() uint32 {
 	return binary.LittleEndian.Uint32(s[4:8])
+}
+
+// Put_s_blocks_count sets s_blocks_count.
+func (s SuperBlock) Put_s_blocks_count(v uint32) {
+	binary.LittleEndian.PutUint32(s[4:8], v)
 }
 
 // Get_s_r_blocks_count returns s_r_blocks_count.
@@ -28,9 +38,19 @@ func (s SuperBlock) Get_s_r_blocks_count() uint32 {
 	return binary.LittleEndian.Uint32(s[8:12])
 }
 
+// Put_s_r_blocks_count sets s_r_blocks_count.
+func (s SuperBlock) Put_s_r_blocks_count(v uint32) {
+	binary.LittleEndian.PutUint32(s[8:12], v)
+}
+
 // Get_s_free_blocks_count returns s_free_blocks_count.
 func (s SuperBlock) Get_s_free_blocks_count() uint32 {
 	return binary.LittleEndian.Uint32(s[12:16])
+}
+
+// Put_s_free_blocks_count sets s_free_blocks_count.
+func (s SuperBlock) Put_s_free_blocks_count(v uint32) {
+	binary.LittleEndian.PutUint32(s[12:16], v)
 }
 
 // Get_s_free_inodes_count returns s_free_inodes_count.
@@ -38,9 +58,19 @@ func (s SuperBlock) Get_s_free_inodes_count() uint32 {
 	return binary.LittleEndian.Uint32(s[16:20])
 }
 
+// Put_s_free_inodes_count sets s_free_inodes_count.
+func (s SuperBlock) Put_s_free_inodes_count(v uint32) {
+	binary.LittleEndian.PutUint32(s[16:20], v)
+}
+
 // Get_s_first_data_block returns s_first_data_block.
 func (s SuperBlock) Get_s_first_data_block() uint32 {
 	return binary.LittleEndian.Uint32(s[20:24])
+}
+
+// Put_s_first_data_block sets s_first_data_block.
+func (s SuperBlock) Put_s_first_data_block(v uint32) {
+	binary.LittleEndian.PutUint32(s[20:24], v)
 }
 
 // Get_s_log_block_size returns s_log_block_size.
@@ -48,9 +78,19 @@ func (s SuperBlock) Get_s_log_block_size() uint32 {
 	return binary.LittleEndian.Uint32(s[24:28])
 }
 
+// Put_s_log_block_size sets s_log_block_size.
+func (s SuperBlock) Put_s_log_block_size(v uint32) {
+	binary.LittleEndian.PutUint32(s[24:28], v)
+}
+
 // Get_s_magic returns s_magic.
 func (s SuperBlock) Get_s_magic() []byte {
 	return s[56:58]
+}
+
+// Put_s_magic sets s_magic.
+func (s SuperBlock) Put_s_magic(v []byte) {
+	copy(s[56:58], v)
 }
 
 // Get_s_state returns s_state.
@@ -58,9 +98,19 @@ func (s SuperBlock) Get_s_state() uint16 {
 	return binary.LittleEndian.Uint16(s[58:60])
 }
 
+// Put_s_state sets s_state.
+func (s SuperBlock) Put_s_state(v uint16) {
+	binary.LittleEndian.PutUint16(s[58:60], v)
+}
+
 // Get_s_errors returns s_errors.
 func (s SuperBlock) Get_s_errors() uint16 {
 	return binary.LittleEndian.Uint16(s[60:62])
+}
+
+// Put_s_errors sets s_errors.
+func (s SuperBlock) Put_s_errors(v uint16) {
+	binary.LittleEndian.PutUint16(s[60:62], v)
 }
 
 // Get_s_minor_rev_level returns s_minor_rev_level.
@@ -68,9 +118,19 @@ func (s SuperBlock) Get_s_minor_rev_level() uint16 {
 	return binary.LittleEndian.Uint16(s[62:64])
 }
 
+// Put_s_minor_rev_level sets s_minor_rev_level.
+func (s SuperBlock) Put_s_minor_rev_level(v uint16) {
+	binary.LittleEndian.PutUint16(s[62:64], v)
+}
+
 // Get_s_lastcheck returns s_lastcheck.
 func (s SuperBlock) Get_s_lastcheck() uint32 {
 	return binary.LittleEndian.Uint32(s[64:68])
+}
+
+// Put_s_lastcheck sets s_lastcheck.
+func (s SuperBlock) Put_s_lastcheck(v uint32) {
+	binary.LittleEndian.PutUint32(s[64:68], v)
 }
 
 // Get_s_checkinterval returns s_checkinterval.
@@ -78,9 +138,19 @@ func (s SuperBlock) Get_s_checkinterval() uint32 {
 	return binary.LittleEndian.Uint32(s[68:72])
 }
 
+// Put_s_checkinterval sets s_checkinterval.
+func (s SuperBlock) Put_s_checkinterval(v uint32) {
+	binary.LittleEndian.PutUint32(s[68:72], v)
+}
+
 // Get_s_creator_os returns s_creator_os.
 func (s SuperBlock) Get_s_creator_os() uint32 {
 	return binary.LittleEndian.Uint32(s[72:76])
+}
+
+// Put_s_creator_os sets s_creator_os.
+func (s SuperBlock) Put_s_creator_os(v uint32) {
+	binary.LittleEndian.PutUint32(s[72:76], v)
 }
 
 // Get_s_rev_level returns s_rev_level.
@@ -88,9 +158,19 @@ func (s SuperBlock) Get_s_rev_level() uint32 {
 	return binary.LittleEndian.Uint32(s[76:80])
 }
 
+// Put_s_rev_level sets s_rev_level.
+func (s SuperBlock) Put_s_rev_level(v uint32) {
+	binary.LittleEndian.PutUint32(s[76:80], v)
+}
+
 // Get_s_def_resuid returns s_def_resuid.
 func (s SuperBlock) Get_s_def_resuid() uint16 {
 	return binary.LittleEndian.Uint16(s[80:82])
+}
+
+// Put_s_def_resuid sets s_def_resuid.
+func (s SuperBlock) Put_s_def_resuid(v uint16) {
+	binary.LittleEndian.PutUint16(s[80:82], v)
 }
 
 // Get_s_def_resgid returns s_def_resgid.
@@ -98,9 +178,19 @@ func (s SuperBlock) Get_s_def_resgid() uint16 {
 	return binary.LittleEndian.Uint16(s[82:84])
 }
 
+// Put_s_def_resgid sets s_def_resgid.
+func (s SuperBlock) Put_s_def_resgid(v uint16) {
+	binary.LittleEndian.PutUint16(s[82:84], v)
+}
+
 // Get_s_first_ino returns s_first_ino.
 func (s SuperBlock) Get_s_first_ino() uint32 {
 	return binary.LittleEndian.Uint32(s[84:88])
+}
+
+// Put_s_first_ino sets s_first_ino.
+func (s SuperBlock) Put_s_first_ino(v uint32) {
+	binary.LittleEndian.PutUint32(s[84:88], v)
 }
 
 // Get_s_inode_size returns s_inode_size.
@@ -108,9 +198,19 @@ func (s SuperBlock) Get_s_inode_size() uint16 {
 	return binary.LittleEndian.Uint16(s[88:90])
 }
 
+// Put_s_inode_size sets s_inode_size.
+func (s SuperBlock) Put_s_inode_size(v uint16) {
+	binary.LittleEndian.PutUint16(s[88:90], v)
+}
+
 // Get_s_block_group_nr returns s_block_group_nr.
 func (s SuperBlock) Get_s_block_group_nr() uint16 {
 	return binary.LittleEndian.Uint16(s[90:92])
+}
+
+// Put_s_block_group_nr sets s_block_group_nr.
+func (s SuperBlock) Put_s_block_group_nr(v uint16) {
+	binary.LittleEndian.PutUint16(s[90:92], v)
 }
 
 // Get_s_feature_compat returns s_feature_compat.
@@ -118,9 +218,19 @@ func (s SuperBlock) Get_s_feature_compat() uint32 {
 	return binary.LittleEndian.Uint32(s[92:96])
 }
 
+// Put_s_feature_compat sets s_feature_compat.
+func (s SuperBlock) Put_s_feature_compat(v uint32) {
+	binary.LittleEndian.PutUint32(s[92:96], v)
+}
+
 // Get_s_feature_incompat returns s_feature_incompat.
 func (s SuperBlock) Get_s_feature_incompat() uint32 {
 	return binary.LittleEndian.Uint32(s[96:100])
+}
+
+// Put_s_feature_incompat sets s_feature_incompat.
+func (s SuperBlock) Put_s_feature_incompat(v uint32) {
+	binary.LittleEndian.PutUint32(s[96:100], v)
 }
 
 // Get_s_feature_ro_compat returns s_feature_ro_compat.
@@ -128,9 +238,19 @@ func (s SuperBlock) Get_s_feature_ro_compat() uint32 {
 	return binary.LittleEndian.Uint32(s[100:104])
 }
 
+// Put_s_feature_ro_compat sets s_feature_ro_compat.
+func (s SuperBlock) Put_s_feature_ro_compat(v uint32) {
+	binary.LittleEndian.PutUint32(s[100:104], v)
+}
+
 // Get_s_uuid returns s_uuid.
 func (s SuperBlock) Get_s_uuid() []byte {
 	return s[104:120]
+}
+
+// Put_s_uuid sets s_uuid.
+func (s SuperBlock) Put_s_uuid(v []byte) {
+	copy(s[104:120], v)
 }
 
 // Get_s_volume_name returns s_volume_name.
@@ -138,9 +258,19 @@ func (s SuperBlock) Get_s_volume_name() []byte {
 	return s[120:136]
 }
 
+// Put_s_volume_name sets s_volume_name.
+func (s SuperBlock) Put_s_volume_name(v []byte) {
+	copy(s[120:136], v)
+}
+
 // Get_s_last_mounted returns s_last_mounted.
 func (s SuperBlock) Get_s_last_mounted() []byte {
 	return s[136:200]
+}
+
+// Put_s_last_mounted sets s_last_mounted.
+func (s SuperBlock) Put_s_last_mounted(v []byte) {
+	copy(s[136:200], v)
 }
 
 // Get_s_algorithm_usage_bitmap returns s_algorithm_usage_bitmap.
@@ -148,9 +278,19 @@ func (s SuperBlock) Get_s_algorithm_usage_bitmap() uint32 {
 	return binary.LittleEndian.Uint32(s[200:204])
 }
 
+// Put_s_algorithm_usage_bitmap sets s_algorithm_usage_bitmap.
+func (s SuperBlock) Put_s_algorithm_usage_bitmap(v uint32) {
+	binary.LittleEndian.PutUint32(s[200:204], v)
+}
+
 // Get_s_prealloc_blocks returns s_prealloc_blocks.
 func (s SuperBlock) Get_s_prealloc_blocks() byte {
 	return s[204]
+}
+
+// Put_s_prealloc_blocks sets s_prealloc_blocks.
+func (s SuperBlock) Put_s_prealloc_blocks(v byte) {
+	s[204] = v
 }
 
 // Get_s_prealloc_dir_blocks returns s_prealloc_dir_blocks.
@@ -158,9 +298,19 @@ func (s SuperBlock) Get_s_prealloc_dir_blocks() byte {
 	return s[205]
 }
 
+// Put_s_prealloc_dir_blocks sets s_prealloc_dir_blocks.
+func (s SuperBlock) Put_s_prealloc_dir_blocks(v byte) {
+	s[205] = v
+}
+
 // Get_s_reserved_gdt_blocks returns s_reserved_gdt_blocks.
 func (s SuperBlock) Get_s_reserved_gdt_blocks() uint16 {
 	return binary.LittleEndian.Uint16(s[206:208])
+}
+
+// Put_s_reserved_gdt_blocks sets s_reserved_gdt_blocks.
+func (s SuperBlock) Put_s_reserved_gdt_blocks(v uint16) {
+	binary.LittleEndian.PutUint16(s[206:208], v)
 }
 
 // Get_s_journal_uuid returns s_journal_uuid.
@@ -168,9 +318,19 @@ func (s SuperBlock) Get_s_journal_uuid() []byte {
 	return s[208:224]
 }
 
+// Put_s_journal_uuid sets s_journal_uuid.
+func (s SuperBlock) Put_s_journal_uuid(v []byte) {
+	copy(s[208:224], v)
+}
+
 // Get_s_journal_inum returns s_journal_inum.
 func (s SuperBlock) Get_s_journal_inum() uint32 {
 	return binary.LittleEndian.Uint32(s[224:228])
+}
+
+// Put_s_journal_inum sets s_journal_inum.
+func (s SuperBlock) Put_s_journal_inum(v uint32) {
+	binary.LittleEndian.PutUint32(s[224:228], v)
 }
 
 // Get_s_journal_dev returns s_journal_dev.
@@ -178,9 +338,19 @@ func (s SuperBlock) Get_s_journal_dev() uint32 {
 	return binary.LittleEndian.Uint32(s[228:232])
 }
 
+// Put_s_journal_dev sets s_journal_dev.
+func (s SuperBlock) Put_s_journal_dev(v uint32) {
+	binary.LittleEndian.PutUint32(s[228:232], v)
+}
+
 // Get_s_last_orphan returns s_last_orphan.
 func (s SuperBlock) Get_s_last_orphan() uint32 {
 	return binary.LittleEndian.Uint32(s[232:236])
+}
+
+// Put_s_last_orphan sets s_last_orphan.
+func (s SuperBlock) Put_s_last_orphan(v uint32) {
+	binary.LittleEndian.PutUint32(s[232:236], v)
 }
 
 // Get_s_def_hash_version returns s_def_hash_version.
@@ -188,9 +358,19 @@ func (s SuperBlock) Get_s_def_hash_version() byte {
 	return s[252]
 }
 
+// Put_s_def_hash_version sets s_def_hash_version.
+func (s SuperBlock) Put_s_def_hash_version(v byte) {
+	s[252] = v
+}
+
 // Get_s_jnl_backup_type returns s_jnl_backup_type.
 func (s SuperBlock) Get_s_jnl_backup_type() byte {
 	return s[253]
+}
+
+// Put_s_jnl_backup_type sets s_jnl_backup_type.
+func (s SuperBlock) Put_s_jnl_backup_type(v byte) {
+	s[253] = v
 }
 
 // Get_s_reserved_word_pad returns s_reserved_word_pad.
@@ -198,9 +378,19 @@ func (s SuperBlock) Get_s_reserved_word_pad() uint16 {
 	return binary.LittleEndian.Uint16(s[254:256])
 }
 
+// Put_s_reserved_word_pad sets s_reserved_word_pad.
+func (s SuperBlock) Put_s_reserved_word_pad(v uint16) {
+	binary.LittleEndian.PutUint16(s[254:256], v)
+}
+
 // Get_s_default_mount_opts returns s_default_mount_opts.
 func (s SuperBlock) Get_s_default_mount_opts() uint32 {
 	return binary.LittleEndian.Uint32(s[256:260])
+}
+
+// Put_s_default_mount_opts sets s_default_mount_opts.
+func (s SuperBlock) Put_s_default_mount_opts(v uint32) {
+	binary.LittleEndian.PutUint32(s[256:260], v)
 }
 
 // Get_s_first_meta_bg returns s_first_meta_bg.
@@ -208,9 +398,19 @@ func (s SuperBlock) Get_s_first_meta_bg() uint32 {
 	return binary.LittleEndian.Uint32(s[260:264])
 }
 
+// Put_s_first_meta_bg sets s_first_meta_bg.
+func (s SuperBlock) Put_s_first_meta_bg(v uint32) {
+	binary.LittleEndian.PutUint32(s[260:264], v)
+}
+
 // Get_s_mkfs_time returns s_mkfs_time.
 func (s SuperBlock) Get_s_mkfs_time() uint32 {
 	return binary.LittleEndian.Uint32(s[264:268])
+}
+
+// Put_s_mkfs_time sets s_mkfs_time.
+func (s SuperBlock) Put_s_mkfs_time(v uint32) {
+	binary.LittleEndian.PutUint32(s[264:268], v)
 }
 
 // Get_s_blocks_count_hi returns s_blocks_count_hi.
@@ -218,9 +418,19 @@ func (s SuperBlock) Get_s_blocks_count_hi() uint32 {
 	return binary.LittleEndian.Uint32(s[336:340])
 }
 
+// Put_s_blocks_count_hi sets s_blocks_count_hi.
+func (s SuperBlock) Put_s_blocks_count_hi(v uint32) {
+	binary.LittleEndian.PutUint32(s[336:340], v)
+}
+
 // Get_s_r_blocks_count_hi returns s_r_blocks_count_hi.
 func (s SuperBlock) Get_s_r_blocks_count_hi() uint32 {
 	return binary.LittleEndian.Uint32(s[340:344])
+}
+
+// Put_s_r_blocks_count_hi sets s_r_blocks_count_hi.
+func (s SuperBlock) Put_s_r_blocks_count_hi(v uint32) {
+	binary.LittleEndian.PutUint32(s[340:344], v)
 }
 
 // Get_s_free_blocks_hi returns s_free_blocks_hi.
@@ -228,9 +438,19 @@ func (s SuperBlock) Get_s_free_blocks_hi() uint32 {
 	return binary.LittleEndian.Uint32(s[344:348])
 }
 
+// Put_s_free_blocks_hi sets s_free_blocks_hi.
+func (s SuperBlock) Put_s_free_blocks_hi(v uint32) {
+	binary.LittleEndian.PutUint32(s[344:348], v)
+}
+
 // Get_s_min_extra_isize returns s_min_extra_isize.
 func (s SuperBlock) Get_s_min_extra_isize() uint16 {
 	return binary.LittleEndian.Uint16(s[348:350])
+}
+
+// Put_s_min_extra_isize sets s_min_extra_isize.
+func (s SuperBlock) Put_s_min_extra_isize(v uint16) {
+	binary.LittleEndian.PutUint16(s[348:350], v)
 }
 
 // Get_s_want_extra_isize returns s_want_extra_isize.
@@ -238,9 +458,19 @@ func (s SuperBlock) Get_s_want_extra_isize() uint16 {
 	return binary.LittleEndian.Uint16(s[350:352])
 }
 
+// Put_s_want_extra_isize sets s_want_extra_isize.
+func (s SuperBlock) Put_s_want_extra_isize(v uint16) {
+	binary.LittleEndian.PutUint16(s[350:352], v)
+}
+
 // Get_s_flags returns s_flags.
 func (s SuperBlock) Get_s_flags() uint32 {
 	return binary.LittleEndian.Uint32(s[352:356])
+}
+
+// Put_s_flags sets s_flags.
+func (s SuperBlock) Put_s_flags(v uint32) {
+	binary.LittleEndian.PutUint32(s[352:356], v)
 }
 
 // Get_s_raid_stride returns s_raid_stride.
@@ -248,9 +478,19 @@ func (s SuperBlock) Get_s_raid_stride() uint16 {
 	return binary.LittleEndian.Uint16(s[356:358])
 }
 
+// Put_s_raid_stride sets s_raid_stride.
+func (s SuperBlock) Put_s_raid_stride(v uint16) {
+	binary.LittleEndian.PutUint16(s[356:358], v)
+}
+
 // Get_s_mmp_interval returns s_mmp_interval.
 func (s SuperBlock) Get_s_mmp_interval() uint16 {
 	return binary.LittleEndian.Uint16(s[358:360])
+}
+
+// Put_s_mmp_interval sets s_mmp_interval.
+func (s SuperBlock) Put_s_mmp_interval(v uint16) {
+	binary.LittleEndian.PutUint16(s[358:360], v)
 }
 
 // Get_s_mmp_block returns s_mmp_block.
@@ -258,14 +498,29 @@ func (s SuperBlock) Get_s_mmp_block() uint64 {
 	return binary.LittleEndian.Uint64(s[360:368])
 }
 
+// Put_s_mmp_block sets s_mmp_block.
+func (s SuperBlock) Put_s_mmp_block(v uint64) {
+	binary.LittleEndian.PutUint64(s[360:368], v)
+}
+
 // Get_s_raid_stripe_width returns s_raid_stripe_width.
 func (s SuperBlock) Get_s_raid_stripe_width() uint32 {
 	return binary.LittleEndian.Uint32(s[368:372])
 }
 
+// Put_s_raid_stripe_width sets s_raid_stripe_width.
+func (s SuperBlock) Put_s_raid_stripe_width(v uint32) {
+	binary.LittleEndian.PutUint32(s[368:372], v)
+}
+
 // Get_s_checksum returns s_checksum.
 func (s SuperBlock) Get_s_checksum() uint32 {
 	return binary.LittleEndian.Uint32(s[1020:1024])
+}
+
+// Put_s_checksum sets s_checksum.
+func (s SuperBlock) Put_s_checksum(v uint32) {
+	binary.LittleEndian.PutUint32(s[1020:1024], v)
 }
 
 // SUPERBLOCK_SIZE is the size of the SuperBlock struct.
