@@ -7,7 +7,6 @@ package gpt
 
 import (
 	"bytes"
-	"hash/crc32"
 
 	"github.com/google/uuid"
 	"github.com/siderolabs/go-pointer"
@@ -15,12 +14,9 @@ import (
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
-	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
+	"github.com/siderolabs/go-blockdevice/v2/internal/gptstructs"
+	"github.com/siderolabs/go-blockdevice/v2/internal/gptutil"
 )
-
-//go:generate go run ../../cstruct/cstruct.go -pkg gpt -struct Header -input header.h -endianness LittleEndian
-
-//go:generate go run ../../cstruct/cstruct.go -pkg gpt -struct Entry -input entry.h -endianness LittleEndian
 
 // nullMagic matches always.
 var nullMagic = magic.Magic{}
@@ -38,27 +34,24 @@ func (p *Probe) Name() string {
 	return "gpt"
 }
 
-const (
-	primaryLBA      = 1
-	headerSignature = 0x5452415020494645 // "EFI PART"
-)
+const primaryLBA = 1
 
 // Probe runs the further inspection and returns the result if successful.
 func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
-	lastLBA, ok := lastLBA(r)
+	lastLBA, ok := gptutil.LastLBA(r)
 	if !ok {
 		return nil, nil //nolint:nilnil
 	}
 
 	// try reading primary header
-	hdr, entries, err := readHeader(r, primaryLBA, lastLBA)
+	hdr, entries, err := gptstructs.ReadHeader(r, primaryLBA, lastLBA)
 	if err != nil {
 		return nil, err
 	}
 
 	if hdr == nil {
 		// try reading backup header
-		hdr, entries, err = readHeader(r, lastLBA, lastLBA)
+		hdr, entries, err = gptstructs.ReadHeader(r, lastLBA, lastLBA)
 		if err != nil {
 			return nil, err
 		}
@@ -69,7 +62,7 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 		return nil, nil //nolint:nilnil
 	}
 
-	ptUUID, err := uuid.FromBytes(guidToUUID(hdr.Get_disk_guid()))
+	ptUUID, err := uuid.FromBytes(gptutil.GUIDToUUID(hdr.Get_disk_guid()))
 	if err != nil {
 		return nil, err
 	}
@@ -107,12 +100,12 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 			continue
 		}
 
-		partUUID, err := uuid.FromBytes(guidToUUID(entry.Get_unique_partition_guid()))
+		partUUID, err := uuid.FromBytes(gptutil.GUIDToUUID(entry.Get_unique_partition_guid()))
 		if err != nil {
 			return nil, err
 		}
 
-		typeUUID, err := uuid.FromBytes(guidToUUID(entry.Get_partition_type_guid()))
+		typeUUID, err := uuid.FromBytes(gptutil.GUIDToUUID(entry.Get_partition_type_guid()))
 		if err != nil {
 			return nil, err
 		}
@@ -139,77 +132,4 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	}
 
 	return result, nil
-}
-
-func readHeader(r probe.Reader, lba, lastLBA uint64) (*Header, []Entry, error) {
-	sectorSize := r.GetSectorSize()
-	buf := make([]byte, sectorSize)
-
-	if err := utils.ReadFullAt(r, buf, int64(lba)*int64(sectorSize)); err != nil {
-		return nil, nil, err
-	}
-
-	hdr := Header(buf)
-
-	// verify the header signature
-	if hdr.Get_signature() != headerSignature {
-		return nil, nil, nil
-	}
-
-	// sanity check the header size
-	headerSize := hdr.Get_header_size()
-	if headerSize < HEADER_SIZE || uint(headerSize) > sectorSize {
-		return nil, nil, nil
-	}
-
-	// verify the header checksum
-	if hdr.Get_header_crc32() != hdr.calculateChecksum() {
-		return nil, nil, nil
-	}
-
-	// verify LBA
-	if hdr.Get_my_lba() != lba {
-		return nil, nil, nil
-	}
-
-	firstUsableLBA := hdr.Get_first_usable_lba()
-	lastUsableLBA := hdr.Get_last_usable_lba()
-
-	// verify the usable LBA range
-	if lastUsableLBA < firstUsableLBA || firstUsableLBA > lastLBA || lastUsableLBA > lastLBA {
-		return nil, nil, nil
-	}
-
-	// header should be outside the usable range
-	if firstUsableLBA < lba && lba < lastUsableLBA {
-		return nil, nil, nil
-	}
-
-	// read the partition entries
-	if hdr.Get_sizeof_partition_entry() != ENTRY_SIZE {
-		return nil, nil, nil
-	}
-
-	if hdr.Get_num_partition_entries() == 0 || hdr.Get_num_partition_entries() > 128 {
-		return nil, nil, nil
-	}
-
-	// read partition entries, verify checksum
-	entriesBuffer := make([]byte, hdr.Get_num_partition_entries()*ENTRY_SIZE)
-
-	if err := utils.ReadFullAt(r, entriesBuffer, int64(hdr.Get_partition_entries_lba())*int64(sectorSize)); err != nil {
-		return nil, nil, err
-	}
-
-	entriesChecksum := crc32.ChecksumIEEE(entriesBuffer)
-	if entriesChecksum != hdr.Get_partition_entry_array_crc32() {
-		return nil, nil, nil
-	}
-
-	entries := make([]Entry, hdr.Get_num_partition_entries())
-	for i := range entries {
-		entries[i] = Entry(entriesBuffer[i*ENTRY_SIZE : (i+1)*ENTRY_SIZE])
-	}
-
-	return &hdr, entries, nil
 }

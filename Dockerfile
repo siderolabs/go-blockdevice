@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-07-15T11:59:50Z by kres ac94478.
+# Generated on 2024-07-17T17:17:17Z by kres ac94478-dirty.
 
 ARG TOOLCHAIN
 
@@ -56,6 +56,7 @@ COPY go.sum go.sum
 RUN cd .
 RUN --mount=type=cache,target=/go/pkg go mod download
 RUN --mount=type=cache,target=/go/pkg go mod verify
+COPY ./internal ./internal
 COPY ./blkid ./blkid
 COPY ./block ./block
 RUN --mount=type=cache,target=/go/pkg go list -mod=readonly all >/dev/null

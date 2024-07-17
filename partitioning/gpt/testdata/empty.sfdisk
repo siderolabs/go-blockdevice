@@ -1,0 +1,6 @@
+label: gpt
+label-id: D815C311-BDED-43FE-A91A-DCBE0D8025D5
+unit: sectors
+first-lba: 34
+last-lba: 4194270
+sector-size: 512

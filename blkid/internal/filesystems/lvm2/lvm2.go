@@ -5,12 +5,12 @@
 // Package lvm2 probes LVM2 PVs.
 package lvm2
 
-//go:generate go run ../../cstruct/cstruct.go -pkg lvm2 -struct LVM2Header -input lvm2_header.h -endianness LittleEndian
+//go:generate go run ../../../../internal/cstruct/cstruct.go -pkg lvm2 -struct LVM2Header -input lvm2_header.h -endianness LittleEndian
 
 import (
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
-	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
+	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 var (
@@ -44,7 +44,7 @@ func (p *Probe) Name() string {
 func (p *Probe) probe(r probe.Reader, offset int64) (LVM2Header, error) {
 	buf := make([]byte, LVM2HEADER_SIZE)
 
-	if err := utils.ReadFullAt(r, buf, offset); err != nil {
+	if err := ioutil.ReadFullAt(r, buf, offset); err != nil {
 		return nil, err
 	}
 

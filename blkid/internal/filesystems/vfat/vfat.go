@@ -5,14 +5,15 @@
 // Package vfat probes FAT12/FAT16/FAT32 filesystems.
 package vfat
 
-//go:generate go run ../../cstruct/cstruct.go -pkg vfat -struct MSDOSSB -input msdos.h -endianness LittleEndian
+//go:generate go run ../../../../internal/cstruct/cstruct.go -pkg vfat -struct MSDOSSB -input msdos.h -endianness LittleEndian
 
-//go:generate go run ../../cstruct/cstruct.go -pkg vfat -struct VFATSB -input vfat.h -endianness LittleEndian
+//go:generate go run ../../../../internal/cstruct/cstruct.go -pkg vfat -struct VFATSB -input vfat.h -endianness LittleEndian
 
 import (
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
+	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 var (
@@ -72,11 +73,11 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	vfatBuf := make([]byte, VFATSB_SIZE)
 	msdosBuf := make([]byte, MSDOSSB_SIZE)
 
-	if err := utils.ReadFullAt(r, vfatBuf, 0); err != nil {
+	if err := ioutil.ReadFullAt(r, vfatBuf, 0); err != nil {
 		return nil, err
 	}
 
-	if err := utils.ReadFullAt(r, msdosBuf, 0); err != nil {
+	if err := ioutil.ReadFullAt(r, msdosBuf, 0); err != nil {
 		return nil, err
 	}
 

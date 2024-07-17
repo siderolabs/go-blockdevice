@@ -1,0 +1,22 @@
+Partition table scan:
+  MBR: protective
+  BSD: not present
+  APM: not present
+  GPT: present
+
+Found valid GPT with protective MBR; using GPT.
+ 12582912 sectors, 6.0 GiB
+Sector size (logical/physical): 512/512 bytes
+Disk identifier (GUID): B6D003E5-7D1D-45E3-9F4B-4A2430B46D4A
+Partition table holds up to 128 entries
+Main partition table begins at sector 2 and ends at sector 33
+First usable sector is 34, last usable sector is 12582878
+Partitions will be aligned on 2048-sector boundaries
+Total free space is 6135741 sectors (2.9 GiB)
+
+Number  Start (sector)    End (sector)  Size       Code  Name
+   1            2048         2099199   1024.0 MiB  EF00  1G1
+   2         2099200         2508799   200.0 MiB   8E00  200M
+   3         2508800         3327999   400.0 MiB   8E00  400M
+   4         4196352         6293503   1024.0 MiB  8E00  1G3
+   5         6293504         7317503   500.0 MiB   8E00  500M

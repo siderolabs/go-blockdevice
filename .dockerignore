@@ -1,8 +1,9 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-05-06T05:59:06Z by kres d15226e.
+# Generated on 2024-07-17T17:13:05Z by kres ac94478-dirty.
 
 *
+!internal
 !blkid
 !block
 !go.mod

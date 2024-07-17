@@ -5,7 +5,7 @@
 // Package iso9660 probes ISO9660 filesystems.
 package iso9660
 
-//go:generate go run ../../cstruct/cstruct.go -pkg iso9660 -struct VolumeDescriptor -input volume.h -endianness NativeEndian
+//go:generate go run ../../../../internal/cstruct/cstruct.go -pkg iso9660 -struct VolumeDescriptor -input volume.h -endianness NativeEndian
 
 import (
 	"strings"
@@ -15,7 +15,7 @@ import (
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
-	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
+	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 const (
@@ -62,7 +62,7 @@ vdLoop:
 	for i := range vdMax {
 		buf := make([]byte, VOLUMEDESCRIPTOR_SIZE)
 
-		if err := utils.ReadFullAt(r, buf, superblockOffset+sectorSize*int64(i)); err != nil {
+		if err := ioutil.ReadFullAt(r, buf, superblockOffset+sectorSize*int64(i)); err != nil {
 			break
 		}
 

@@ -5,12 +5,12 @@
 // Package squashfs probes Squash filesystems.
 package squashfs
 
-//go:generate go run ../../cstruct/cstruct.go -pkg squashfs -struct SuperBlock -input superblock.h -endianness LittleEndian
+//go:generate go run ../../../../internal/cstruct/cstruct.go -pkg squashfs -struct SuperBlock -input superblock.h -endianness LittleEndian
 
 import (
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
-	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
+	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 var squashfsMagic1 = magic.Magic{ // big endian
@@ -43,7 +43,7 @@ func (p *Probe) Name() string {
 func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	buf := make([]byte, SUPERBLOCK_SIZE)
 
-	if err := utils.ReadFullAt(r, buf, 0); err != nil {
+	if err := ioutil.ReadFullAt(r, buf, 0); err != nil {
 		return nil, err
 	}
 

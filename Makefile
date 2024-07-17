@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-07-15T11:59:50Z by kres ac94478.
+# Generated on 2024-07-17T17:17:17Z by kres ac94478-dirty.
 
 # common variables
 
@@ -174,6 +174,8 @@ unit-tests:  ## Performs unit tests
 .PHONY: unit-tests-race
 unit-tests-race:  ## Performs unit tests with race detection enabled.
 	@$(MAKE) target-$@  TARGET_ARGS="--allow security.insecure"
+
+zfs-img:
 
 .PHONY: lint
 lint: lint-golangci-lint lint-gofumpt lint-govulncheck  ## Run all linters for the project.

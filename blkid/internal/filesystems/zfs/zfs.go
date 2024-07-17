@@ -5,14 +5,14 @@
 // Package zfs probes ZFS filesystems.
 package zfs
 
-//go:generate go run ../../cstruct/cstruct.go -pkg zfs -struct ZFSUB -input zfs.h -endianness LittleEndian
+//go:generate go run ../../../../internal/cstruct/cstruct.go -pkg zfs -struct ZFSUB -input zfs.h -endianness LittleEndian
 
 import (
 	"fmt"
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
-	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
+	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 // https://github.com/util-linux/util-linux/blob/c0207d354ee47fb56acfa64b03b5b559bb301280/libblkid/src/superblocks/zfs.c
@@ -66,7 +66,7 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 		size - zfsStartOffset - lastLabelOffset,
 	} {
 		labelBuf := make([]byte, zfsVdevLabelSize)
-		if err := utils.ReadFullAt(r, labelBuf, int64(labelOffset)); err != nil {
+		if err := ioutil.ReadFullAt(r, labelBuf, int64(labelOffset)); err != nil {
 			return nil, err
 		}
 

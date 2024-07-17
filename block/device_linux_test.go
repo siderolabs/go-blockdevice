@@ -113,6 +113,11 @@ func TestDevice(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.False(t, isWhole)
+
+		partitionNum, err := devWhole.GetKernelLastPartitionNum()
+		require.NoError(t, err)
+
+		assert.Equal(t, 6, partitionNum)
 	})
 
 	t.Run("get whole disk", func(t *testing.T) {

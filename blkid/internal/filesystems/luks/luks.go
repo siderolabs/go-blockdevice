@@ -5,7 +5,7 @@
 // Package luks probes LUKS encrypted filesystems.
 package luks
 
-//go:generate go run ../../cstruct/cstruct.go -pkg luks -struct Luks2Header -input luks2_header.h -endianness BigEndian
+//go:generate go run ../../../../internal/cstruct/cstruct.go -pkg luks -struct Luks2Header -input luks2_header.h -endianness BigEndian
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ import (
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
-	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
+	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 var luksMagic = magic.Magic{
@@ -40,7 +40,7 @@ func (p *Probe) Name() string {
 func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	buf := make([]byte, LUKS2HEADER_SIZE)
 
-	if err := utils.ReadFullAt(r, buf, 0); err != nil {
+	if err := ioutil.ReadFullAt(r, buf, 0); err != nil {
 		return nil, err
 	}
 
