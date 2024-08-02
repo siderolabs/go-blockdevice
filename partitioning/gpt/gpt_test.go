@@ -249,7 +249,7 @@ func TestGPT(t *testing.T) {
 
 			blkdev := block.NewFromFile(disk)
 
-			gptdev, err := gpt.DeviceFromBlockDevice(blkdev, disk)
+			gptdev, err := gpt.DeviceFromBlockDevice(blkdev)
 			require.NoError(t, err)
 
 			table, err := gpt.New(gptdev, test.opts...)

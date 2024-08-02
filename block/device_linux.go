@@ -19,8 +19,14 @@ import (
 )
 
 // NewFromPath returns a new Device from the specified path.
-func NewFromPath(path string) (*Device, error) {
-	f, err := os.OpenFile(path, os.O_RDONLY|unix.O_CLOEXEC|unix.O_NONBLOCK, 0)
+func NewFromPath(path string, opts ...Option) (*Device, error) {
+	var options Options
+
+	for _, opt := range opts {
+		opt(&options)
+	}
+
+	f, err := os.OpenFile(path, options.Flag|unix.O_CLOEXEC|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, err
 	}

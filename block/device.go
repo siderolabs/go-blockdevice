@@ -31,6 +31,11 @@ func (d *Device) Close() error {
 	return nil
 }
 
+// File returns the underlying file.
+func (d *Device) File() *os.File {
+	return d.f
+}
+
 // DefaultBlockSize is the default block size in bytes.
 const DefaultBlockSize = 512
 
@@ -55,4 +60,19 @@ type DeviceProperties struct {
 	Transport string
 	// Rotational is true if the device is a rotational disk.
 	Rotational bool
+}
+
+// Options for NewFromPath.
+type Options struct {
+	Flag int
+}
+
+// Option is a function that modifies Options.
+type Option func(*Options)
+
+// OpenForWrite opens the device for writing.
+func OpenForWrite() Option {
+	return func(o *Options) {
+		o.Flag |= os.O_RDWR
+	}
 }

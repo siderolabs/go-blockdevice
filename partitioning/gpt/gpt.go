@@ -90,14 +90,14 @@ func (wrapper *deviceWrapper) GetSize() uint64 {
 }
 
 // DeviceFromBlockDevice creates a new Device from a block.Device.
-func DeviceFromBlockDevice(dev *block.Device, f *os.File) (Device, error) {
+func DeviceFromBlockDevice(dev *block.Device) (Device, error) {
 	size, err := dev.GetSize()
 	if err != nil {
 		return nil, err
 	}
 
 	return &deviceWrapper{
-		File:   f,
+		File:   dev.File(),
 		Device: dev,
 		size:   size,
 	}, nil
