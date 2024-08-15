@@ -6,6 +6,7 @@ package block
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
@@ -278,6 +280,31 @@ func (d *Device) Lock(exclusive bool) error {
 // TryLock (and return an error if failed).
 func (d *Device) TryLock(exclusive bool) error {
 	return d.lock(exclusive, unix.LOCK_NB)
+}
+
+// RetryLock until the context deadline.
+func (d *Device) RetryLock(ctx context.Context, exclusive bool) error {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			if err := d.TryLock(exclusive); err == nil {
+				return nil
+			}
+		}
+	}
+}
+
+// RetryLockWithTimeout retries locking until the timeout.
+func (d *Device) RetryLockWithTimeout(ctx context.Context, exclusive bool, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	return d.RetryLock(ctx, exclusive)
 }
 
 // Unlock releases any lock.

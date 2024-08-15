@@ -5,11 +5,13 @@
 package block_test
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/freddierice/go-losetup/v2"
 	"github.com/stretchr/testify/assert"
@@ -201,6 +203,23 @@ func TestDevice(t *testing.T) {
 		require.NoError(t, devWhole.Unlock())
 
 		require.NoError(t, devWhole2.TryLock(false))
+		require.NoError(t, devWhole2.Unlock())
+	})
+
+	t.Run("retry lock", func(t *testing.T) {
+		require.NoError(t, devWhole.Lock(true))
+
+		errCh := make(chan error)
+
+		go func() {
+			errCh <- devWhole2.RetryLockWithTimeout(context.Background(), true, 10*time.Second)
+		}()
+
+		time.Sleep(1 * time.Second)
+
+		require.NoError(t, devWhole.Unlock())
+
+		require.NoError(t, <-errCh)
 		require.NoError(t, devWhole2.Unlock())
 	})
 
