@@ -630,8 +630,10 @@ func (t *Table) syncKernel() error {
 			}
 
 			continue
-		case err != nil:
-			return fmt.Errorf("failed to delete partition %d: %w", no, err)
+		default:
+			if err != nil {
+				return fmt.Errorf("failed to delete partition %d: %w", no, err)
+			}
 		}
 
 		err = t.dev.KernelPartitionAdd(no,
