@@ -15,6 +15,7 @@ spec:
         - cryptsetup
         - dosfstools
         - e2fsprogs
+        - gptfdisk
         - lvm2
         - parted
         - util-linux
@@ -44,19 +45,20 @@ spec:
         from: fedora:39
         steps:
           - script:
-              command: dnf install -y zfs-fuse && rm -rf /var/cache/dnf
+              command: dnf install -y zfs-fuse zstd && rm -rf /var/cache/dnf
           - script:
               command: |
                 --security=insecure zfs-fuse & \
                 dd if=/dev/zero of=/tmp/zfs.img bs=16M count=4 iflag=fullblock && \
                 sleep 1 && \
-                zpool create -f -R /tmp/zfs zroot1 /tmp/zfs.img
+                zpool create -f -R /tmp/zfs zroot1 /tmp/zfs.img && \
+                zstd -19 /tmp/zfs.img -o /tmp/zfs.img.zst
       - name: zfs-img
         description: copies out the ZFS image
         steps:
           - copy:
               from: zfs-img-gen
-              src: /tmp/zfs.img
+              src: /tmp/zfs.img.zst
               dst: /
 ---
 kind: golang.UnitTests
@@ -68,4 +70,4 @@ spec:
         - copy:
             from: zfs-img
             src: /
-            dst: /usr/share/
+            dst: /src/blkid/testdata/

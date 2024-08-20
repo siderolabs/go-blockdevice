@@ -20,9 +20,10 @@ const (
 	zfsUberblockCount = 128
 	zfsUberblockSize  = 1024
 	zfsLabelSize      = 1024
+	zfsLabelUberblock = 1024 * 128
 	zfsVdevLabelSize  = 1024 * 256
-	zfsStartOffset    = 1024 * 128
 	zfsMinUberblocks  = 4 // Number of uberblocks to be found
+	zfsMinSize        = 64 * 1024 * 1024
 )
 
 var (
@@ -49,36 +50,36 @@ func (p *Probe) Name() string {
 // Probe runs the further inspection and returns the result if successful.
 func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	size := r.GetSize()
+
+	if size < zfsMinSize {
+		return nil, nil //nolint:nilnil
+	}
+
 	// How many bytes between end of last label and the block dev
 	lastLabelOffset := size % zfsVdevLabelSize
 
+	found := 0
+
 	var ub ZFSUB
 
-	found := 0
+	labelBuf := make([]byte, zfsVdevLabelSize)
 
 	for _, labelOffset := range []uint64{
 		0,
-		zfsStartOffset,
 		zfsVdevLabelSize,
-		size - 4*zfsStartOffset - lastLabelOffset,
-		size - 3*zfsStartOffset - lastLabelOffset,
-		size - 2*zfsStartOffset - lastLabelOffset,
-		size - zfsStartOffset - lastLabelOffset,
+		size - 2*zfsVdevLabelSize - lastLabelOffset,
+		size - zfsVdevLabelSize - lastLabelOffset,
 	} {
-		labelBuf := make([]byte, zfsVdevLabelSize)
 		if err := ioutil.ReadFullAt(r, labelBuf, int64(labelOffset)); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("reading at offset %d: %w", labelOffset, err)
 		}
 
 		for i := range zfsUberblockCount {
-			ubOffset := uint64(i) * zfsUberblockSize
+			ubOffset := zfsLabelUberblock + uint64(i)*zfsUberblockSize
 
 			ub = ZFSUB(labelBuf[ubOffset : ubOffset+ZFSUB_SIZE])
 			if ub.Get_ub_magic() == zfsMagic || ub.Get_ub_magic() == zfsMagicSwap {
 				found++
-			} else {
-				// Not a UB
-				continue
 			}
 		}
 

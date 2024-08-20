@@ -1,11 +1,12 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-07-17T17:13:05Z by kres ac94478-dirty.
+# Generated on 2024-08-20T10:44:02Z by kres 7be2a05.
 
 *
 !internal
 !blkid
 !block
+!partitioning
 !go.mod
 !go.sum
 !.golangci.yml

@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/freddierice/go-losetup/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -36,10 +35,7 @@ func TestDeviceWipe(t *testing.T) {
 		require.NoError(t, f.Close())
 	})
 
-	var loDev losetup.Device
-
-	loDev, err = losetup.Attach(rawImage, 0, false)
-	require.NoError(t, err)
+	loDev := losetupAttachHelper(t, rawImage, false)
 
 	t.Cleanup(func() {
 		assert.NoError(t, loDev.Detach())

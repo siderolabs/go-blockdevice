@@ -8,17 +8,21 @@ package gpt_test
 
 import (
 	"embed"
+	"errors"
+	randv2 "math/rand/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/freddierice/go-losetup/v2"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 
 	"github.com/siderolabs/go-blockdevice/v2/block"
 	"github.com/siderolabs/go-blockdevice/v2/partitioning/gpt"
@@ -211,7 +215,7 @@ func TestGPT(t *testing.T) {
 				growth, err = table.AvailablePartitionGrowth(1)
 				require.NoError(t, err)
 
-				assert.EqualValues(t, 4*GiB-(2048+33)*512, growth)
+				assert.EqualValues(t, 4*GiB-(2048+2048)*512, growth)
 
 				require.NoError(t, table.GrowPartition(1, growth))
 			},
@@ -231,10 +235,7 @@ func TestGPT(t *testing.T) {
 			require.NoError(t, f.Truncate(int64(test.diskSize)))
 			require.NoError(t, f.Close())
 
-			var loDev losetup.Device
-
-			loDev, err = losetup.Attach(rawImage, 0, false)
-			require.NoError(t, err)
+			loDev := losetupAttachHelper(t, rawImage, false)
 
 			t.Cleanup(func() {
 				assert.NoError(t, loDev.Detach())
@@ -255,7 +256,7 @@ func TestGPT(t *testing.T) {
 			table, err := gpt.New(gptdev, test.opts...)
 			require.NoError(t, err)
 
-			assert.EqualValues(t, test.diskSize-(2048+33)*512, table.LargestContiguousAllocatable())
+			assert.EqualValues(t, test.diskSize-(2048+2048)*512, table.LargestContiguousAllocatable())
 
 			if test.allocator != nil {
 				test.allocator(t, table)
@@ -289,4 +290,31 @@ func TestGPT(t *testing.T) {
 			}
 		})
 	}
+}
+
+func losetupAttachHelper(t *testing.T, rawImage string, readonly bool) losetup.Device {
+	t.Helper()
+
+	for range 10 {
+		loDev, err := losetup.Attach(rawImage, 0, readonly)
+		if err != nil {
+			if errors.Is(err, unix.EBUSY) {
+				spraySleep := max(randv2.ExpFloat64(), 2.0)
+
+				t.Logf("retrying after %v seconds", spraySleep)
+
+				time.Sleep(time.Duration(spraySleep * float64(time.Second)))
+
+				continue
+			}
+		}
+
+		require.NoError(t, err)
+
+		return loDev
+	}
+
+	t.Fatal("failed to attach loop device") //nolint:revive
+
+	panic("unreachable")
 }

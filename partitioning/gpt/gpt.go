@@ -261,6 +261,8 @@ func (t *Table) init(lastLBA uint64) {
 
 	alignmentSize := max(ioSize, 2048*512)
 	t.alignment = uint64((alignmentSize + t.sectorSize - 1) / t.sectorSize)
+
+	t.firstUsableLBA = (t.firstUsableLBA + t.alignment - 1) / t.alignment * t.alignment
 }
 
 // Clear the partition table.
@@ -309,17 +311,18 @@ func (t *Table) allocatableRanges() []allocatableRange {
 		}
 
 		lowLBA = (lowLBA + t.alignment - 1) / t.alignment * t.alignment
+		highLBA = highLBA / t.alignment * t.alignment
 
 		if highLBA > lowLBA {
 			ranges = append(ranges, allocatableRange{
 				lowLBA:       lowLBA,
 				highLBA:      highLBA,
 				partitionIdx: partitionIdx,
-				size:         (highLBA - lowLBA + 1) * uint64(t.sectorSize),
+				size:         (highLBA - lowLBA) * uint64(t.sectorSize),
 			})
 		}
 
-		if highLBA == t.lastUsableLBA {
+		if partitionIdx >= len(t.entries) {
 			break
 		}
 

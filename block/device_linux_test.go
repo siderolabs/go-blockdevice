@@ -6,6 +6,8 @@ package block_test
 
 import (
 	"context"
+	"errors"
+	randv2 "math/rand/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -41,10 +43,7 @@ func TestDevice(t *testing.T) {
 	require.NoError(t, f.Truncate(int64(2*GiB)))
 	require.NoError(t, f.Close())
 
-	var loDev losetup.Device
-
-	loDev, err = losetup.Attach(rawImage, 0, false)
-	require.NoError(t, err)
+	loDev := losetupAttachHelper(t, rawImage, false)
 
 	t.Cleanup(func() {
 		assert.NoError(t, loDev.Detach())
@@ -87,8 +86,7 @@ func TestDevice(t *testing.T) {
 		assert.NoError(t, devWhole2.Close())
 	})
 
-	loReadOnly, err := losetup.Attach(rawImage, 0, true)
-	require.NoError(t, err)
+	loReadOnly := losetupAttachHelper(t, rawImage, true)
 
 	t.Cleanup(func() {
 		assert.NoError(t, loReadOnly.Detach())
@@ -249,4 +247,31 @@ func TestDevice(t *testing.T) {
 		assert.Equal(t, "/sys/class/block", props.SubSystem)
 		assert.False(t, props.Rotational)
 	})
+}
+
+func losetupAttachHelper(t *testing.T, rawImage string, readonly bool) losetup.Device {
+	t.Helper()
+
+	for range 10 {
+		loDev, err := losetup.Attach(rawImage, 0, readonly)
+		if err != nil {
+			if errors.Is(err, unix.EBUSY) {
+				spraySleep := max(randv2.ExpFloat64(), 2.0)
+
+				t.Logf("retrying after %v seconds", spraySleep)
+
+				time.Sleep(time.Duration(spraySleep * float64(time.Second)))
+
+				continue
+			}
+		}
+
+		require.NoError(t, err)
+
+		return loDev
+	}
+
+	t.Fatal("failed to attach loop device") //nolint:revive
+
+	panic("unreachable")
 }

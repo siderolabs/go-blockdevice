@@ -1,7 +1,7 @@
 label: gpt
 label-id: B6D003E5-7D1D-45E3-9F4B-4A2430B46D4A
 unit: sectors
-first-lba: 34
+first-lba: 2048
 last-lba: 12582878
 sector-size: 512
 

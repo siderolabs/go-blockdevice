@@ -7,27 +7,35 @@
 package blkid_test
 
 import (
+	"bytes"
 	"crypto/rand"
+	_ "embed"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
+	randv2 "math/rand/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/freddierice/go-losetup/v2"
 	"github.com/google/uuid"
+	"github.com/klauspost/compress/zstd"
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/go-pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
+	"golang.org/x/sys/unix"
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid"
 	"github.com/siderolabs/go-blockdevice/v2/block"
+	"github.com/siderolabs/go-blockdevice/v2/partitioning/gpt"
 )
 
 const (
@@ -38,7 +46,7 @@ const (
 func xfsSetup(t *testing.T, path string) {
 	t.Helper()
 
-	cmd := exec.Command("mkfs.xfs", "-L", "somelabel", path)
+	cmd := exec.Command("mkfs.xfs", "--unsupported", "-L", "somelabel", path)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -75,18 +83,22 @@ func luksSetup(t *testing.T, path string) {
 	require.NoError(t, cmd.Run())
 }
 
+//go:embed testdata/zfs.img.zst
+var zfsImage []byte
+
 func zfsSetup(t *testing.T, path string) {
 	t.Helper()
 
-	if _, err := os.Stat("/usr/share/zfs.img"); os.IsNotExist(err) {
-		t.Skip("zfs.img not found")
-	}
+	out, err := os.OpenFile(path, os.O_RDWR, 0)
+	require.NoError(t, err)
 
-	cmd := exec.Command("cp", "/usr/share/zfs.img", path)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	zr, err := zstd.NewReader(bytes.NewReader(zfsImage))
+	require.NoError(t, err)
 
-	require.NoError(t, cmd.Run())
+	_, err = io.Copy(out, zr)
+	require.NoError(t, err)
+
+	require.NoError(t, out.Close())
 }
 
 func isoSetup(useJoilet bool) func(t *testing.T, path string) {
@@ -422,10 +434,7 @@ func TestProbePathFilesystems(t *testing.T) {
 					var probePath string
 
 					if useLoopDevice {
-						var loDev losetup.Device
-
-						loDev, err = losetup.Attach(rawImage, 0, false)
-						require.NoError(t, err)
+						loDev := losetupAttachHelper(t, rawImage, false)
 
 						t.Cleanup(func() {
 							assert.NoError(t, loDev.Detach())
@@ -462,6 +471,7 @@ func TestProbePathFilesystems(t *testing.T) {
 						require.NotNil(t, info.Label)
 						assert.Equal(t, test.expectedLabel, *info.Label)
 					case test.expectedLabelRegex != nil:
+						require.NotNil(t, info.Label)
 						assert.True(t, test.expectedLabelRegex.MatchString(*info.Label))
 					default:
 						assert.Nil(t, info.Label)
@@ -639,10 +649,7 @@ func TestProbePathGPT(t *testing.T) {
 					var probePath string
 
 					if useLoopDevice {
-						var loDev losetup.Device
-
-						loDev, err = losetup.Attach(rawImage, 0, false)
-						require.NoError(t, err)
+						loDev := losetupAttachHelper(t, rawImage, false)
 
 						t.Cleanup(func() {
 							assert.NoError(t, loDev.Detach())
@@ -737,10 +744,7 @@ func TestProbePathNested(t *testing.T) {
 			require.NoError(t, f.Truncate(int64(test.size)))
 			require.NoError(t, f.Close())
 
-			var loDev losetup.Device
-
-			loDev, err = losetup.Attach(rawImage, 0, false)
-			require.NoError(t, err)
+			loDev := losetupAttachHelper(t, rawImage, false)
 
 			t.Cleanup(func() {
 				assert.NoError(t, loDev.Detach())
@@ -805,4 +809,195 @@ func TestProbePathNested(t *testing.T) {
 			assert.EqualValues(t, 0x30c00000, info.Parts[5].ProbedSize)
 		})
 	}
+}
+
+func setupOurGPT(t *testing.T, path string) {
+	t.Helper()
+
+	blk, err := block.NewFromPath(path, block.OpenForWrite())
+	require.NoError(t, err)
+
+	require.NoError(t, blk.Lock(true))
+	require.NoError(t, blk.FastWipe())
+
+	gptdev, err := gpt.DeviceFromBlockDevice(blk)
+	require.NoError(t, err)
+
+	// 	label-id: DDDA0816-8B53-47BF-A813-9EBB1F73AAA2
+	// size=      204800, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, uuid=3C047FF8-E35C-4918-A061-B4C1E5A291E5, name="EFI"
+	// size=        2048, type=21686148-6449-6E6F-744E-656564454649, uuid=942D2017-052E-4216-B4E4-2110507E4CD4, name="BIOS", attrs="LegacyBIOSBootable"
+	// size=     2048000, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=E8516F6B-F03E-45AE-8D9D-9958456EE7E4, name="BOOT"
+	// size=        2048, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=CE6B2D56-7A70-4546-926C-7A9B41607347, name="META"
+	// size=      204800, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=7F5FCD6C-A703-40D2-8796-E5CF7F3A9EB5, name="STATE"
+	//                    type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=0F06E81A-E78D-426B-A078-30A01AAB3FB7, name="EPHEMERAL"
+
+	part, err := gpt.New(gptdev, gpt.WithDiskGUID(uuid.MustParse("DDDA0816-8B53-47BF-A813-9EBB1F73AAA2")))
+	require.NoError(t, err)
+
+	_, _, err = part.AllocatePartition(204800*512, "EFI", uuid.MustParse("C12A7328-F81F-11D2-BA4B-00A0C93EC93B"), gpt.WithUniqueGUID(uuid.MustParse("3C047FF8-E35C-4918-A061-B4C1E5A291E5")))
+	require.NoError(t, err)
+
+	_, _, err = part.AllocatePartition(2048*512, "BIOS", uuid.MustParse("21686148-6449-6E6F-744E-656564454649"), gpt.WithUniqueGUID(uuid.MustParse("942D2017-052E-4216-B4E4-2110507E4CD4")))
+	require.NoError(t, err)
+
+	_, _, err = part.AllocatePartition(2048000*512, "BOOT", uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4"), gpt.WithUniqueGUID(uuid.MustParse("E8516F6B-F03E-45AE-8D9D-9958456EE7E4")))
+	require.NoError(t, err)
+
+	_, _, err = part.AllocatePartition(2048*512, "META", uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4"), gpt.WithUniqueGUID(uuid.MustParse("CE6B2D56-7A70-4546-926C-7A9B41607347")))
+	require.NoError(t, err)
+
+	_, _, err = part.AllocatePartition(204800*512, "STATE", uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4"), gpt.WithUniqueGUID(uuid.MustParse("7F5FCD6C-A703-40D2-8796-E5CF7F3A9EB5")))
+	require.NoError(t, err)
+
+	_, _, err = part.AllocatePartition(part.LargestContiguousAllocatable(), "EPHEMERAL", uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4"),
+		gpt.WithUniqueGUID(uuid.MustParse("0F06E81A-E78D-426B-A078-30A01AAB3FB7")))
+	require.NoError(t, err)
+
+	require.NoError(t, part.Write())
+
+	vfatSetup(t, path+"p1")
+	xfsSetup(t, path+"p3")
+	xfsSetup(t, path+"p5")
+	xfsSetup(t, path+"p6")
+
+	require.NoError(t, blk.Unlock())
+	require.NoError(t, blk.Close())
+}
+
+func TestProbePathOurGPT(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("test requires root privileges")
+	}
+
+	if hostname, _ := os.Hostname(); hostname == "buildkitsandbox" { //nolint: errcheck
+		t.Skip("test not supported under buildkit as partition devices are not propagated from /dev")
+	}
+
+	for _, test := range []struct { //nolint:govet
+		name string
+
+		size  uint64
+		setup func(*testing.T, string)
+
+		expectedUUID  uuid.UUID
+		expectedParts []blkid.NestedProbeResult
+	}{
+		{
+			name: "good GPT, ext4fs, xfs, vfat, none",
+
+			size:  2 * GiB,
+			setup: setupOurGPT,
+
+			expectedUUID:  uuid.MustParse("DDDA0816-8B53-47BF-A813-9EBB1F73AAA2"),
+			expectedParts: expectedParts,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+
+			rawImage := filepath.Join(tmpDir, "image.raw")
+
+			f, err := os.Create(rawImage)
+			require.NoError(t, err)
+
+			require.NoError(t, f.Truncate(int64(test.size)))
+			require.NoError(t, f.Close())
+
+			loDev := losetupAttachHelper(t, rawImage, false)
+
+			t.Cleanup(func() {
+				assert.NoError(t, loDev.Detach())
+			})
+
+			probePath := loDev.Path()
+
+			test.setup(t, probePath)
+
+			logger := zaptest.NewLogger(t)
+
+			info, err := blkid.ProbePath(probePath, blkid.WithProbeLogger(logger))
+			require.NoError(t, err)
+
+			assert.NotNil(t, info.BlockDevice)
+
+			assert.EqualValues(t, block.DefaultBlockSize, info.IOSize)
+
+			if test.size != 0 {
+				assert.EqualValues(t, test.size, info.Size)
+			}
+
+			assert.Equal(t, "gpt", info.Name)
+			assert.EqualValues(t, block.DefaultBlockSize, info.BlockSize)
+			assert.Equal(t, test.size-1*MiB-33*block.DefaultBlockSize, info.ProbedSize)
+
+			require.NotNil(t, info.UUID)
+			assert.Equal(t, test.expectedUUID, *info.UUID)
+
+			// extract only partition information and compare it separately
+			partitionsOnly := xslices.Map(info.Parts, func(p blkid.NestedProbeResult) blkid.NestedProbeResult {
+				return blkid.NestedProbeResult{
+					NestedResult: p.NestedResult,
+				}
+			})
+
+			assert.Equal(t, test.expectedParts, partitionsOnly)
+
+			// EFI: vfat
+			assert.Equal(t, "vfat", info.Parts[0].Name)
+			assert.EqualValues(t, 512, info.Parts[0].BlockSize)
+			assert.EqualValues(t, 2048, info.Parts[0].FilesystemBlockSize)
+			assert.EqualValues(t, 0x63f9c00, info.Parts[0].ProbedSize)
+
+			// empty
+			assert.Equal(t, blkid.ProbeResult{}, info.Parts[1].ProbeResult)
+
+			// BOOT: xfs
+			assert.Equal(t, "xfs", info.Parts[2].Name)
+			assert.EqualValues(t, 512, info.Parts[2].BlockSize)
+			assert.EqualValues(t, 4096, info.Parts[2].FilesystemBlockSize)
+			assert.EqualValues(t, 0x3a800000, info.Parts[2].ProbedSize)
+
+			// empty META
+			assert.Equal(t, blkid.ProbeResult{}, info.Parts[3].ProbeResult)
+
+			// STATE: xfs
+			assert.Equal(t, "xfs", info.Parts[4].Name)
+			assert.EqualValues(t, 512, info.Parts[4].BlockSize)
+			assert.EqualValues(t, 4096, info.Parts[4].FilesystemBlockSize)
+			assert.EqualValues(t, 0x57fd000, info.Parts[4].ProbedSize)
+
+			// EPHEMERAL: xfs
+			assert.Equal(t, "xfs", info.Parts[5].Name)
+			assert.EqualValues(t, 512, info.Parts[5].BlockSize)
+			assert.EqualValues(t, 4096, info.Parts[5].FilesystemBlockSize)
+			assert.EqualValues(t, 0x30c00000, info.Parts[5].ProbedSize)
+		})
+	}
+}
+
+func losetupAttachHelper(t *testing.T, rawImage string, readonly bool) losetup.Device { //nolint:unparam
+	t.Helper()
+
+	for range 10 {
+		loDev, err := losetup.Attach(rawImage, 0, readonly)
+		if err != nil {
+			if errors.Is(err, unix.EBUSY) {
+				spraySleep := max(randv2.ExpFloat64(), 2.0)
+
+				t.Logf("retrying after %v seconds", spraySleep)
+
+				time.Sleep(time.Duration(spraySleep * float64(time.Second)))
+
+				continue
+			}
+		}
+
+		require.NoError(t, err)
+
+		return loDev
+	}
+
+	t.Fatal("failed to attach loop device") //nolint:revive
+
+	panic("unreachable")
 }

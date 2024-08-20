@@ -26,17 +26,15 @@ type Chain []probe.Prober
 
 // MaxMagicSize returns the maximum size of the magic value in the chain.
 func (chain Chain) MaxMagicSize() int {
-	max := 0
+	maxSize := 0
 
 	for _, prober := range chain {
 		for _, magic := range prober.Magic() {
-			if size := magic.BlockSize(); size >= max {
-				max = size
-			}
+			maxSize = max(maxSize, magic.BlockSize())
 		}
 	}
 
-	return max
+	return maxSize
 }
 
 // MagicMatches returns the prober that matches the magic value in the buffer.

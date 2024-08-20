@@ -11,8 +11,8 @@ Sector size (logical/physical): 512/512 bytes
 Disk identifier (GUID): D815C311-BDED-43FE-A91A-DCBE0D8025D5
 Partition table holds up to 128 entries
 Main partition table begins at sector 2 and ends at sector 33
-First usable sector is 34, last usable sector is 4194270
+First usable sector is 2048, last usable sector is 4194270
 Partitions will be aligned on 2048-sector boundaries
-Total free space is 4194237 sectors (2.0 GiB)
+Total free space is 4192223 sectors (2.0 GiB)
 
 Number  Start (sector)    End (sector)  Size       Code  Name

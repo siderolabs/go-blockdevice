@@ -71,7 +71,7 @@ func (d *Device) GetKernelLastPartitionNum() (int, error) {
 		return 0, err
 	}
 
-	var max int
+	var maxPartNum int
 
 	for _, entry := range contents {
 		if !entry.IsDir() {
@@ -88,10 +88,8 @@ func (d *Device) GetKernelLastPartitionNum() (int, error) {
 			continue
 		}
 
-		if partNum > max {
-			max = partNum
-		}
+		maxPartNum = max(maxPartNum, partNum)
 	}
 
-	return max, nil
+	return maxPartNum, nil
 }
