@@ -15,7 +15,6 @@ import (
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
-	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 const (
@@ -62,7 +61,7 @@ vdLoop:
 	for i := range vdMax {
 		buf := make([]byte, VOLUMEDESCRIPTOR_SIZE)
 
-		if err := ioutil.ReadFullAt(r, buf, superblockOffset+sectorSize*int64(i)); err != nil {
+		if _, err := r.ReadAt(buf, superblockOffset+sectorSize*int64(i)); err != nil {
 			break
 		}
 

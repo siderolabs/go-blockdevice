@@ -16,7 +16,6 @@ import (
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/utils"
-	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 const sbOffset = 0x400
@@ -50,7 +49,7 @@ func (p *Probe) Name() string {
 func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	buf := make([]byte, SUPERBLOCK_SIZE)
 
-	if err := ioutil.ReadFullAt(r, buf, sbOffset); err != nil {
+	if _, err := r.ReadAt(buf, sbOffset); err != nil {
 		return nil, err
 	}
 

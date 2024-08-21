@@ -10,7 +10,6 @@ import (
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
-	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 // META constants, from talos/internal/pkg/meta/internal/adv/talos.
@@ -45,7 +44,7 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	buf := make([]byte, 4)
 
 	for _, offset := range []int64{0, length} {
-		if err := ioutil.ReadFullAt(r, buf, offset); err != nil {
+		if _, err := r.ReadAt(buf, offset); err != nil {
 			return nil, err
 		}
 
@@ -53,7 +52,7 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 			continue
 		}
 
-		if err := ioutil.ReadFullAt(r, buf, offset+length-4); err != nil {
+		if _, err := r.ReadAt(buf, offset+length-4); err != nil {
 			return nil, err
 		}
 

@@ -8,8 +8,6 @@ import (
 	"hash/crc32"
 	"io"
 	"slices"
-
-	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 // HeaderSignature is the signature of the GPT header.
@@ -40,7 +38,7 @@ func ReadHeader(r HeaderReader, lba, lastLBA uint64) (*Header, []Entry, error) {
 	sectorSize := r.GetSectorSize()
 	buf := make([]byte, sectorSize)
 
-	if err := ioutil.ReadFullAt(r, buf, int64(lba)*int64(sectorSize)); err != nil {
+	if _, err := r.ReadAt(buf, int64(lba)*int64(sectorSize)); err != nil {
 		return nil, nil, err
 	}
 
@@ -92,7 +90,7 @@ func ReadHeader(r HeaderReader, lba, lastLBA uint64) (*Header, []Entry, error) {
 	// read partition entries, verify checksum
 	entriesBuffer := make([]byte, hdr.Get_num_partition_entries()*ENTRY_SIZE)
 
-	if err := ioutil.ReadFullAt(r, entriesBuffer, int64(hdr.Get_partition_entries_lba())*int64(sectorSize)); err != nil {
+	if _, err := r.ReadAt(entriesBuffer, int64(hdr.Get_partition_entries_lba())*int64(sectorSize)); err != nil {
 		return nil, nil, err
 	}
 

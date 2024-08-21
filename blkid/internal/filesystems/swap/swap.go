@@ -16,7 +16,6 @@ import (
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
-	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 var (
@@ -99,7 +98,7 @@ func (p *Probe) Name() string {
 func (p *Probe) Probe(r probe.Reader, m magic.Magic) (*probe.Result, error) {
 	buf := make([]byte, SWAPHEADER_SIZE)
 
-	if err := ioutil.ReadFullAt(r, buf, 1024); err != nil {
+	if _, err := r.ReadAt(buf, 1024); err != nil {
 		return nil, err
 	}
 

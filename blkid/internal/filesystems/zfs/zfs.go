@@ -12,7 +12,6 @@ import (
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
-	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 // https://github.com/util-linux/util-linux/blob/c0207d354ee47fb56acfa64b03b5b559bb301280/libblkid/src/superblocks/zfs.c
@@ -70,7 +69,7 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 		size - 2*zfsVdevLabelSize - lastLabelOffset,
 		size - zfsVdevLabelSize - lastLabelOffset,
 	} {
-		if err := ioutil.ReadFullAt(r, labelBuf, int64(labelOffset)); err != nil {
+		if _, err := r.ReadAt(labelBuf, int64(labelOffset)); err != nil {
 			return nil, fmt.Errorf("reading at offset %d: %w", labelOffset, err)
 		}
 

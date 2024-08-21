@@ -24,7 +24,6 @@ import (
 	"github.com/siderolabs/go-blockdevice/v2/block"
 	"github.com/siderolabs/go-blockdevice/v2/internal/gptstructs"
 	"github.com/siderolabs/go-blockdevice/v2/internal/gptutil"
-	"github.com/siderolabs/go-blockdevice/v2/internal/ioutil"
 )
 
 // Device is an interface around actual block device.
@@ -553,7 +552,7 @@ func (t *Table) Write() error {
 func (t *Table) writePMBR() error {
 	protectiveMBR := make([]byte, 512)
 
-	if err := ioutil.ReadFullAt(t.dev, protectiveMBR, 0); err != nil {
+	if _, err := t.dev.ReadAt(protectiveMBR, 0); err != nil {
 		return fmt.Errorf("failed to read protective MBR: %w", err)
 	}
 
