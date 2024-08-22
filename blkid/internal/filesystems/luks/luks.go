@@ -15,6 +15,7 @@ import (
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
+	"github.com/siderolabs/go-blockdevice/v2/internal/luks2"
 )
 
 var luksMagic = magic.Magic{
@@ -37,13 +38,13 @@ func (p *Probe) Name() string {
 
 // Probe runs the further inspection and returns the result if successful.
 func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
-	buf := make([]byte, LUKS2HEADER_SIZE)
+	buf := make([]byte, luks2.LUKS2HEADER_SIZE)
 
 	if _, err := r.ReadAt(buf, 0); err != nil {
 		return nil, err
 	}
 
-	hdr := Luks2Header(buf)
+	hdr := luks2.Luks2Header(buf)
 
 	if hdr.Get_version() != 2 {
 		return nil, nil //nolint:nilnil

@@ -1,11 +1,12 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-08-20T10:44:02Z by kres 7be2a05.
+# Generated on 2024-08-22T10:15:10Z by kres 9cc7f48.
 
 *
 !internal
 !blkid
 !block
+!encryption
 !partitioning
 !go.mod
 !go.sum

@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-08-20T12:11:08Z by kres 7be2a05.
+# Generated on 2024-08-22T10:15:10Z by kres 9cc7f48.
 
 ARG TOOLCHAIN
 
@@ -60,6 +60,7 @@ RUN --mount=type=cache,target=/go/pkg go mod verify
 COPY ./internal ./internal
 COPY ./blkid ./blkid
 COPY ./block ./block
+COPY ./encryption ./encryption
 COPY ./partitioning ./partitioning
 RUN --mount=type=cache,target=/go/pkg go list -mod=readonly all >/dev/null
 
