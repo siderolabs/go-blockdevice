@@ -138,6 +138,7 @@ func TestGPT(t *testing.T) {
 				)))
 				require.NoError(t, allocateError(table.AllocatePartition(100*MiB, "100M", partType1,
 					gpt.WithUniqueGUID(uuid.MustParse("3D0FE86B-7791-4659-B564-FC49A542866D")),
+					gpt.WithLegacyBIOSBootableAttribute(true),
 				)))
 				require.NoError(t, allocateError(table.AllocatePartition(2.5*GiB, "2.5G", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("EE1A711E-DE12-4D9F-98FF-672F7AD638F8")),

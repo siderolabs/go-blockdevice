@@ -558,7 +558,6 @@ func (t *Table) writePMBR() error {
 
 	// boot signature
 	protectiveMBR[510], protectiveMBR[511] = 0x55, 0xAA
-	protectiveMBR[511] = 0xAA
 
 	// PMBR protective entry.
 	b := protectiveMBR[446 : 446+16]

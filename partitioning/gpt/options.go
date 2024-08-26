@@ -66,3 +66,12 @@ func WithUniqueGUID(guid uuid.UUID) PartitionOption {
 		o.UniqueGUID = guid
 	}
 }
+
+// WithLegacyBIOSBootableAttribute marks the partition as bootable.
+func WithLegacyBIOSBootableAttribute(val bool) PartitionOption {
+	return func(args *PartitionOptions) {
+		if val {
+			args.Flags |= (1 << 2)
+		}
+	}
+}
