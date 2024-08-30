@@ -133,14 +133,14 @@ func New(cipher Cipher, options ...Option) *LUKS {
 }
 
 // Open runs luksOpen on a device and returns mapped device path.
-func (l *LUKS) Open(deviceName, mappedName string, key *encryption.Key) (string, error) {
+func (l *LUKS) Open(ctx context.Context, deviceName, mappedName string, key *encryption.Key) (string, error) {
 	args := slices.Concat(
 		[]string{"luksOpen", deviceName, mappedName, "--key-file=-"},
 		keyslotArgs(key),
 		l.perfArgs(),
 	)
 
-	_, err := l.runCommand(args, key.Value)
+	_, err := l.runCommand(ctx, args, key.Value)
 	if err != nil {
 		return "", err
 	}
@@ -149,7 +149,7 @@ func (l *LUKS) Open(deviceName, mappedName string, key *encryption.Key) (string,
 }
 
 // Encrypt implements encryption.Provider.
-func (l *LUKS) Encrypt(deviceName string, key *encryption.Key) error {
+func (l *LUKS) Encrypt(ctx context.Context, deviceName string, key *encryption.Key) error {
 	cipher, err := l.cipher.String()
 	if err != nil {
 		return err
@@ -166,29 +166,29 @@ func (l *LUKS) Encrypt(deviceName string, key *encryption.Key) error {
 		args = append(args, fmt.Sprintf("--sector-size=%d", l.blockSize))
 	}
 
-	_, err = l.runCommand(args, key.Value)
+	_, err = l.runCommand(ctx, args, key.Value)
 
 	return err
 }
 
 // Resize implements encryption.Provider.
-func (l *LUKS) Resize(devname string, key *encryption.Key) error {
+func (l *LUKS) Resize(ctx context.Context, devname string, key *encryption.Key) error {
 	args := []string{"resize", devname, "--key-file=-"}
 
-	_, err := l.runCommand(args, key.Value)
+	_, err := l.runCommand(ctx, args, key.Value)
 
 	return err
 }
 
 // Close implements encryption.Provider.
-func (l *LUKS) Close(devname string) error {
-	_, err := l.runCommand([]string{"luksClose", devname}, nil)
+func (l *LUKS) Close(ctx context.Context, devname string) error {
+	_, err := l.runCommand(ctx, []string{"luksClose", devname}, nil)
 
 	return err
 }
 
 // AddKey adds a new key at the LUKS encryption slot.
-func (l *LUKS) AddKey(devname string, key, newKey *encryption.Key) error {
+func (l *LUKS) AddKey(ctx context.Context, devname string, key, newKey *encryption.Key) error {
 	var buffer bytes.Buffer
 
 	keyfileLen, _ := buffer.Write(key.Value)
@@ -206,13 +206,13 @@ func (l *LUKS) AddKey(devname string, key, newKey *encryption.Key) error {
 		keyslotArgs(newKey),
 	)
 
-	_, err := l.runCommand(args, buffer.Bytes())
+	_, err := l.runCommand(ctx, args, buffer.Bytes())
 
 	return err
 }
 
 // SetKey sets new key value at the LUKS encryption slot.
-func (l *LUKS) SetKey(devname string, oldKey, newKey *encryption.Key) error {
+func (l *LUKS) SetKey(ctx context.Context, devname string, oldKey, newKey *encryption.Key) error {
 	if oldKey.Slot != newKey.Slot {
 		return fmt.Errorf("old and new key slots must match")
 	}
@@ -234,19 +234,19 @@ func (l *LUKS) SetKey(devname string, oldKey, newKey *encryption.Key) error {
 		l.perfArgs(),
 	)
 
-	_, err := l.runCommand(args, buffer.Bytes())
+	_, err := l.runCommand(ctx, args, buffer.Bytes())
 
 	return err
 }
 
 // CheckKey checks if the key is valid.
-func (l *LUKS) CheckKey(devname string, key *encryption.Key) (bool, error) {
+func (l *LUKS) CheckKey(ctx context.Context, devname string, key *encryption.Key) (bool, error) {
 	args := slices.Concat(
 		[]string{"luksOpen", "--test-passphrase", devname, "--key-file=-"},
 		keyslotArgs(key),
 	)
 
-	_, err := l.runCommand(args, key.Value)
+	_, err := l.runCommand(ctx, args, key.Value)
 	if err != nil {
 		if err == encryption.ErrEncryptionKeyRejected { //nolint:errorlint
 			return false, nil
@@ -259,13 +259,13 @@ func (l *LUKS) CheckKey(devname string, key *encryption.Key) (bool, error) {
 }
 
 // RemoveKey removes a key at the specified LUKS encryption slot.
-func (l *LUKS) RemoveKey(devname string, slot int, key *encryption.Key) error {
-	_, err := l.runCommand([]string{"luksKillSlot", devname, strconv.Itoa(slot), "--key-file=-"}, key.Value)
+func (l *LUKS) RemoveKey(ctx context.Context, devname string, slot int, key *encryption.Key) error {
+	_, err := l.runCommand(ctx, []string{"luksKillSlot", devname, strconv.Itoa(slot), "--key-file=-"}, key.Value)
 	if err != nil {
 		return err
 	}
 
-	if err = l.RemoveToken(devname, slot); err != nil && !errors.Is(err, encryption.ErrTokenNotFound) {
+	if err = l.RemoveToken(ctx, devname, slot); err != nil && !errors.Is(err, encryption.ErrTokenNotFound) {
 		return err
 	}
 
@@ -306,7 +306,7 @@ func (l *LUKS) ReadKeyslots(deviceName string) (*encryption.Keyslots, error) {
 
 // SetToken adds arbitrary token to the key slot.
 // Token id == slot id: only one token per key slot is supported.
-func (l *LUKS) SetToken(devname string, slot int, token token.Token) error {
+func (l *LUKS) SetToken(ctx context.Context, devname string, slot int, token token.Token) error {
 	data, err := token.Bytes()
 	if err != nil {
 		return err
@@ -314,14 +314,14 @@ func (l *LUKS) SetToken(devname string, slot int, token token.Token) error {
 
 	id := strconv.Itoa(slot)
 
-	_, err = l.runCommand([]string{"token", "import", "-q", devname, "--token-id", id, "--json-file=-", "--token-replace"}, data)
+	_, err = l.runCommand(ctx, []string{"token", "import", "-q", devname, "--token-id", id, "--json-file=-", "--token-replace"}, data)
 
 	return err
 }
 
 // ReadToken reads arbitrary token from the luks metadata.
-func (l *LUKS) ReadToken(devname string, slot int, token token.Token) error {
-	stdout, err := l.runCommand([]string{"token", "export", "-q", devname, "--token-id", strconv.Itoa(slot), "--json-file=-"}, nil)
+func (l *LUKS) ReadToken(ctx context.Context, devname string, slot int, token token.Token) error {
+	stdout, err := l.runCommand(ctx, []string{"token", "export", "-q", devname, "--token-id", strconv.Itoa(slot), "--json-file=-"}, nil)
 	if err != nil {
 		return err
 	}
@@ -330,8 +330,8 @@ func (l *LUKS) ReadToken(devname string, slot int, token token.Token) error {
 }
 
 // RemoveToken removes token from the luks metadata.
-func (l *LUKS) RemoveToken(devname string, slot int) error {
-	_, err := l.runCommand([]string{"token", "remove", "--token-id", strconv.Itoa(slot), devname}, nil)
+func (l *LUKS) RemoveToken(ctx context.Context, devname string, slot int) error {
+	_, err := l.runCommand(ctx, []string{"token", "remove", "--token-id", strconv.Itoa(slot), devname}, nil)
 
 	return err
 }
@@ -339,10 +339,10 @@ func (l *LUKS) RemoveToken(devname string, slot int) error {
 var notFoundMatcher = regexp.MustCompile("(is not in use|Failed to get token)")
 
 // runCommand executes cryptsetup with arguments.
-func (l *LUKS) runCommand(args []string, stdin []byte) (string, error) {
+func (l *LUKS) runCommand(ctx context.Context, args []string, stdin []byte) (string, error) {
 	stdout, err := cmd.RunContext(cmd.WithStdin(
-		context.Background(),
-		bytes.NewBuffer(stdin)), "cryptsetup", args...)
+		ctx,
+		bytes.NewReader(stdin)), "cryptsetup", args...)
 	if err != nil {
 		var exitError *cmd.ExitError
 

@@ -5,6 +5,7 @@
 package encryption
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/siderolabs/go-blockdevice/v2/encryption/token"
@@ -20,21 +21,21 @@ const (
 // Provider represents encryption utility methods.
 type Provider interface {
 	TokenProvider
-	Encrypt(devname string, key *Key) error
-	Open(devname, mappedName string, key *Key) (string, error)
-	Close(devname string) error
-	AddKey(devname string, key, newKey *Key) error
-	SetKey(devname string, key, newKey *Key) error
-	CheckKey(devname string, key *Key) (bool, error)
-	RemoveKey(devname string, slot int, key *Key) error
+	Encrypt(ctx context.Context, devname string, key *Key) error
+	Open(ctx context.Context, devname, mappedName string, key *Key) (string, error)
+	Close(ctx context.Context, devname string) error
+	AddKey(ctx context.Context, devname string, key, newKey *Key) error
+	SetKey(ctx context.Context, devname string, key, newKey *Key) error
+	CheckKey(ctx context.Context, devname string, key *Key) (bool, error)
+	RemoveKey(ctx context.Context, devname string, slot int, key *Key) error
 	ReadKeyslots(deviceName string) (*Keyslots, error)
 }
 
 // TokenProvider represents token management methods.
 type TokenProvider interface {
-	SetToken(devname string, slot int, token token.Token) error
-	ReadToken(devname string, slot int, token token.Token) error
-	RemoveToken(devname string, slot int) error
+	SetToken(ctx context.Context, devname string, slot int, token token.Token) error
+	ReadToken(ctx context.Context, devname string, slot int, token token.Token) error
+	RemoveToken(ctx context.Context, devname string, slot int) error
 }
 
 var (

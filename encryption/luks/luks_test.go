@@ -5,6 +5,7 @@
 package luks_test
 
 import (
+	"context"
 	"errors"
 	randv2 "math/rand/v2"
 	"os"
@@ -31,6 +32,9 @@ const (
 )
 
 func testEncrypt(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	t.Cleanup(cancel)
+
 	tmpDir := t.TempDir()
 
 	rawImage := filepath.Join(tmpDir, "image.raw")
@@ -97,21 +101,21 @@ func testEncrypt(t *testing.T) {
 
 	t.Logf("unencrypted partition path %s", path)
 
-	require.NoError(t, provider.Encrypt(path, key))
+	require.NoError(t, provider.Encrypt(ctx, path, key))
 
-	encryptedPath, err := provider.Open(path, mappedName, key)
+	encryptedPath, err := provider.Open(ctx, path, mappedName, key)
 	require.NoError(t, err)
 
-	require.NoError(t, provider.Resize(encryptedPath, key))
+	require.NoError(t, provider.Resize(ctx, encryptedPath, key))
 
-	require.NoError(t, provider.AddKey(path, key, keyExtra))
-	require.NoError(t, provider.SetKey(path, keyExtra, keyExtra))
+	require.NoError(t, provider.AddKey(ctx, path, key, keyExtra))
+	require.NoError(t, provider.SetKey(ctx, path, keyExtra, keyExtra))
 
-	valid, err := provider.CheckKey(path, keyExtra)
+	valid, err := provider.CheckKey(ctx, path, keyExtra)
 	require.NoError(t, err)
 	require.True(t, valid)
 
-	valid, err = provider.CheckKey(path, encryption.NewKey(1, []byte("nope")))
+	valid, err = provider.CheckKey(ctx, path, encryption.NewKey(1, []byte("nope")))
 	require.NoError(t, err)
 	require.False(t, valid)
 
@@ -131,36 +135,36 @@ func testEncrypt(t *testing.T) {
 		Type: "sealedkey",
 	}
 
-	err = provider.SetToken(path, 0, token)
+	err = provider.SetToken(ctx, path, 0, token)
 	require.NoError(t, err)
 
-	err = provider.ReadToken(path, 0, token)
+	err = provider.ReadToken(ctx, path, 0, token)
 	require.NoError(t, err)
 
 	require.Equal(t, token.UserData.SealedKey, "aaaa")
 
-	require.NoError(t, provider.RemoveToken(path, 0))
-	require.Error(t, provider.ReadToken(path, 0, token))
+	require.NoError(t, provider.RemoveToken(ctx, path, 0))
+	require.Error(t, provider.ReadToken(ctx, path, 0, token))
 
 	// create and replace token
-	err = provider.SetToken(path, 0, token)
+	err = provider.SetToken(ctx, path, 0, token)
 	require.NoError(t, err)
 
 	token.UserData.SealedKey = "bbbb"
 
-	err = provider.SetToken(path, 0, token)
+	err = provider.SetToken(ctx, path, 0, token)
 	require.NoError(t, err)
 
 	require.NoError(t, unix.Mount(encryptedPath, mountPath, "vfat", 0, ""))
 	require.NoError(t, unix.Unmount(mountPath, 0))
 
-	require.NoError(t, provider.Close(encryptedPath))
-	require.Error(t, provider.Close(encryptedPath))
+	require.NoError(t, provider.Close(ctx, encryptedPath))
+	require.Error(t, provider.Close(ctx, encryptedPath))
 
 	// second key slot
-	encryptedPath, err = provider.Open(path, mappedName, keyExtra)
+	encryptedPath, err = provider.Open(ctx, path, mappedName, keyExtra)
 	require.NoError(t, err)
-	require.NoError(t, provider.Close(encryptedPath))
+	require.NoError(t, provider.Close(ctx, encryptedPath))
 
 	// check keyslots list
 	keyslots, err := provider.ReadKeyslots(path)
@@ -172,23 +176,23 @@ func testEncrypt(t *testing.T) {
 	require.True(t, ok)
 
 	// remove key slot
-	err = provider.RemoveKey(path, 1, key)
+	err = provider.RemoveKey(ctx, path, 1, key)
 	require.NoError(t, err)
-	_, err = provider.Open(path, mappedName, keyExtra)
+	_, err = provider.Open(ctx, path, mappedName, keyExtra)
 	require.Equal(t, err, encryption.ErrEncryptionKeyRejected)
 
-	valid, err = provider.CheckKey(path, key)
+	valid, err = provider.CheckKey(ctx, path, key)
 	require.NoError(t, err)
 	require.True(t, valid)
 
 	// unhappy cases
-	_, err = provider.Open(path, mappedName, encryption.NewKey(0, []byte("エクスプロシオン")))
+	_, err = provider.Open(ctx, path, mappedName, encryption.NewKey(0, []byte("エクスプロシオン")))
 	require.Equal(t, err, encryption.ErrEncryptionKeyRejected)
 
-	_, err = provider.Open("/dev/nosuchdevice", mappedName, encryption.NewKey(0, []byte("エクスプロシオン")))
+	_, err = provider.Open(ctx, "/dev/nosuchdevice", mappedName, encryption.NewKey(0, []byte("エクスプロシオン")))
 	require.Error(t, err)
 
-	_, err = provider.Open(loDev.Path(), mappedName, key)
+	_, err = provider.Open(ctx, loDev.Path(), mappedName, key)
 	require.Error(t, err)
 }
 
