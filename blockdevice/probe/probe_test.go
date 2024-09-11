@@ -96,7 +96,7 @@ func (suite *ProbeSuite) TestDevForPartitionLabel() {
 			part:  part32,
 		},
 	} {
-		suite.T().Run(tc.label, func(t *testing.T) {
+		suite.Run(tc.label, func() {
 			dev, err := probe.DevForPartitionLabel(suite.LoopbackDevice.Name(), tc.label)
 			suite.Require().NoError(err)
 

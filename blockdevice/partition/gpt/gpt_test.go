@@ -440,7 +440,7 @@ func (suite *GPTSuite) TestPartitionInsertOffsetAndResize() {
 	_, err = g.Add(efiSize, gpt.WithPartitionName("efi"))
 	suite.Require().NoError(err)
 
-	_, err = g.Add(0, gpt.WithPartitionName("system"))
+	_, err = g.Add(bootSize, gpt.WithPartitionName("system"))
 	suite.Require().NoError(err)
 
 	_, err = g.Add(0, gpt.WithPartitionName("config"), gpt.WithOffset(configStart), gpt.WithMaximumSize(true))

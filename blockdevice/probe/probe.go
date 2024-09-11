@@ -90,7 +90,7 @@ func WithFileSystemLabel(label string) SelectOption {
 func WithSingleResult() SelectOption {
 	count := 0
 
-	return func(device *ProbedBlockDevice) (bool, error) {
+	return func(*ProbedBlockDevice) (bool, error) {
 		if count > 0 {
 			return false, fmt.Errorf("got more than one blockdevice with provided criteria")
 		}

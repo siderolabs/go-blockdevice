@@ -475,13 +475,13 @@ func (g *GPT) syncKernelPartitions() error {
 	// process remaining partitions: delete all the kernel partitions left, add new partitions from in-memory set
 	for j := i; j < len(kernelPartitions); j++ {
 		if err := blkpg.InformKernelOfDelete(g.f, 0, 0, int32(kernelPartitions[j].No)); err != nil {
-			return err
+			return fmt.Errorf("failed to delete partition %d: %w", kernelPartitions[j].No, err)
 		}
 	}
 
 	for j := i; j < len(newPartitions); j++ {
 		if err := blkpg.InformKernelOfAdd(g.f, newPartitions[j].FirstLBA, newPartitions[j].Length(), newPartitions[j].Number); err != nil {
-			return err
+			return fmt.Errorf("failed to add partition %d (first %d, length %d): %w", newPartitions[j].Number, newPartitions[j].FirstLBA, newPartitions[j].Length(), err)
 		}
 	}
 

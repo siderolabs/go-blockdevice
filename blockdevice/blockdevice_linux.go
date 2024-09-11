@@ -98,6 +98,7 @@ func Open(devname string, setters ...Option) (_ *BlockDevice, rerr error) { //no
 		bd.g = g
 	} else {
 		var g *gpt.GPT
+
 		if g, err = gpt.Open(f); err != nil {
 			if errors.Is(err, gpt.ErrPartitionTableDoesNotExist) {
 				return bd, nil
@@ -223,8 +224,19 @@ func (bd *BlockDevice) FastWipe() error {
 	}
 
 	_, err = bd.WipeRange(0, wipeLength)
+	if err != nil {
+		return err
+	}
 
-	return err
+	// wipe the last FastWipeRange bytes of the device as well
+	if size >= FastWipeRange*2 {
+		_, err = bd.WipeRange(size-FastWipeRange, FastWipeRange)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // WipeRange the blockdevice [start, start+length).

@@ -92,7 +92,6 @@ func inform(f *os.File, first, length uint64, n, op int32) error {
 
 		return f.Sync()
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to inform kernel: %w", err)
 	}
