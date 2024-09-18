@@ -67,6 +67,11 @@ func (suite *ProbeSuite) setSystemLabelEXT4(name string) {
 	suite.Require().NoError(cmd.Run())
 }
 
+func (suite *ProbeSuite) setSystemLabelSwap(name string) {
+	cmd := exec.Command("mkswap", "-L", name, suite.LoopbackDevice.Name())
+	suite.Require().NoError(cmd.Run())
+}
+
 func (suite *ProbeSuite) TestBlockDeviceWithSymlinkResolves() {
 	// Create a symlink to the block device
 	symlink := suite.Dev.Name() + ".link"
@@ -162,6 +167,35 @@ func (suite *ProbeSuite) TestProbeByFilesystemLabelBlockdeviceEXT4() {
 	suite.setSystemLabelEXT4("EXTBD")
 
 	probed, err := probe.All(probe.WithFileSystemLabel("EXTBD"))
+	suite.Require().NoError(err)
+	suite.Require().Equal(1, len(probed))
+
+	suite.Require().Equal(suite.LoopbackDevice.Name(), probed[0].Device().Name())
+	suite.Require().Equal(suite.LoopbackDevice.Name(), probed[0].Path)
+}
+
+func (suite *ProbeSuite) TestProbeByFilesystemLabelBlockdeviceSWAP() {
+	suite.setSystemLabelSwap("SWAPBD")
+
+	probed, err := probe.All(probe.WithFileSystemLabel("SWAPBD"))
+	suite.Require().NoError(err)
+	suite.Require().Equal(1, len(probed))
+
+	suite.Require().Equal(suite.LoopbackDevice.Name(), probed[0].Device().Name())
+	suite.Require().Equal(suite.LoopbackDevice.Name(), probed[0].Path)
+}
+
+func (suite *ProbeSuite) TestProbeMDRaid() {
+	name := "TESTRAID"
+	cmd := exec.Command("mdadm", "--create", "/dev/md1", "-N", name, "--metadata=1.2", "--level=1", "--raid-devices=2", "missing", suite.LoopbackDevice.Name())
+	suite.Require().NoError(cmd.Run())
+
+	defer func() {
+		cmd := exec.Command("mdadm", "--stop", "/dev/md1")
+		cmd.Run()
+	}()
+
+	probed, err := probe.All(probe.WithFileSystemLabel(name))
 	suite.Require().NoError(err)
 	suite.Require().Equal(1, len(probed))
 
