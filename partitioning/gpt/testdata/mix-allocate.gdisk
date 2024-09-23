@@ -12,11 +12,11 @@ Partition table holds up to 128 entries
 Main partition table begins at sector 2 and ends at sector 33
 First usable sector is 2048, last usable sector is 12582878
 Partitions will be aligned on 2048-sector boundaries
-Total free space is 6133727 sectors (2.9 GiB)
+Total free space is 4085727 sectors (1.9 GiB)
 
 Number  Start (sector)    End (sector)  Size       Code  Name
    1            2048         2099199   1024.0 MiB  EF00  1G1
-   2         2099200         2508799   200.0 MiB   8E00  200M
-   3         2508800         3327999   400.0 MiB   8E00  400M
-   4         4196352         6293503   1024.0 MiB  8E00  1G3
-   5         6293504         7317503   500.0 MiB   8E00  500M
+   3         2099200         5171199   1.5 GiB     8E00  1500M
+   4         6293504         8390655   1024.0 MiB  8E00  1G4
+   5         8390656         8800255   200.0 MiB   8E00  200M
+   6         8800256         9619455   400.0 MiB   8E00  400M

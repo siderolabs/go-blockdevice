@@ -160,19 +160,21 @@ func TestGPT(t *testing.T) {
 			allocator: func(t *testing.T, table *gpt.Table) {
 				t.Helper()
 
-				// allocate 3 1G partitions first, and delete the middle one
+				// allocate 4 1G partitions first, and delete two in the middle
 
 				require.NoError(t, allocateError(table.AllocatePartition(1*GiB, "1G1", partType1,
 					gpt.WithUniqueGUID(uuid.MustParse("DA66737E-1ED4-4DDF-B98C-70CEBFE3ADA0")),
 				)))
 				require.NoError(t, allocateError(table.AllocatePartition(1*GiB, "1G2", partType1)))
-				require.NoError(t, allocateError(table.AllocatePartition(1*GiB, "1G3", partType2,
+				require.NoError(t, allocateError(table.AllocatePartition(1*GiB, "1G3", partType1)))
+				require.NoError(t, allocateError(table.AllocatePartition(1*GiB, "1G4", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("3D0FE86B-7791-4659-B564-FC49A542866D")),
 				)))
 
 				require.NoError(t, table.DeletePartition(1))
+				require.NoError(t, table.DeletePartition(2))
 
-				// allocate smaller partitions to fill the gap
+				// gap is 2 GiB, while the tail available space is < 2 GiB, so small partitions will be appended to the end
 				require.NoError(t, allocateError(table.AllocatePartition(200*MiB, "200M", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("EE1A711E-DE12-4D9F-98FF-672F7AD638F8")),
 				)))
@@ -180,8 +182,8 @@ func TestGPT(t *testing.T) {
 					gpt.WithUniqueGUID(uuid.MustParse("15E609C8-9775-4E86-AF59-8A87E7C03FAB")),
 				)))
 
-				// partition that doesn't fit the gap will be appended to the end
-				require.NoError(t, allocateError(table.AllocatePartition(500*MiB, "500M", partType2,
+				// bigger partition will fill the gap
+				require.NoError(t, allocateError(table.AllocatePartition(1500*MiB, "1500M", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("15E609C8-9775-4E86-AF59-8A87E7C03FAC")),
 				)))
 			},

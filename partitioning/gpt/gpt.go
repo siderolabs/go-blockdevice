@@ -294,11 +294,12 @@ func (t *Table) allocatableRanges() []allocatableRange {
 
 	for {
 		for partitionIdx < len(t.entries) {
-			if t.entries[partitionIdx] == nil {
-				partitionIdx++
+			if t.entries[partitionIdx] != nil {
+				break
 			}
 
-			break
+			// skip empty entries
+			partitionIdx++
 		}
 
 		var highLBA uint64
@@ -634,12 +635,14 @@ func (t *Table) syncKernel() error {
 			}
 		}
 
-		err = t.dev.KernelPartitionAdd(no,
-			myEntry.FirstLBA*uint64(t.sectorSize),
-			(myEntry.LastLBA-myEntry.FirstLBA+1)*uint64(t.sectorSize),
-		)
-		if err != nil {
-			return fmt.Errorf("failed to add partition %d: %w", no, err)
+		if myEntry != nil {
+			err = t.dev.KernelPartitionAdd(no,
+				myEntry.FirstLBA*uint64(t.sectorSize),
+				(myEntry.LastLBA-myEntry.FirstLBA+1)*uint64(t.sectorSize),
+			)
+			if err != nil {
+				return fmt.Errorf("failed to add partition %d: %w", no, err)
+			}
 		}
 	}
 
