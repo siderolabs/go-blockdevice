@@ -148,6 +148,22 @@ func (l *LUKS) Open(ctx context.Context, deviceName, mappedName string, key *enc
 	return filepath.Join("/dev/mapper", mappedName), nil
 }
 
+// IsOpen checks if the device is already opened.
+func (l *LUKS) IsOpen(ctx context.Context, _, mappedName string) (bool, string, error) {
+	args := []string{"status", mappedName}
+
+	_, err := l.runCommand(ctx, args, nil)
+	if err != nil {
+		if errors.Is(err, encryption.ErrDeviceNotReady) {
+			return false, "", nil
+		}
+
+		return false, "", err
+	}
+
+	return true, filepath.Join("/dev/mapper", mappedName), nil
+}
+
 // Encrypt implements encryption.Provider.
 func (l *LUKS) Encrypt(ctx context.Context, deviceName string, key *encryption.Key) error {
 	cipher, err := l.cipher.String()
@@ -358,6 +374,8 @@ func (l *LUKS) runCommand(ctx context.Context, args []string, stdin []byte) (str
 				}
 			case 2:
 				return "", encryption.ErrEncryptionKeyRejected
+			case 4:
+				return "", encryption.ErrDeviceNotReady
 			case 5:
 				return "", encryption.ErrDeviceBusy
 			}

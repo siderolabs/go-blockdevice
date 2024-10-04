@@ -101,10 +101,23 @@ func testEncrypt(t *testing.T) {
 
 	t.Logf("unencrypted partition path %s", path)
 
+	isOpen, _, err := provider.IsOpen(ctx, path, mappedName)
+	require.NoError(t, err)
+	require.False(t, isOpen)
+
 	require.NoError(t, provider.Encrypt(ctx, path, key))
+
+	isOpen, _, err = provider.IsOpen(ctx, path, mappedName)
+	require.NoError(t, err)
+	require.False(t, isOpen)
 
 	encryptedPath, err := provider.Open(ctx, path, mappedName, key)
 	require.NoError(t, err)
+
+	isOpen, isOpenPath, err := provider.IsOpen(ctx, path, mappedName)
+	require.NoError(t, err)
+	require.True(t, isOpen)
+	require.Equal(t, encryptedPath, isOpenPath)
 
 	require.NoError(t, provider.Resize(ctx, encryptedPath, key))
 
@@ -159,6 +172,11 @@ func testEncrypt(t *testing.T) {
 	require.NoError(t, unix.Unmount(mountPath, 0))
 
 	require.NoError(t, provider.Close(ctx, encryptedPath))
+
+	isOpen, _, err = provider.IsOpen(ctx, path, mappedName)
+	require.NoError(t, err)
+	require.False(t, isOpen)
+
 	require.Error(t, provider.Close(ctx, encryptedPath))
 
 	// second key slot

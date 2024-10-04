@@ -22,6 +22,7 @@ const (
 type Provider interface {
 	TokenProvider
 	Encrypt(ctx context.Context, devname string, key *Key) error
+	IsOpen(ctx context.Context, devname, mappedName string) (bool, string, error)
 	Open(ctx context.Context, devname, mappedName string, key *Key) (string, error)
 	Close(ctx context.Context, devname string) error
 	AddKey(ctx context.Context, devname string, key, newKey *Key) error
@@ -47,6 +48,9 @@ var (
 
 	// ErrTokenNotFound returned when trying to get/delete not existing token.
 	ErrTokenNotFound = fmt.Errorf("no token with supplied id exists")
+
+	// ErrDeviceNotReady returned when device is not ready.
+	ErrDeviceNotReady = fmt.Errorf("device is not ready")
 )
 
 // Keyslots represents LUKS2 keyslots metadata.
