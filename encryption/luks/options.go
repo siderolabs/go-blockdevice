@@ -50,3 +50,17 @@ func WithPerfOptions(options ...string) Option {
 		l.perfOptions = options
 	}
 }
+
+// WithDetachedHeaderDir sets the directory where detached LUKS header files are created.
+func WithDetachedHeaderDir(dir string) Option {
+	return func(l *LUKS) {
+		l.detachedHeaderDir = dir
+	}
+}
+
+// WithValidationPolicy overrides the default detached-header validation policy.
+func WithValidationPolicy(policy ValidationPolicy) Option {
+	return func(l *LUKS) {
+		l.validationPolicy = policy
+	}
+}

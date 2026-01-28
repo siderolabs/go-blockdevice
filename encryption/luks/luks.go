@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -116,6 +117,8 @@ type LUKS struct {
 	pbkdfMemory          uint64
 	blockSize            uint64
 	keySize              uint
+	detachedHeaderDir    string
+	validationPolicy     ValidationPolicy
 }
 
 // New creates new LUKS2 encryption provider.
@@ -137,13 +140,52 @@ func New(cipher Cipher, options ...Option) *LUKS {
 
 // Open runs luksOpen on a device and returns mapped device path.
 func (l *LUKS) Open(ctx context.Context, deviceName, mappedName string, key *encryption.Key) (string, error) {
+	if l.detachedHeaderDir == "" {
+		return "", fmt.Errorf("detached header dir is not configured")
+	}
+
+	policy := l.validationPolicy
+	if policy.AllowedSegmentEncryptions == nil {
+		cipher, err := l.cipher.String()
+		if err != nil {
+			return "", err
+		}
+
+		policy.AllowedSegmentEncryptions = []string{cipher}
+	}
+
+	headerFile, err := createDetachedHeaderFile(l.detachedHeaderDir)
+	if err != nil {
+		return "", err
+	}
+
+	headerPath := headerFile.Name()
+	_ = headerFile.Close()
+
+	defer func() {
+		_ = os.Remove(headerPath)
+	}()
+
+	if _, err = l.runCommand(ctx, []string{"luksHeaderBackup", deviceName, "--header-backup-file", headerPath}, nil); err != nil {
+		return "", err
+	}
+
+	metadata, err := l.dumpJSONMetadata(ctx, headerPath)
+	if err != nil {
+		return "", err
+	}
+
+	if err = validateLUKS2JSONMetadata(metadata, policy); err != nil {
+		return "", err
+	}
+
 	args := slices.Concat(
-		[]string{"luksOpen", deviceName, mappedName, "--key-file=-"},
+		[]string{"luksOpen", "--header", headerPath, deviceName, mappedName, "--key-file=-"},
 		keyslotArgs(key),
 		l.perfArgs(),
 	)
 
-	_, err := l.runCommand(ctx, args, key.Value)
+	_, err = l.runCommand(ctx, args, key.Value)
 	if err != nil {
 		return "", err
 	}
@@ -173,7 +215,6 @@ func (l *LUKS) Encrypt(ctx context.Context, deviceName string, key *encryption.K
 	if err != nil {
 		return err
 	}
-
 	args := slices.Concat(
 		[]string{"luksFormat", "--type", "luks2", "--key-file=-", "-c", cipher, deviceName},
 		l.argonArgs(),
