@@ -162,7 +162,11 @@ func (l *LUKS) Open(ctx context.Context, deviceName, mappedName string, key *enc
 	headerPath := headerFile.Name()
 	_ = headerFile.Close()
 
+	// Remove temp file so cryptsetup can create a fresh header backup at this path.
+	_ = os.Remove(headerPath)
+
 	defer func() {
+		// Clean up the header backup file created by cryptsetup.
 		_ = os.Remove(headerPath)
 	}()
 
