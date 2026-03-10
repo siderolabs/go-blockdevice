@@ -36,6 +36,11 @@ func Probe(f *os.File, opts ...ProbeOption) (*Info, error) {
 
 	switch sysStat.Mode & unix.S_IFMT {
 	case unix.S_IFBLK:
+		// Invalidate page cache before reading to ensure fresh data from the device.
+		// This is critical when a process (e.g., cryptsetup) wrote to the device using O_DIRECT,
+		// which can leave the block device's page cache stale (especially with loop devices).
+		unix.Fadvise(int(f.Fd()), 0, 0, unix.FADV_DONTNEED) //nolint:errcheck
+
 		// block device, initialize full support
 		info.BlockDevice = block.NewFromFile(f)
 
