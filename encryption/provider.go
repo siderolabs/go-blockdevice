@@ -7,6 +7,8 @@ package encryption
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/siderolabs/go-blockdevice/v2/encryption/token"
 )
@@ -57,10 +59,56 @@ type Keyslots struct {
 	Keyslots map[string]*Keyslot `json:"keyslots"`
 }
 
+// JSONMetadata represents LUKS2 JSON metadata.
+type JSONMetadata struct {
+	Keyslots map[string]*Keyslot `json:"keyslots"`
+	Segments map[string]*Segment `json:"segments"`
+}
+
+// Segment represents a single LUKS2 segment.
+type Segment struct {
+	Type       string     `json:"type"`
+	Size       string     `json:"size"`
+	IVTweak    string     `json:"iv_tweak"`
+	Encryption string     `json:"encryption"`
+	Flags      []string   `json:"flags,omitempty"`
+	Offset     StringUint `json:"offset"`
+	SectorSize int64      `json:"sector_size"`
+}
+
+// StringUint is a uint64 that unmarshals from a JSON quoted string (e.g. "16777216").
+type StringUint uint64
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *StringUint) UnmarshalJSON(data []byte) error {
+	str := strings.Trim(string(data), "\"")
+
+	v, err := strconv.ParseUint(str, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	*s = StringUint(v)
+
+	return nil
+}
+
+// KeyslotArea represents the area parameters of a LUKS2 keyslot.
+type KeyslotArea struct {
+	Encryption string `json:"encryption"`
+}
+
+// KeyslotKDF represents the KDF parameters of a LUKS2 keyslot.
+type KeyslotKDF struct {
+	Type string `json:"type"`
+}
+
 // Keyslot represents a single LUKS2 keyslot.
 type Keyslot struct {
-	Type    string `json:"type"`
-	KeySize int64  `json:"key_size"`
+	Type    string      `json:"type"`
+	Area    KeyslotArea `json:"area"`
+	KDF     KeyslotKDF  `json:"kdf"`
+	KeySize int64       `json:"key_size"`
 }
 
 // NewKey create a new key.

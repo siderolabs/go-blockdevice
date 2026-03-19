@@ -5,8 +5,10 @@
 package luks_test
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/binary"
 	"errors"
 	"io"
 	randv2 "math/rand/v2"
@@ -222,6 +224,35 @@ func TestLUKSEncrypt(t *testing.T) {
 
 	_, err = provider.Open(ctx, loDev.Path(), mappedName, key)
 	require.Error(t, err)
+
+	// tamper the on-disk header: corrupt KDF type in both JSON areas
+	func() {
+		f, err1 := os.OpenFile(path, os.O_RDWR, 0)
+		require.NoError(t, err1)
+
+		defer f.Close() //nolint:errcheck
+
+		// read hdr_size from binary header (big-endian uint64 at offset 8)
+		binHdr := make([]byte, 16)
+		_, err = io.ReadFull(f, binHdr)
+		require.NoError(t, err)
+
+		hdrSize := binary.BigEndian.Uint64(binHdr[8:16])
+
+		// tamper both JSON areas: "argon2xx" is the same length as "argon2id"
+		for _, offset := range []int64{4096, int64(hdrSize) + 4096} {
+			buf := make([]byte, 8192)
+			_, err = f.ReadAt(buf, offset)
+			require.NoError(t, err)
+
+			tampered := bytes.ReplaceAll(buf, []byte(`"argon2id"`), []byte(`"argon2xx"`))
+			_, err = f.WriteAt(tampered, offset)
+			require.NoError(t, err)
+		}
+	}()
+
+	_, err = provider.Open(ctx, path, mappedName, key)
+	require.ErrorContains(t, err, "unexpected KDF type")
 }
 
 func TestLUKSKeyRotation(t *testing.T) {

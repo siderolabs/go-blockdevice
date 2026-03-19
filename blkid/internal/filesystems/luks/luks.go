@@ -20,7 +20,7 @@ import (
 
 var luksMagic = magic.Magic{
 	Offset: 0,
-	Value:  []byte("LUKS\xba\xbe"),
+	Value:  []byte(luks2.MagicValue),
 }
 
 // Probe for the filesystem.

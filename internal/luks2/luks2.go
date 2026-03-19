@@ -5,4 +5,6 @@
 // Package luks2 contains LUKS header.
 package luks2
 
+const MagicValue = "LUKS\xba\xbe"
+
 //go:generate go run ../cstruct/cstruct.go -pkg luks2 -struct Luks2Header -input luks2_header.h -endianness BigEndian

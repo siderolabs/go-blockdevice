@@ -8,10 +8,9 @@ package luks
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -21,10 +20,8 @@ import (
 
 	"github.com/siderolabs/go-cmd/pkg/cmd"
 
-	"github.com/siderolabs/go-blockdevice/v2/block"
 	"github.com/siderolabs/go-blockdevice/v2/encryption"
 	"github.com/siderolabs/go-blockdevice/v2/encryption/token"
-	"github.com/siderolabs/go-blockdevice/v2/internal/luks2"
 )
 
 // Cipher LUKS2 cipher type.
@@ -137,11 +134,31 @@ func New(cipher Cipher, options ...Option) *LUKS {
 
 // Open runs luksOpen on a device and returns mapped device path.
 func (l *LUKS) Open(ctx context.Context, deviceName, mappedName string, key *encryption.Key) (string, error) {
+	header, err := l.readHeader(deviceName)
+	if err != nil {
+		return "", err
+	}
+
+	// Write the detached header strictly to RAM
+	file, err := os.CreateTemp("", "luks-header-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create detached LUKS header file: %w", err)
+	}
+
+	_, err = file.Write(header.raw)
+	if err != nil {
+		return "", fmt.Errorf("failed to write detached LUKS header: %w", err)
+	}
+
+	defer os.Remove(file.Name()) //nolint:errcheck
+	defer file.Close()           //nolint:errcheck
+
 	args := slices.Concat(
 		[]string{
 			"luksOpen",
 			deviceName,
 			mappedName,
+			fmt.Sprintf("--header=%s", file.Name()),
 			"--key-file=-",
 			fmt.Sprintf("--keyfile-size=%d", len(key.Value)),
 		},
@@ -149,7 +166,7 @@ func (l *LUKS) Open(ctx context.Context, deviceName, mappedName string, key *enc
 		l.perfArgs(),
 	)
 
-	_, err := l.runCommand(ctx, args, key.Value, false)
+	_, err = l.runCommand(ctx, args, key.Value, false)
 	if err != nil {
 		return "", err
 	}
@@ -297,34 +314,12 @@ func (l *LUKS) RemoveKey(ctx context.Context, devname string, slot int, key *enc
 
 // ReadKeyslots returns deserialized LUKS2 keyslots JSON.
 func (l *LUKS) ReadKeyslots(deviceName string) (*encryption.Keyslots, error) {
-	bd, err := block.NewFromPath(deviceName)
+	header, err := l.readHeader(deviceName)
 	if err != nil {
 		return nil, err
 	}
 
-	defer bd.Close() //nolint:errcheck
-
-	sb := make(luks2.Luks2Header, 4096)
-
-	if _, err = io.ReadFull(bd.File(), sb[:]); err != nil {
-		return nil, err
-	}
-
-	jsonArea := make([]byte, int(sb.Get_hdr_size())-len(sb))
-
-	if _, err = io.ReadFull(bd.File(), jsonArea); err != nil {
-		return nil, err
-	}
-
-	jsonArea = bytes.Trim(bytes.TrimSpace(jsonArea), "\x00")
-
-	var keyslots *encryption.Keyslots
-
-	if err = json.Unmarshal(jsonArea, &keyslots); err != nil {
-		return nil, err
-	}
-
-	return keyslots, nil
+	return &encryption.Keyslots{Keyslots: header.jsonMetadata.Keyslots}, nil
 }
 
 // SetToken adds arbitrary token to the key slot.
