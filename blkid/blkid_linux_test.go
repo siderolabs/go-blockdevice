@@ -499,6 +499,23 @@ func TestProbePathFilesystems(t *testing.T) {
 			},
 		},
 		{
+			name:   "iso fixed image with zero byte in label",
+			noLoop: true,
+
+			size:  0,
+			setup: fixedImageSetup("testdata/user-data.iso.zst"),
+
+			expectedName:  "iso9660",
+			expectedLabel: "cidata",
+
+			expectedBlockSize:   []uint32{2048},
+			expectedFSBlockSize: []uint32{2048},
+			expectedFSSize:      0x15800,
+			expectedSignatures: []blkid.SignatureRange{
+				{Offset: 32769, Size: 5},
+			},
+		},
+		{
 			name:   "squashfs",
 			noLoop: true,
 

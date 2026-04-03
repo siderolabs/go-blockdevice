@@ -100,7 +100,7 @@ vdLoop:
 		lblBytes := joilet.Get_volume_id()
 
 		if label, err := unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM).NewDecoder().Bytes(lblBytes); err == nil {
-			res.Label = pointer.To(strings.TrimRight(string(label), " "))
+			res.Label = pointer.To(strings.TrimRight(string(label), " \000"))
 		}
 	}
 
