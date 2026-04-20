@@ -13,5 +13,5 @@ import (
 )
 
 func TestMaxMagicSize(t *testing.T) {
-	assert.Equal(t, 65536, chain.Default().MaxMagicSize())
+	assert.Equal(t, 65608, chain.Default().MaxMagicSize())
 }

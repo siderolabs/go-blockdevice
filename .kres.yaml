@@ -11,6 +11,7 @@ spec:
 kind: golang.Toolchain
 spec:
     extraPackages:
+        - btrfs-progs
         - cdrkit
         - cryptsetup
         - dosfstools
@@ -72,3 +73,11 @@ spec:
             from: zfs-img
             src: /
             dst: /src/blkid/testdata/
+---
+kind: golang.Generate
+spec:
+  goGenerateSpecs:
+    - source: .
+      copy:
+        - blkid/
+        - internal/

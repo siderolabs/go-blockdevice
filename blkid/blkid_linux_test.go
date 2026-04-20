@@ -53,6 +53,16 @@ func xfsSetup(t *testing.T, path string) {
 	require.NoError(t, cmd.Run())
 }
 
+func btrfsSetup(t *testing.T, path string) {
+	t.Helper()
+
+	cmd := exec.CommandContext(t.Context(), "mkfs.btrfs", "-L", "btrlabel", path)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	require.NoError(t, cmd.Run())
+}
+
 func ext2Setup(t *testing.T, path string) {
 	t.Helper()
 
@@ -276,6 +286,23 @@ func TestProbePathFilesystems(t *testing.T) {
 			expectedFSSize:      436 * MiB,
 			expectedSignatures: []blkid.SignatureRange{
 				{Offset: 0, Size: 4},
+			},
+		},
+		{
+			name: "btrfs",
+
+			size:  500 * MiB,
+			setup: btrfsSetup,
+
+			expectedName:  "btrfs",
+			expectedLabel: "btrlabel",
+			expectUUID:    true,
+
+			expectedBlockSize:   []uint32{4096},
+			expectedFSBlockSize: []uint32{16384},
+			expectedFSSize:      500 * MiB,
+			expectedSignatures: []blkid.SignatureRange{
+				{Offset: 65600, Size: 8},
 			},
 		},
 		{

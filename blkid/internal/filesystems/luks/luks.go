@@ -5,8 +5,6 @@
 // Package luks probes LUKS encrypted filesystems.
 package luks
 
-//go:generate go run ../../../../internal/cstruct/cstruct.go -pkg luks -struct Luks2Header -input luks2_header.h -endianness BigEndian
-
 import (
 	"bytes"
 

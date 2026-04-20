@@ -1,25 +1,22 @@
-# syntax = docker/dockerfile-upstream:1.20.0-labs
+# syntax = docker/dockerfile-upstream:1.23.0-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-20T11:08:18Z by kres 1ffefb6.
+# Generated on 2026-04-20T09:19:18Z by kres 4b58472.
 
 ARG TOOLCHAIN=scratch
 
-# cleaned up specs and compiled versions
-FROM scratch AS generate
-
 # runs markdownlint
-FROM docker.io/oven/bun:1.3.6-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.3.11-alpine AS lint-markdown
 WORKDIR /src
-RUN bun i markdownlint-cli@0.47.0 sentences-per-line@0.5.0
+RUN bun i markdownlint-cli@0.48.0 sentences-per-line@0.5.2
 COPY .markdownlint.json .
 COPY ./CHANGELOG.md ./CHANGELOG.md
 RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules markdownlint-sentences-per-line .
 
 # base toolchain image
 FROM --platform=${BUILDPLATFORM} ${TOOLCHAIN} AS toolchain
-RUN apk --update --no-cache add bash build-base curl jq protoc protobuf-dev cdrkit cryptsetup dosfstools e2fsprogs gptfdisk lvm2 parted util-linux squashfs-tools xfsprogs mtools
+RUN apk --update --no-cache add bash build-base curl jq protoc protobuf-dev btrfs-progs cdrkit cryptsetup dosfstools e2fsprogs gptfdisk lvm2 parted util-linux squashfs-tools xfsprogs mtools
 
 # Creates the ZFS image
 FROM fedora:39 AS zfs-img-gen
@@ -41,6 +38,12 @@ ENV GOTOOLCHAIN=${GOTOOLCHAIN}
 ARG GOEXPERIMENT
 ENV GOEXPERIMENT=${GOEXPERIMENT}
 ENV GOPATH=/go
+ARG GOIMPORTS_VERSION
+RUN --mount=type=cache,target=/root/.cache/go-build,id=go-blockdevice/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=go-blockdevice/go/pkg go install golang.org/x/tools/cmd/goimports@v${GOIMPORTS_VERSION}
+RUN mv /go/bin/goimports /bin
+ARG GOMOCK_VERSION
+RUN --mount=type=cache,target=/root/.cache/go-build,id=go-blockdevice/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=go-blockdevice/go/pkg go install go.uber.org/mock/mockgen@v${GOMOCK_VERSION}
+RUN mv /go/bin/mockgen /bin
 ARG DEEPCOPY_VERSION
 RUN --mount=type=cache,target=/root/.cache/go-build,id=go-blockdevice/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=go-blockdevice/go/pkg go install github.com/siderolabs/deep-copy@${DEEPCOPY_VERSION} \
 	&& mv /go/bin/deep-copy /bin/deep-copy
@@ -49,6 +52,9 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=go-blockdevice/root/.cach
 	&& mv /go/bin/golangci-lint /bin/golangci-lint
 RUN --mount=type=cache,target=/root/.cache/go-build,id=go-blockdevice/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=go-blockdevice/go/pkg go install golang.org/x/vuln/cmd/govulncheck@latest \
 	&& mv /go/bin/govulncheck /bin/govulncheck
+ARG DIS_VULNCHECK_VERSION
+RUN --mount=type=cache,target=/root/.cache/go-build,id=go-blockdevice/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=go-blockdevice/go/pkg go install github.com/shanduur/dis-vulncheck@${DIS_VULNCHECK_VERSION} \
+	&& mv /go/bin/dis-vulncheck /bin/dis-vulncheck
 ARG GOFUMPT_VERSION
 RUN go install mvdan.cc/gofumpt@${GOFUMPT_VERSION} \
 	&& mv /go/bin/gofumpt /bin/gofumpt
@@ -73,6 +79,13 @@ COPY ./partitioning ./partitioning
 COPY ./swap ./swap
 RUN --mount=type=cache,target=/go/pkg,id=go-blockdevice/go/pkg go list -mod=readonly all >/dev/null
 
+# run go generate
+FROM base AS go-generate-0
+WORKDIR /src
+COPY .license-header.go.txt hack/.license-header.go.txt
+RUN --mount=type=cache,target=/root/.cache/go-build,id=go-blockdevice/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=go-blockdevice/go/pkg go generate ./...
+RUN goimports -w -local github.com/siderolabs/go-blockdevice/v2 .
+
 # runs gofumpt
 FROM base AS lint-gofumpt
 RUN FILES="$(gofumpt -l .)" && test -z "${FILES}" || (echo -e "Source code is not formatted with 'gofumpt -w .':\n${FILES}"; exit 1)
@@ -95,8 +108,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=go-blockdevice/root/.cach
 # runs govulncheck
 FROM base AS lint-govulncheck
 WORKDIR /src
-COPY --chmod=0755 hack/govulncheck.sh ./hack/govulncheck.sh
-RUN --mount=type=cache,target=/root/.cache/go-build,id=go-blockdevice/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=go-blockdevice/go/pkg ./hack/govulncheck.sh ./...
+RUN --mount=type=cache,target=/root/.cache/go-build,id=go-blockdevice/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=go-blockdevice/go/pkg dis-vulncheck -tool=false ./...
 
 # runs unit-tests with race detector
 FROM base AS unit-tests-race
@@ -111,6 +123,11 @@ COPY --from=zfs-img / /src/blkid/testdata/
 WORKDIR /src
 ARG TESTPKGS
 RUN --security=insecure --mount=type=cache,target=/root/.cache/go-build,id=go-blockdevice/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=go-blockdevice/go/pkg --mount=type=cache,target=/tmp,id=go-blockdevice/tmp go test -covermode=atomic -coverprofile=coverage.txt -coverpkg=${TESTPKGS} ${TESTPKGS}
+
+# cleaned up specs and compiled versions
+FROM scratch AS generate
+COPY --from=go-generate-0 /src/blkid blkid
+COPY --from=go-generate-0 /src/internal internal
 
 # clean golangci-lint fmt output
 FROM scratch AS lint-golangci-lint-fmt

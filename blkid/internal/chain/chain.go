@@ -7,6 +7,7 @@ package chain
 
 import (
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/bluestore"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/btrfs"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/ext"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/iso9660"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/luks"
@@ -66,6 +67,7 @@ func Default() Chain {
 		&ext.Probe4{},
 		&ext.Probe3{},
 		&ext.Probe2{},
+		&btrfs.Probe{},
 		&vfat.Probe{},
 		&iso9660.Probe{},
 		&squashfs.Probe{},
