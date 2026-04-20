@@ -47,8 +47,8 @@ func xfsSetup(t *testing.T, path string) {
 	t.Helper()
 
 	cmd := exec.CommandContext(t.Context(), "mkfs.xfs", "--unsupported", "-L", "somelabel", path)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 }
@@ -57,8 +57,8 @@ func btrfsSetup(t *testing.T, path string) {
 	t.Helper()
 
 	cmd := exec.CommandContext(t.Context(), "mkfs.btrfs", "-L", "btrlabel", path)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 }
@@ -67,8 +67,8 @@ func ext2Setup(t *testing.T, path string) {
 	t.Helper()
 
 	cmd := exec.CommandContext(t.Context(), "mkfs.ext2", "-L", "extlabel", path)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 }
@@ -77,8 +77,8 @@ func ext3Setup(t *testing.T, path string) {
 	t.Helper()
 
 	cmd := exec.CommandContext(t.Context(), "mkfs.ext3", "-L", "extlabel", path)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 }
@@ -87,8 +87,8 @@ func ext4Setup(t *testing.T, path string) {
 	t.Helper()
 
 	cmd := exec.CommandContext(t.Context(), "mkfs.ext4", "-L", "extlabel", path)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 }
@@ -98,8 +98,8 @@ func vfatSetup(bits int) func(t *testing.T, path string) {
 		t.Helper()
 
 		cmd := exec.CommandContext(t.Context(), "mkfs.vfat", "-F", strconv.Itoa(bits), "-n", "TALOS_V1", "-v", path)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		cmd.Stdout = t.Output()
+		cmd.Stderr = t.Output()
 
 		require.NoError(t, cmd.Run())
 	}
@@ -109,8 +109,8 @@ func luksSetup(t *testing.T, path string) {
 	t.Helper()
 
 	cmd := exec.CommandContext(t.Context(), "cryptsetup", "luksFormat", "--label", "cryptlabel", "--key-file", "/dev/urandom", "--keyfile-size", "32", path)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 }
@@ -166,8 +166,8 @@ func isoSetup(useJoilet bool) func(t *testing.T, path string) {
 		args = append(args, contents)
 
 		cmd := exec.CommandContext(t.Context(), "mkisofs", args...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		cmd.Stdout = t.Output()
+		cmd.Stderr = t.Output()
 
 		require.NoError(t, cmd.Run())
 	}
@@ -177,8 +177,8 @@ func swapSetup(t *testing.T, path string) {
 	t.Helper()
 
 	cmd := exec.CommandContext(t.Context(), "mkswap", "--label", "swaplabel", "-p", "8192", path)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 }
@@ -187,8 +187,8 @@ func swapSetup2(t *testing.T, path string) {
 	t.Helper()
 
 	cmd := exec.CommandContext(t.Context(), "mkswap", "--label", "swapswap", "-p", "4096", path)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 }
@@ -197,8 +197,8 @@ func lvm2Setup(t *testing.T, path string) {
 	t.Helper()
 
 	cmd := exec.CommandContext(t.Context(), "pvcreate", "-v", path)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 }
@@ -225,8 +225,8 @@ func squashfsSetup(t *testing.T, path string) {
 	require.NoError(t, f.Close())
 
 	cmd := exec.CommandContext(t.Context(), "mksquashfs", contents, path, "-all-root", "-noappend", "-no-progress", "-no-compression")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 }
@@ -695,8 +695,8 @@ size=      204800, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=7F5FCD6C-A703
 
 	cmd := exec.CommandContext(t.Context(), "sfdisk", path)
 	cmd.Stdin = strings.NewReader(script)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 }
@@ -727,8 +727,8 @@ size=      204800, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, uuid=3C047FF8-E35C
 
 	cmd := exec.CommandContext(t.Context(), "sfdisk", rawImage)
 	cmd.Stdin = strings.NewReader(script)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 

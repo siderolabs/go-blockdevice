@@ -63,14 +63,14 @@ func TestDevice(t *testing.T) {
 
 	cmd := exec.CommandContext(t.Context(), "sfdisk", devPath)
 	cmd.Stdin = strings.NewReader(script)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 
 	cmd = exec.CommandContext(t.Context(), "partprobe", devPath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
 
 	require.NoError(t, cmd.Run())
 

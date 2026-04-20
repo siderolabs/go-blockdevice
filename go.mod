@@ -1,6 +1,6 @@
 module github.com/siderolabs/go-blockdevice/v2
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/freddierice/go-losetup/v2 v2.0.1
