@@ -287,7 +287,12 @@ func (t *Table) init(lastLBA uint64) {
 
 	if t.firstUsableLBA == 0 {
 		t.firstUsableLBA = t.primaryPartitionsLBA + uint64(lbasForEntries)
-		t.firstUsableLBA = (t.firstUsableLBA + t.alignment - 1) / t.alignment * t.alignment // 2048 with 512 sector size, 256 with 4096 sector size
+
+		// only align the LBA when the compatibility flag is not set. This alignment can cause Windows to corrupt the
+		// partition table.
+		if !t.options.CompatFirstUsableLBA {
+			t.firstUsableLBA = (t.firstUsableLBA + t.alignment - 1) / t.alignment * t.alignment // 2048 with 512 sector size, 256 with 4096 sector size
+		}
 	}
 
 	t.lastUsableLBA = t.secondaryPartitionsLBA - 1

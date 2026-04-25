@@ -11,6 +11,12 @@ type Options struct {
 	SkipPMBR         bool
 	MarkPMBRBootable bool
 
+	// If true, the first usable LBA will be the first LBA after the partition table.
+	// Otherwise (default), the first usable LBA will be set to the first LBA after
+	// the partition table aligned on a 1MiB boundary. Modern Windows versions can
+	// corrupt partition tables on disk eject when this flag is not set.
+	CompatFirstUsableLBA bool
+
 	// Number of LBAs to skip before the writing partition entries.
 	SkipLBAs uint
 
@@ -48,6 +54,15 @@ func WithSkipLBAs(n uint) Option {
 func WithDiskGUID(guid uuid.UUID) Option {
 	return func(o *Options) {
 		o.DiskGUID = guid
+	}
+}
+
+// WithCompatFirstUsableLBA sets the first usable LBA to the first LBA after the
+// partition table instead of a 1MiB-aligned value. This can prevent modern
+// Windows versions from clobbering the partition table on disk eject.
+func WithCompatFirstUsableLBA() Option {
+	return func(o *Options) {
+		o.CompatFirstUsableLBA = true
 	}
 }
 

@@ -161,6 +161,24 @@ func TestGPT(t *testing.T) {
 			expectedGdiskDump:  loadTestdata(t, "allocate.gdisk"),
 		},
 		{
+			name:     "allocate with LBA compatibility",
+			diskSize: 2 * GiB,
+			opts: []gpt.Option{
+				gpt.WithDiskGUID(uuid.MustParse("B6D003E5-7D1D-45E3-9F4B-4A2430B46D4A")),
+				gpt.WithCompatFirstUsableLBA(),
+			},
+			allocator: func(t *testing.T, table *gpt.Table) {
+				t.Helper()
+
+				assertAllocated(t, 1)(table.AllocatePartition(1*GiB, "1G", partType1,
+					gpt.WithUniqueGUID(uuid.MustParse("DA66737E-1ED4-4DDF-B98C-70CEBFE3ADA0")),
+				))
+			},
+
+			expectedSfdiskDump: loadTestdata(t, "allocate-lba-compat.sfdisk"),
+			expectedGdiskDump:  loadTestdata(t, "allocate-lba-compat.gdisk"),
+		},
+		{
 			name:     "allocate with small delete",
 			diskSize: 4 * GiB,
 			opts: []gpt.Option{

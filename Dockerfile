@@ -2,12 +2,12 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-20T09:19:18Z by kres 4b58472.
+# Generated on 2026-05-07T15:09:05Z by kres 1762ab2.
 
 ARG TOOLCHAIN=scratch
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.3.11-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.3.13-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.48.0 sentences-per-line@0.5.2
 COPY .markdownlint.json .
