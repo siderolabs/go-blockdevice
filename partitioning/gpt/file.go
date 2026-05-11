@@ -9,27 +9,57 @@ import (
 	"os"
 )
 
+// FileOptions is a set of options for DeviceFromFile.
+type FileOptions struct {
+	SectorSize uint
+}
+
+// FileOption is a function that sets some option for DeviceFromFile.
+type FileOption func(*FileOptions)
+
+// WithFileSectorSize sets the sector size to be reported by the file-based device.
+// Default is 512 bytes; pass 4096 (or another power of two) to work with disk
+// images authored for a different sector size.
+func WithFileSectorSize(size uint) FileOption {
+	return func(o *FileOptions) {
+		o.SectorSize = size
+	}
+}
+
 type fileWrapper struct {
-	f    *os.File
-	size uint64
+	f          *os.File
+	size       uint64
+	sectorSize uint
 }
 
 // DeviceFromFile creates a new Device from an os.File for use with disk image files.
 // This is useful for creating partition tables on file-based disk images without
 // requiring an actual block device.
 //
+// By default, the sector size is 512 bytes; use [WithFileSectorSize] to override
+// it (e.g. for 4K-sector disk images).
+//
 // Note: The file size is captured at the time of device creation. If the file is
 // truncated or resized after creating the Device, create a new Device to reflect
 // the updated size.
-func DeviceFromFile(f *os.File) (Device, error) {
+func DeviceFromFile(f *os.File, opts ...FileOption) (Device, error) {
+	options := FileOptions{
+		SectorSize: 512,
+	}
+
+	for _, opt := range opts {
+		opt(&options)
+	}
+
 	info, err := f.Stat()
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat file: %w", err)
 	}
 
 	return &fileWrapper{
-		f:    f,
-		size: uint64(info.Size()),
+		f:          f,
+		size:       uint64(info.Size()),
+		sectorSize: options.SectorSize,
 	}, nil
 }
 
@@ -45,7 +75,7 @@ func (d *fileWrapper) WriteAt(p []byte, off int64) (int, error) {
 
 // GetSectorSize implements Device interface.
 func (d *fileWrapper) GetSectorSize() uint {
-	return 512 // Common default sector size for files
+	return d.sectorSize
 }
 
 // GetSize implements Device interface.
@@ -55,7 +85,7 @@ func (d *fileWrapper) GetSize() uint64 {
 
 // GetIOSize implements Device interface.
 func (d *fileWrapper) GetIOSize() (uint, error) {
-	return 512, nil
+	return d.sectorSize, nil
 }
 
 // Sync implements Device interface.
