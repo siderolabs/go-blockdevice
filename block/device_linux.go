@@ -373,7 +373,15 @@ func (d *Device) GetProperties() (*DeviceProperties, error) {
 
 	props.Transport = d.getTransport(sysFsPath, props.DeviceName)
 
+	if props.Transport == "nvme" {
+		props.FirmwareRevision = readNVMeFirmwareRevision(sysFsPath)
+	}
+
 	return props, nil
+}
+
+func readNVMeFirmwareRevision(sysFsPath string) string {
+	return readSysFsFile(filepath.Join(sysFsPath, "device", "firmware_rev"))
 }
 
 func (d *Device) getTransport(sysFsPath, deviceName string) string {

@@ -59,6 +59,10 @@ type DeviceProperties struct {
 	SubSystem string
 	// Transport of the device: SCSI, ata, ahci, nvme, etc.
 	Transport string
+	// FirmwareRevision reported by the device, as in /sys/block/<dev>/device/firmware_rev.
+	//
+	// Currently populated only for NVMe; other transports leave it empty.
+	FirmwareRevision string
 	// Rotational is true if the device is a rotational disk.
 	Rotational bool
 }
