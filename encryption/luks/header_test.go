@@ -68,6 +68,18 @@ func TestValidateHeader(t *testing.T) {
 			},
 		},
 		{
+			// cryptsetup < 2.4.0 (e.g. 2.3.0) defaulted to argon2i.
+			name: "valid with argon2i KDF",
+			metadata: func() *encryption.JSONMetadata {
+				m := defaultMetadata()
+				ks := defaultKeyslot()
+				ks.KDF.Type = "argon2i"
+				m.Keyslots["0"] = ks
+
+				return m
+			}(),
+		},
+		{
 			name:        "invalid header version",
 			version:     1,
 			metadata:    defaultMetadata(),

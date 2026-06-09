@@ -711,7 +711,8 @@ func (t *Table) syncKernelComplete() error {
 			continue
 		}
 
-		if err := t.dev.KernelPartitionAdd(no,
+		if err := t.dev.KernelPartitionAdd(
+			no,
 			myEntry.FirstLBA*uint64(t.sectorSize),
 			(myEntry.LastLBA-myEntry.FirstLBA+1)*uint64(t.sectorSize),
 		); err != nil {
@@ -762,7 +763,8 @@ func (t *Table) syncKernelIncremental() error {
 		}
 
 		if myEntry != nil {
-			err = t.dev.KernelPartitionAdd(no,
+			err = t.dev.KernelPartitionAdd(
+				no,
 				myEntry.FirstLBA*uint64(t.sectorSize),
 				(myEntry.LastLBA-myEntry.FirstLBA+1)*uint64(t.sectorSize),
 			)

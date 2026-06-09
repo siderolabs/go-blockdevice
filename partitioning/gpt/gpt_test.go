@@ -142,17 +142,21 @@ func TestGPT(t *testing.T) {
 			allocator: func(t *testing.T, table *gpt.Table) {
 				t.Helper()
 
-				assertAllocated(t, 1)(table.AllocatePartition(1*GiB, "1G", partType1,
+				assertAllocated(t, 1)(table.AllocatePartition(
+					1*GiB, "1G", partType1,
 					gpt.WithUniqueGUID(uuid.MustParse("DA66737E-1ED4-4DDF-B98C-70CEBFE3ADA0")),
 				))
-				assertAllocated(t, 2)(table.AllocatePartition(100*MiB, "100M", partType1,
+				assertAllocated(t, 2)(table.AllocatePartition(
+					100*MiB, "100M", partType1,
 					gpt.WithUniqueGUID(uuid.MustParse("3D0FE86B-7791-4659-B564-FC49A542866D")),
 					gpt.WithLegacyBIOSBootableAttribute(true),
 				))
-				assertAllocated(t, 3)(table.AllocatePartition(2.5*GiB, "2.5G", partType2,
+				assertAllocated(t, 3)(table.AllocatePartition(
+					2.5*GiB, "2.5G", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("EE1A711E-DE12-4D9F-98FF-672F7AD638F8")),
 				))
-				assertAllocated(t, 4)(table.AllocatePartition(1*GiB, "1G", partType2,
+				assertAllocated(t, 4)(table.AllocatePartition(
+					1*GiB, "1G", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("15E609C8-9775-4E86-AF59-8A87E7C03FAB")),
 				))
 			},
@@ -170,7 +174,8 @@ func TestGPT(t *testing.T) {
 			allocator: func(t *testing.T, table *gpt.Table) {
 				t.Helper()
 
-				assertAllocated(t, 1)(table.AllocatePartition(1*GiB, "1G", partType1,
+				assertAllocated(t, 1)(table.AllocatePartition(
+					1*GiB, "1G", partType1,
 					gpt.WithUniqueGUID(uuid.MustParse("DA66737E-1ED4-4DDF-B98C-70CEBFE3ADA0")),
 				))
 			},
@@ -187,10 +192,12 @@ func TestGPT(t *testing.T) {
 			allocator: func(t *testing.T, table *gpt.Table) {
 				t.Helper()
 
-				assertAllocated(t, 1)(table.AllocatePartition(1*GiB, "1G", partType1,
+				assertAllocated(t, 1)(table.AllocatePartition(
+					1*GiB, "1G", partType1,
 					gpt.WithUniqueGUID(uuid.MustParse("DA66737E-1ED4-4DDF-B98C-70CEBFE3ADA0")),
 				))
-				assertAllocated(t, 2)(table.AllocatePartition(100*MiB, "100M", partType1,
+				assertAllocated(t, 2)(table.AllocatePartition(
+					100*MiB, "100M", partType1,
 					gpt.WithUniqueGUID(uuid.MustParse("3D0FE86B-7791-4659-B564-FC49A542866D")),
 					gpt.WithLegacyBIOSBootableAttribute(true),
 				))
@@ -203,7 +210,8 @@ func TestGPT(t *testing.T) {
 
 				assert.EqualValues(t, 100*MiB, table.LargestContiguousAllocatable())
 
-				assertAllocated(t, 2)(table.AllocatePartition(100*MiB, "100M", partType2,
+				assertAllocated(t, 2)(table.AllocatePartition(
+					100*MiB, "100M", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("15E609C8-9775-4E86-AF59-8A87E7C03FAB")),
 				))
 			},
@@ -222,12 +230,14 @@ func TestGPT(t *testing.T) {
 
 				// allocate 4 1G partitions first, and delete two in the middle
 
-				assertAllocated(t, 1)(table.AllocatePartition(1*GiB, "1G1", partType1,
+				assertAllocated(t, 1)(table.AllocatePartition(
+					1*GiB, "1G1", partType1,
 					gpt.WithUniqueGUID(uuid.MustParse("DA66737E-1ED4-4DDF-B98C-70CEBFE3ADA0")),
 				))
 				assertAllocated(t, 2)(table.AllocatePartition(1*GiB, "1G2", partType1))
 				assertAllocated(t, 3)(table.AllocatePartition(1*GiB, "1G3", partType1))
-				assertAllocated(t, 4)(table.AllocatePartition(1*GiB, "1G4", partType2,
+				assertAllocated(t, 4)(table.AllocatePartition(
+					1*GiB, "1G4", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("3D0FE86B-7791-4659-B564-FC49A542866D")),
 				))
 
@@ -235,15 +245,18 @@ func TestGPT(t *testing.T) {
 				require.NoError(t, table.DeletePartition(2))
 
 				// gap is 2 GiB, while the tail available space is < 2 GiB, so small partitions will be appended to the end
-				assertAllocated(t, 5)(table.AllocatePartition(200*MiB, "200M", partType2,
+				assertAllocated(t, 5)(table.AllocatePartition(
+					200*MiB, "200M", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("EE1A711E-DE12-4D9F-98FF-672F7AD638F8")),
 				))
-				assertAllocated(t, 6)(table.AllocatePartition(400*MiB, "400M", partType2,
+				assertAllocated(t, 6)(table.AllocatePartition(
+					400*MiB, "400M", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("15E609C8-9775-4E86-AF59-8A87E7C03FAB")),
 				))
 
 				// bigger partition will fill the gap
-				assertAllocated(t, 2)(table.AllocatePartition(1500*MiB, "1500M", partType2,
+				assertAllocated(t, 2)(table.AllocatePartition(
+					1500*MiB, "1500M", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("15E609C8-9775-4E86-AF59-8A87E7C03FAC")),
 				))
 			},
@@ -261,10 +274,12 @@ func TestGPT(t *testing.T) {
 				t.Helper()
 
 				// allocate 2 1G partitions first, and grow the last one
-				assertAllocated(t, 1)(table.AllocatePartition(1*GiB, "1G", partType1,
+				assertAllocated(t, 1)(table.AllocatePartition(
+					1*GiB, "1G", partType1,
 					gpt.WithUniqueGUID(uuid.MustParse("DA66737E-1ED4-4DDF-B98C-70CEBFE3ADA0")),
 				))
-				assertAllocated(t, 2)(table.AllocatePartition(1*GiB, "GROW", partType2,
+				assertAllocated(t, 2)(table.AllocatePartition(
+					1*GiB, "GROW", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("3D0FE86B-7791-4659-B564-FC49A542866D")),
 				))
 
@@ -810,7 +825,8 @@ func createExt4Image(t *testing.T, label string, partUUID uuid.UUID) string {
 	// - root_owner=0:0: set root owner to uid/gid 0
 	extOpts := fmt.Sprintf("hash_seed=%s,lazy_itable_init=0,root_owner=0:0", partUUID.String())
 
-	cmd := exec.CommandContext(t.Context(), "mkfs.ext4",
+	cmd := exec.CommandContext(
+		t.Context(), "mkfs.ext4",
 		"-b", "4096", // Block size to match systemd-repart
 		"-m", "0", // 0% reserved blocks to match systemd-repart
 		"-I", "256", // Inode size to match systemd-repart
@@ -1054,7 +1070,8 @@ CopyFiles=%s:/
 	// see https://github.com/systemd/systemd/blob/main/test/units/TEST-58-REPART.sh#L115
 	diskGUID := uuid.MustParse("1D2CE291-7CCE-4F7D-BC83-FDB49AD74EBD")
 
-	cmd := exec.CommandContext(t.Context(),
+	cmd := exec.CommandContext(
+		t.Context(),
 		"systemd-repart",
 		"--definitions="+defsDir,
 		"--empty=create",

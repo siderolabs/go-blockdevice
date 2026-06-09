@@ -1437,7 +1437,8 @@ func fastWipeBySignatures(t *testing.T, path string, info *blkid.Info) {
 
 	require.NoError(t, blk.Lock(true))
 
-	require.NoError(t, blk.FastWipe(xslices.Map(info.SignatureRanges,
+	require.NoError(t, blk.FastWipe(xslices.Map(
+		info.SignatureRanges,
 		func(r blkid.SignatureRange) block.Range {
 			return block.Range(r)
 		},

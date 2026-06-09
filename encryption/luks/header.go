@@ -154,7 +154,10 @@ func validateHeader(sb luks2.Luks2Header, metadata *encryption.JSONMetadata) err
 			return fmt.Errorf("keyslot %s has unexpected area encryption %q", id, keyslot.Area.Encryption)
 		}
 
-		if keyslot.KDF.Type != "argon2id" {
+		// cryptsetup < 2.4.0 (e.g. 2.3.0) defaulted to argon2i, while newer versions default to argon2id.
+		switch keyslot.KDF.Type {
+		case "argon2id", "argon2i":
+		default:
 			return fmt.Errorf("keyslot %s has unexpected KDF type %q", id, keyslot.KDF.Type)
 		}
 	}

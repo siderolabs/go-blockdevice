@@ -107,7 +107,8 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 			ranges := make([]probe.SignatureRange, 0, zfsUberblockCount)
 
 			for i := range zfsUberblockCount {
-				ranges = append(ranges,
+				ranges = append(
+					ranges,
 					probe.SignatureRange{
 						Offset: labelOffset + zfsLabelUberblock + uint64(i)*zfsUberblockSize,
 						Size:   8, // magic is 8 bytes
