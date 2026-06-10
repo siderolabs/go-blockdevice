@@ -97,7 +97,7 @@ func vfatSetup(bits int) func(t *testing.T, path string) {
 	return func(t *testing.T, path string) {
 		t.Helper()
 
-		cmd := exec.CommandContext(t.Context(), "mkfs.vfat", "-F", strconv.Itoa(bits), "-n", "TALOS_V1", "-v", path)
+		cmd := exec.CommandContext(t.Context(), "mkfs.vfat", "-I", "-F", strconv.Itoa(bits), "-n", "TALOS_V1", "-v", path)
 		cmd.Stdout = t.Output()
 		cmd.Stderr = t.Output()
 

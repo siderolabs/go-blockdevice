@@ -45,6 +45,8 @@ type DeviceProperties struct {
 	DeviceName string
 	// Model from /sys/block/*/device/model.
 	Model string
+	// Vendor from /sys/block/<dev>/device/vendor.
+	Vendor string
 	// Serial /sys/block/<dev>/device/serial.
 	Serial string
 	// Modalias /sys/block/<dev>/device/modalias.

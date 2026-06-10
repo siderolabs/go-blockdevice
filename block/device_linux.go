@@ -341,6 +341,7 @@ func (d *Device) GetProperties() (*DeviceProperties, error) {
 
 	props := &DeviceProperties{
 		Model:    readSysFsFile(filepath.Join(sysFsPath, "device", "model")),
+		Vendor:   readSysFsFile(filepath.Join(sysFsPath, "device", "vendor")),
 		Serial:   readSysFsFile(filepath.Join(sysFsPath, "serial")),
 		Modalias: readSysFsFile(filepath.Join(sysFsPath, "device", "modalias")),
 		WWID:     readSysFsFile(filepath.Join(sysFsPath, "wwid")),

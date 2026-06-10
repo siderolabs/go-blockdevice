@@ -791,7 +791,7 @@ func createVFATImage(t *testing.T) string {
 
 	// Format as VFAT with reproducible output
 	// Use FAT32 with 4096 byte sectors to match systemd-repart defaults
-	cmd := exec.CommandContext(t.Context(), "mkfs.vfat", "-F", "32", "-S", "4096", "-n", "TESTIMAGE", "--invariant", imgPath)
+	cmd := exec.CommandContext(t.Context(), "mkfs.vfat", "-I", "-F", "32", "-S", "4096", "-n", "TESTIMAGE", "--invariant", imgPath)
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "mkfs.vfat failed: %s", output)
 
