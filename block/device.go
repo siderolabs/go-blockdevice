@@ -49,7 +49,8 @@ type DeviceProperties struct {
 	Vendor string
 	// Serial /sys/block/<dev>/device/serial.
 	Serial string
-	// Modalias /sys/block/<dev>/device/modalias.
+	// Modalias from /sys/block/<dev>/device/modalias, falling back to
+	// /sys/block/<dev>/device/device/modalias when the former is absent (common on NVMe).
 	Modalias string
 	// WWID /sys/block/<dev>/wwid.
 	WWID string

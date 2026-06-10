@@ -343,7 +343,7 @@ func (d *Device) GetProperties() (*DeviceProperties, error) {
 		Model:    readSysFsFile(filepath.Join(sysFsPath, "device", "model")),
 		Vendor:   readSysFsFile(filepath.Join(sysFsPath, "device", "vendor")),
 		Serial:   readSysFsFile(filepath.Join(sysFsPath, "serial")),
-		Modalias: readSysFsFile(filepath.Join(sysFsPath, "device", "modalias")),
+		Modalias: readBlockDeviceModalias(sysFsPath),
 		WWID:     readSysFsFile(filepath.Join(sysFsPath, "wwid")),
 		UUID:     readSysFsFile(filepath.Join(sysFsPath, "uuid")),
 	}
@@ -383,6 +383,16 @@ func (d *Device) GetProperties() (*DeviceProperties, error) {
 
 func readNVMeFirmwareRevision(sysFsPath string) string {
 	return readSysFsFile(filepath.Join(sysFsPath, "device", "firmware_rev"))
+}
+
+// readBlockDeviceModalias returns the modalias of the block device, falling
+// back to the underlying PCI device's modalias when /device/modalias is absent.
+func readBlockDeviceModalias(sysFsPath string) string {
+	if m := readSysFsFile(filepath.Join(sysFsPath, "device", "modalias")); m != "" {
+		return m
+	}
+
+	return readSysFsFile(filepath.Join(sysFsPath, "device", "device", "modalias"))
 }
 
 func (d *Device) getTransport(sysFsPath, deviceName string) string {
