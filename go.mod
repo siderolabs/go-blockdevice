@@ -11,7 +11,7 @@ require (
 	github.com/siderolabs/go-pointer v1.0.1
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
-	golang.org/x/sys v0.40.0
+	golang.org/x/sys v0.46.0
 	golang.org/x/text v0.33.0
 )
 

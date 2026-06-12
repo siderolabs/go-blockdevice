@@ -113,6 +113,7 @@ type LUKS struct {
 	pbkdfMemory          uint64
 	blockSize            uint64
 	keySize              uint
+	allowDiscards        bool
 }
 
 // New creates new LUKS2 encryption provider.
@@ -164,6 +165,7 @@ func (l *LUKS) Open(ctx context.Context, deviceName, mappedName string, key *enc
 		},
 		keyslotArgs(key),
 		l.perfArgs(),
+		l.openArgs(),
 	)
 
 	_, err = l.runCommand(ctx, args, key.Value, false)
@@ -417,6 +419,14 @@ func (l *LUKS) argonArgs() []string {
 	}
 
 	return args
+}
+
+func (l *LUKS) openArgs() []string {
+	if l.allowDiscards {
+		return []string{"--allow-discards"}
+	}
+
+	return nil
 }
 
 func (l *LUKS) perfArgs() []string {

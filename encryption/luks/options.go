@@ -50,3 +50,10 @@ func WithPerfOptions(options ...string) Option {
 		l.perfOptions = options
 	}
 }
+
+// WithAllowDiscards allows TRIM/discard requests to be passed to the underlying device when opening.
+func WithAllowDiscards() Option {
+	return func(l *LUKS) {
+		l.allowDiscards = true
+	}
+}

@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"github.com/siderolabs/go-blockdevice/v2/block"
 	"github.com/siderolabs/go-blockdevice/v2/encryption"
 	"github.com/siderolabs/go-blockdevice/v2/encryption/luks"
+	"github.com/siderolabs/go-blockdevice/v2/fstrim"
 	"github.com/siderolabs/go-blockdevice/v2/partitioning"
 	"github.com/siderolabs/go-blockdevice/v2/partitioning/gpt"
 )
@@ -348,6 +350,95 @@ func TestLUKSKeyRotation(t *testing.T) {
 
 		oldKey = newKey
 	}
+}
+
+func TestLUKSFstrim(t *testing.T) {
+	if os.Getuid() != 0 {
+		t.Skip("can't run the test as non-root")
+	}
+
+	if _, err := exec.LookPath("mkfs.xfs"); err != nil {
+		t.Skip("mkfs.xfs is not available")
+	}
+
+	t.Run("with discards allowed", func(t *testing.T) {
+		// discards are allowed end-to-end (xfs -> dm-crypt -> loop device), so fstrim succeeds
+		mountPath := setupEncryptedXFS(t, luks.WithAllowDiscards())
+
+		trimmed, err := fstrim.Fstrim(mountPath)
+		require.NoError(t, err)
+
+		t.Logf("trimmed %d bytes", trimmed)
+		require.NotZero(t, trimmed)
+	})
+
+	t.Run("without discards allowed", func(t *testing.T) {
+		// without --allow-discards dm-crypt blocks TRIM, so the filesystem reports discard as unsupported
+		mountPath := setupEncryptedXFS(t)
+
+		_, err := fstrim.Fstrim(mountPath)
+		require.ErrorIs(t, err, fstrim.ErrNotSupported)
+	})
+}
+
+// setupEncryptedXFS creates a loop-backed LUKS volume, opens it with the given options,
+// formats it with XFS and mounts it, returning the mount path. All resources are cleaned
+// up via t.Cleanup.
+func setupEncryptedXFS(t *testing.T, opts ...luks.Option) string {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
+	t.Cleanup(cancel)
+
+	tmpDir := t.TempDir()
+
+	rawImage := filepath.Join(tmpDir, "image.raw")
+
+	f, err := os.Create(rawImage)
+	require.NoError(t, err)
+
+	require.NoError(t, f.Truncate(int64(size)))
+	require.NoError(t, f.Close())
+
+	loDev := losetupAttachHelper(t, rawImage, false)
+
+	t.Cleanup(func() {
+		assert.NoError(t, loDev.Detach())
+	})
+
+	devPath := loDev.Path()
+	mappedName := filepath.Base(devPath) + "-encrypted"
+
+	key := encryption.NewKey(0, []byte("changeme"))
+
+	provider := luks.New(
+		luks.AESXTSPlain64Cipher,
+		slices.Concat([]luks.Option{luks.WithIterTime(time.Millisecond * 100)}, opts)...,
+	)
+
+	require.NoError(t, provider.Encrypt(ctx, devPath, key))
+
+	encryptedPath, err := provider.Open(ctx, devPath, mappedName, key)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		assert.NoError(t, provider.Close(context.Background(), encryptedPath))
+	})
+
+	// format an XFS filesystem on top of the encrypted device
+	cmd := exec.CommandContext(ctx, "mkfs.xfs", "-f", "-q", encryptedPath)
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, "mkfs.xfs failed: %s", out)
+
+	mountPath := t.TempDir()
+
+	require.NoError(t, unix.Mount(encryptedPath, mountPath, "xfs", 0, ""))
+
+	t.Cleanup(func() {
+		assert.NoError(t, unix.Unmount(mountPath, 0))
+	})
+
+	return mountPath
 }
 
 func losetupAttachHelper(t *testing.T, rawImage string, readonly bool) losetup.Device {
