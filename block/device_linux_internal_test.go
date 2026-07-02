@@ -33,6 +33,62 @@ func TestReadNVMeFirmwareRevision(t *testing.T) {
 	})
 }
 
+func TestGetTransportDM(t *testing.T) {
+	t.Parallel()
+
+	d := &Device{}
+
+	for _, tt := range []struct {
+		name string
+		uuid string
+	}{
+		{"mpath whole device", "mpath-36005076810800567c8000000000009f8"},
+		{"mpath partition part-N- form", "part-1-mpath-36005076810800567c8000000000009f8"},
+		{"mpath partition partN- form", "part1-mpath-36005076810800567c8000000000009f8"},
+		{"LVM", "LVM-AbCdEf-0001-0002-0003-0004-0005-0006-lvname"},
+		{"crypt", "CRYPT-LUKS2-abcdef1234567890abcdef1234567890-cryptname"},
+		{"generic dm", "some-other-uuid"},
+		{"no uuid file", ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := t.TempDir()
+
+			if tt.uuid != "" {
+				require.NoError(t, os.MkdirAll(filepath.Join(root, "dm"), 0o755))
+				require.NoError(t, os.WriteFile(filepath.Join(root, "dm", "uuid"), []byte(tt.uuid+"\n"), 0o644))
+			}
+
+			assert.Equal(t, "dm", d.getTransport(root, "dm-0"))
+		})
+	}
+}
+
+func TestDMKind(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name     string
+		uuid     string
+		expected string
+	}{
+		{"mpath whole device", "mpath-36005076810800567c8000000000009f8", "mpath"},
+		{"mpath partition part-N- form", "part-1-mpath-36005076810800567c8000000000009f8", "mpath"},
+		{"mpath partition partN- form", "part1-mpath-36005076810800567c8000000000009f8", "mpath"},
+		{"LVM", "LVM-AbCdEf-0001-0002-0003-0004-0005-0006-lvname", "lvm"},
+		{"crypt", "CRYPT-LUKS2-abcdef1234567890abcdef1234567890-cryptname", "crypt"},
+		{"generic dm", "some-other-uuid", "dm"},
+		{"empty", "", "dm"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.expected, dmKind(tt.uuid))
+		})
+	}
+}
+
 func TestReadBlockDeviceModalias(t *testing.T) {
 	t.Parallel()
 

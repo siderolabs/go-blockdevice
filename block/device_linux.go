@@ -374,6 +374,11 @@ func (d *Device) GetProperties() (*DeviceProperties, error) {
 
 	props.Transport = d.getTransport(sysFsPath, props.DeviceName)
 
+	if props.Transport == "dm" {
+		props.DeviceMapperUUID = readSysFsFile(filepath.Join(sysFsPath, "dm", "uuid"))
+		props.DeviceMapperKind = dmKind(props.DeviceMapperUUID)
+	}
+
 	if props.Transport == "nvme" {
 		props.FirmwareRevision = readNVMeFirmwareRevision(sysFsPath)
 	}
@@ -405,6 +410,8 @@ func (d *Device) getTransport(sysFsPath, deviceName string) string {
 		return "xenblk"
 	case strings.HasPrefix(deviceName, "mmcblk"):
 		return "mmc"
+	case strings.HasPrefix(deviceName, "dm-"):
+		return "dm"
 	}
 
 	devicePath, err := os.Readlink(filepath.Join(sysFsPath, "device"))
@@ -424,6 +431,25 @@ func (d *Device) getTransport(sysFsPath, deviceName string) string {
 		return ""
 	}
 
+	return getScsiTransport(host, devicePath)
+}
+
+func dmKind(uuid string) string {
+	switch {
+	case strings.HasPrefix(uuid, "mpath-"):
+		return "mpath"
+	case strings.HasPrefix(uuid, "part") && strings.Contains(uuid, "-mpath-"):
+		return "mpath"
+	case strings.HasPrefix(uuid, "LVM-"):
+		return "lvm"
+	case strings.HasPrefix(uuid, "CRYPT-"):
+		return "crypt"
+	default:
+		return "dm"
+	}
+}
+
+func getScsiTransport(host int, devicePath string) string {
 	switch {
 	case isScsiHost(host, "spi"):
 		return "spi"
@@ -438,21 +464,25 @@ func (d *Device) getTransport(sysFsPath, deviceName string) string {
 	case scsiPathContains(devicePath, "usb"):
 		return "usb"
 	case isScsiHost(host, "scsi"):
-		procName := readScsiHostAttribute(host, "scsi", "proc_name")
-
-		switch {
-		case procName == "ahci", procName == "sata":
-			return "sata"
-		case strings.Contains(procName, "ata"):
-			return "ata"
-		case procName == "virtio_scsi":
-			return "virtio"
-		default:
-			return procName
-		}
+		return getScsiHostTransport(host)
 	}
 
 	return ""
+}
+
+func getScsiHostTransport(host int) string {
+	procName := readScsiHostAttribute(host, "scsi", "proc_name")
+
+	switch {
+	case procName == "ahci", procName == "sata":
+		return "sata"
+	case strings.Contains(procName, "ata"):
+		return "ata"
+	case procName == "virtio_scsi":
+		return "virtio"
+	default:
+		return procName
+	}
 }
 
 func isScsiHost(host int, typ string) bool {

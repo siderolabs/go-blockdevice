@@ -60,11 +60,13 @@ type DeviceProperties struct {
 	BusPath string
 	// SubSystem is the dest path of symlink /sys/block/<dev>/subsystem.
 	SubSystem string
-	// Transport of the device: SCSI, ata, ahci, nvme, etc.
+	// Transport of the device: sata, nvme, virtio, dm, etc.
 	Transport string
-	// FirmwareRevision reported by the device, as in /sys/block/<dev>/device/firmware_rev.
-	//
-	// Currently populated only for NVMe; other transports leave it empty.
+	// DeviceMapperUUID is /sys/block/<dev>/dm/uuid, only set for DM devices.
+	DeviceMapperUUID string
+	// DeviceMapperKind is mpath, lvm, crypt, or dm.
+	DeviceMapperKind string
+	// FirmwareRevision from /sys/block/<dev>/device/firmware_rev (NVMe only).
 	FirmwareRevision string
 	// Rotational is true if the device is a rotational disk.
 	Rotational bool
