@@ -571,6 +571,48 @@ func TestProbePathFilesystems(t *testing.T) {
 				{Offset: 0, Size: 4},
 			},
 		},
+		{
+			name:   "md metadata 1.0",
+			noLoop: true,
+
+			size:  0,
+			setup: fixedImageSetup("testdata/md-metadata-1.0.img.zst"),
+
+			expectedName:  "linux_raid_member",
+			expectedLabel: "talos:mdset10",
+			expectUUID:    true,
+			expectedSignatures: []blkid.SignatureRange{
+				{Offset: 104849408, Size: 4},
+			},
+		},
+		{
+			name:   "md metadata 1.1",
+			noLoop: true,
+
+			size:  0,
+			setup: fixedImageSetup("testdata/md-metadata-1.1.img.zst"),
+
+			expectedName:  "linux_raid_member",
+			expectedLabel: "talos:mdset11",
+			expectUUID:    true,
+			expectedSignatures: []blkid.SignatureRange{
+				{Offset: 0, Size: 4},
+			},
+		},
+		{
+			name:   "md metadata 1.2",
+			noLoop: true,
+
+			size:  0,
+			setup: fixedImageSetup("testdata/md-metadata-1.2.img.zst"),
+
+			expectedName:  "linux_raid_member",
+			expectedLabel: "talos:mdset12",
+			expectUUID:    true,
+			expectedSignatures: []blkid.SignatureRange{
+				{Offset: 4096, Size: 4},
+			},
+		},
 	} {
 		for _, useLoopDevice := range []bool{false, true} {
 			t.Run(fmt.Sprintf("loop=%v", useLoopDevice), func(t *testing.T) {

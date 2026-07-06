@@ -33,6 +33,8 @@ spec:
   steps:
     - name: zfs-img
       toplevel: true
+    - name: md-img
+      toplevel: true
 ---
 kind: custom.Step
 name: zfs-img
@@ -63,6 +65,42 @@ spec:
               src: /tmp/zfs.img.zst
               dst: /
 ---
+kind: custom.Step
+name: md-img
+spec:
+  makefile:
+    enabled: true
+  docker:
+    enabled: true
+    stages:
+      - name: md-img-gen
+        description: Creates the md (Linux Software RAID) member images
+        from: fedora:39
+        steps:
+          - script:
+              command: dnf install -y mdadm util-linux zstd && rm -rf /var/cache/dnf
+          - script:
+              command: |
+                --security=insecure for v in 1.0 1.1 1.2; do \
+                  img="/tmp/md-$v.img" && \
+                  name="mdset$(echo $v | tr -d .)" && \
+                  truncate -s 100M "$img" && \
+                  loop=$(losetup --find --show "$img") && \
+                  { mdadm --create /dev/md0 --run --force --level=linear --raid-devices=1 --metadata="$v" --name="$name" --homehost=talos "$loop" || true; } && \
+                  mdadm --examine "$loop" && \
+                  { mdadm --stop /dev/md0 2>/dev/null || true; } && \
+                  losetup -d "$loop" && \
+                  zstd -19 -f -o "/tmp/md-metadata-$v.img.zst" "$img" || \
+                  exit 1; \
+                done
+      - name: md-img
+        description: copies out the md images
+        steps:
+          - copy:
+              from: md-img-gen
+              src: /tmp/md-metadata-*.img.zst
+              dst: /
+---
 kind: golang.UnitTests
 name: unit-tests
 spec:
@@ -71,6 +109,10 @@ spec:
       steps:
         - copy:
             from: zfs-img
+            src: /
+            dst: /src/blkid/testdata/
+        - copy:
+            from: md-img
             src: /
             dst: /src/blkid/testdata/
 ---

@@ -12,6 +12,7 @@ import (
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/iso9660"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/luks"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/lvm2"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/md"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/squashfs"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/swap"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/talosmeta"
@@ -63,6 +64,7 @@ func (chain Chain) MagicMatches(buf []byte) []probe.MagicMatch {
 // Default returns a list of probers for the filesystems and volume managers.
 func Default() Chain {
 	return Chain{
+		&md.Probe{},
 		&xfs.Probe{},
 		&ext.Probe4{},
 		&ext.Probe3{},
