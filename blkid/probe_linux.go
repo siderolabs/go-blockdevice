@@ -7,6 +7,7 @@
 package blkid
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -106,8 +107,8 @@ func Probe(f *os.File, opts ...ProbeOption) (*Info, error) {
 
 		defer wholeDisk.Close() //nolint:errcheck
 
-		if err = wholeDisk.TryLock(false); err != nil {
-			if errors.Is(err, unix.EWOULDBLOCK) {
+		if err := wholeDisk.RetryLockWithTimeout(context.Background(), false, options.LockTimeout); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
 				return nil, ErrFailedLock
 			}
 

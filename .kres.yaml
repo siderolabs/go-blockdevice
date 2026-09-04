@@ -14,6 +14,7 @@ spec:
         - btrfs-progs
         - cdrkit
         - cryptsetup
+        - device-mapper
         - dosfstools
         - e2fsprogs
         - gptfdisk
@@ -105,16 +106,6 @@ kind: golang.UnitTests
 name: unit-tests
 spec:
     requiresInsecure: true
-    docker:
-      steps:
-        - copy:
-            from: zfs-img
-            src: /
-            dst: /src/blkid/testdata/
-        - copy:
-            from: md-img
-            src: /
-            dst: /src/blkid/testdata/
 ---
 kind: golang.Generate
 spec:

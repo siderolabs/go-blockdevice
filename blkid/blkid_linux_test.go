@@ -1555,6 +1555,78 @@ func TestProbeWithWipeRanges(t *testing.T) {
 	}
 }
 
+// TestProbePathLockContention covers the shared lock a probe takes on the whole disk: it is contended
+// by udev, which takes an exclusive lock on a device while it processes a uevent, so a probe right
+// after a write to the device used to fail spuriously with ErrFailedLock.
+func TestProbePathLockContention(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("skipping test; must be root")
+	}
+
+	rawImage := filepath.Join(t.TempDir(), "image.raw")
+
+	f, err := os.Create(rawImage)
+	require.NoError(t, err)
+
+	require.NoError(t, f.Truncate(int64(4*MiB)))
+	require.NoError(t, f.Close())
+
+	loDev := losetupAttachHelper(t, rawImage, false)
+
+	t.Cleanup(func() {
+		assert.NoError(t, loDev.Detach())
+	})
+
+	// hold an exclusive lock on the device through a separate open file description, standing in for udev
+	locker, err := block.NewFromPath(loDev.Path())
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		assert.NoError(t, locker.Close())
+	})
+
+	// closing the device releases the lock, so there is no explicit unlock on cleanup
+	require.NoError(t, locker.Lock(true))
+
+	t.Run("no waiting", func(t *testing.T) {
+		_, err := blkid.ProbePath(loDev.Path(), blkid.WithLockTimeout(0))
+		assert.ErrorIs(t, err, blkid.ErrFailedLock)
+	})
+
+	t.Run("timeout expires", func(t *testing.T) {
+		start := time.Now()
+
+		_, err := blkid.ProbePath(loDev.Path(), blkid.WithLockTimeout(time.Second))
+		assert.ErrorIs(t, err, blkid.ErrFailedLock)
+
+		assert.GreaterOrEqual(t, time.Since(start), time.Second)
+	})
+
+	t.Run("lock released while waiting", func(t *testing.T) {
+		const holdFor = 500 * time.Millisecond
+
+		unlocked := make(chan error, 1)
+
+		go func() {
+			time.Sleep(holdFor)
+
+			unlocked <- locker.Unlock()
+		}()
+
+		start := time.Now()
+
+		info, err := blkid.ProbePath(loDev.Path(), blkid.WithProbeLogger(zaptest.NewLogger(t)))
+		require.NoError(t, err)
+
+		// join the unlocking goroutine: it touches the device, and the cleanup closing the device
+		// must not race with it
+		require.NoError(t, <-unlocked)
+
+		assert.GreaterOrEqual(t, time.Since(start), holdFor)
+		assert.EqualValues(t, 4*MiB, info.Size)
+	})
+}
+
 func losetupAttachHelper(t *testing.T, rawImage string, readonly bool) losetup.Device { //nolint:unparam
 	t.Helper()
 

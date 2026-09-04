@@ -7,6 +7,7 @@ package blkid
 
 import (
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -19,6 +20,12 @@ import (
 var (
 	ErrFailedLock = errors.New("failed to acquire shared lock while probing blockdevice")
 )
+
+// DefaultLockTimeout is the default time to wait for the shared lock on the blockdevice.
+//
+// The lock is most often contended by udev, which takes an exclusive lock on the whole disk while it
+// processes a uevent, so a device which was just written to is briefly unprobeable.
+const DefaultLockTimeout = 5 * time.Second
 
 // Info represents the result of the probe.
 type Info struct { //nolint:govet
@@ -91,6 +98,10 @@ type SignatureRange = probe.SignatureRange
 type ProbeOptions struct {
 	// Logger to use for logging.
 	Logger *zap.Logger
+	// LockTimeout is the time to wait for the shared lock on the blockdevice.
+	//
+	// Zero means a single attempt with no waiting.
+	LockTimeout time.Duration
 	// SkipLocking blockdevices in shared mode.
 	SkipLocking bool
 	// SectorSize is the sector size to use for probing.
@@ -114,6 +125,16 @@ func WithSkipLocking(skip bool) ProbeOption {
 	}
 }
 
+// WithLockTimeout sets the time to wait for the shared lock on the blockdevice.
+//
+// The lock is retried until the timeout expires, and ErrFailedLock is returned if it can't be
+// acquired in time. Zero means a single attempt, failing immediately if the device is locked.
+func WithLockTimeout(timeout time.Duration) ProbeOption {
+	return func(o *ProbeOptions) {
+		o.LockTimeout = timeout
+	}
+}
+
 // WithSectorSize sets the sector size to use for probing.
 //
 // This is useful when probing a file that is not a blockdevice.
@@ -125,8 +146,9 @@ func WithSectorSize(sectorSize uint) ProbeOption {
 
 func applyProbeOptions(opts ...ProbeOption) ProbeOptions {
 	o := ProbeOptions{
-		Logger:     zap.NewNop(),
-		SectorSize: block.DefaultBlockSize,
+		Logger:      zap.NewNop(),
+		SectorSize:  block.DefaultBlockSize,
+		LockTimeout: DefaultLockTimeout,
 	}
 
 	for _, opt := range opts {

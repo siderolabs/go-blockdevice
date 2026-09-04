@@ -30,7 +30,6 @@ import (
 	"github.com/siderolabs/go-blockdevice/v2/encryption"
 	"github.com/siderolabs/go-blockdevice/v2/encryption/luks"
 	"github.com/siderolabs/go-blockdevice/v2/fstrim"
-	"github.com/siderolabs/go-blockdevice/v2/partitioning"
 	"github.com/siderolabs/go-blockdevice/v2/partitioning/gpt"
 )
 
@@ -111,7 +110,9 @@ func TestLUKSEncrypt(t *testing.T) {
 		luks.WithPerfOptions(luks.PerfSameCPUCrypt),
 	)
 
-	path := partitioning.DevName(devPath, 2)
+	path, err := blkdev.GetPartitionDevName(2)
+	require.NoError(t, err)
+
 	mappedName := filepath.Base(path) + "-encrypted"
 
 	t.Logf("unencrypted partition path %s", path)

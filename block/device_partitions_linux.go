@@ -5,14 +5,16 @@
 package block
 
 import (
-	"os"
+	"errors"
+	"fmt"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/siderolabs/go-blockdevice/v2/block/internal/sysfs"
 )
 
 // KernelPartitionAdd invokes the BLKPG_ADD_PARTITION ioctl.
@@ -66,30 +68,51 @@ func (d *Device) GetKernelLastPartitionNum() (int, error) {
 		return 0, err
 	}
 
-	contents, err := os.ReadDir(sysFsPath)
+	devices, err := sysfs.KernelPartitionDevices(sysFsPath)
 	if err != nil {
 		return 0, err
 	}
 
 	var maxPartNum int
 
-	for _, entry := range contents {
-		if !entry.IsDir() {
-			continue
-		}
-
-		contents := readSysFsFile(filepath.Join(sysFsPath, entry.Name(), "partition"))
-		if len(contents) == 0 {
-			continue
-		}
-
-		partNum, err := strconv.Atoi(contents)
-		if err != nil {
-			continue
-		}
-
-		maxPartNum = max(maxPartNum, partNum)
+	for partNo := range devices {
+		maxPartNum = max(maxPartNum, int(partNo))
 	}
 
 	return maxPartNum, nil
+}
+
+// ErrPartitionNotFound is returned when the partition device is not found (yet).
+var ErrPartitionNotFound = errors.New("partition device not found")
+
+// GetPartitionDevices returns a map of partition number to the kernel device name of the partition device.
+//
+// For a device-mapper device, kernel partitions never exist (the kernel sets GENHD_FL_NO_PART on every
+// device-mapper gendisk), so partitions are separate device-mapper devices carrying the UUID
+// "part<N>-<parent UUID>" (as created by kpartx); they are enumerated via holders/.
+// For any other device, kernel partitions are enumerated from /sys/dev/block/<dev>/*/partition.
+func (d *Device) GetPartitionDevices() (map[uint]string, error) {
+	sysFsPath, err := d.sysFsPath()
+	if err != nil {
+		return nil, err
+	}
+
+	return sysfs.PartitionDevices(sysFsPath)
+}
+
+// GetPartitionDevName returns the path of the device of the partition with the given number, e.g. "/dev/sda1".
+//
+// If the partition device hasn't appeared (yet), ErrPartitionNotFound is returned.
+func (d *Device) GetPartitionDevName(no uint) (string, error) {
+	devices, err := d.GetPartitionDevices()
+	if err != nil {
+		return "", err
+	}
+
+	devName, ok := devices[no]
+	if !ok {
+		return "", fmt.Errorf("%w: partition %d", ErrPartitionNotFound, no)
+	}
+
+	return filepath.Join("/dev", devName), nil
 }

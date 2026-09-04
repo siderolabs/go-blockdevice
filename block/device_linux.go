@@ -18,6 +18,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/siderolabs/go-blockdevice/v2/block/internal/sysfs"
 )
 
 // NewFromPath returns a new Device from the specified path.
@@ -284,6 +286,15 @@ func (d *Device) TryLock(exclusive bool) error {
 
 // RetryLock until the context deadline.
 func (d *Device) RetryLock(ctx context.Context, exclusive bool) error {
+	err := d.TryLock(exclusive)
+
+	switch {
+	case err == nil:
+		return nil
+	case !errors.Is(err, unix.EWOULDBLOCK):
+		return fmt.Errorf("failed to lock: %w", err)
+	}
+
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -292,8 +303,13 @@ func (d *Device) RetryLock(ctx context.Context, exclusive bool) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			if err := d.TryLock(exclusive); err == nil {
+			err = d.TryLock(exclusive)
+
+			switch {
+			case err == nil:
 				return nil
+			case !errors.Is(err, unix.EWOULDBLOCK):
+				return fmt.Errorf("failed to lock: %w", err)
 			}
 		}
 	}
@@ -518,10 +534,5 @@ func scsiPathContains(devicePath, what string) bool {
 }
 
 func readSysFsFile(path string) string {
-	contents, err := os.ReadFile(path)
-	if err != nil {
-		return ""
-	}
-
-	return string(bytes.TrimSpace(contents))
+	return sysfs.ReadFile(path)
 }

@@ -5,7 +5,9 @@
 package block_test
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	randv2 "math/rand/v2"
 	"os"
 	"os/exec"
@@ -27,6 +29,7 @@ const (
 	GiB = 1024 * MiB
 )
 
+//nolint:maintidx
 func TestDevice(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("skipping test; must be root")
@@ -117,6 +120,47 @@ func TestDevice(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, 6, partitionNum)
+	})
+
+	t.Run("partition devices", func(t *testing.T) {
+		if hostname, _ := os.Hostname(); hostname == "buildkitsandbox" { //nolint:errcheck
+			t.Skip("test not supported under buildkit as partition devices are not propagated from /dev")
+		}
+
+		devName := filepath.Base(devPath)
+
+		partitionDevices, err := devWhole.GetPartitionDevices()
+		require.NoError(t, err)
+
+		assert.Equal(t, map[uint]string{
+			1: devName + "p1",
+			2: devName + "p2",
+			3: devName + "p3",
+			4: devName + "p4",
+			5: devName + "p5",
+			6: devName + "p6",
+		}, partitionDevices)
+
+		partitionDevName, err := devWhole.GetPartitionDevName(3)
+		require.NoError(t, err)
+
+		assert.Equal(t, devPath+"p3", partitionDevName)
+
+		_, err = devWhole.GetPartitionDevName(7)
+		assert.ErrorIs(t, err, block.ErrPartitionNotFound)
+
+		// a partition doesn't have partitions of its own
+		devPartition, err := block.NewFromPath(devPath + "p3")
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			assert.NoError(t, devPartition.Close())
+		})
+
+		partitionDevices, err = devPartition.GetPartitionDevices()
+		require.NoError(t, err)
+
+		assert.Empty(t, partitionDevices)
 	})
 
 	t.Run("get whole disk", func(t *testing.T) {
@@ -273,4 +317,153 @@ func losetupAttachHelper(t *testing.T, rawImage string, readonly bool) losetup.D
 	t.Fatal("failed to attach loop device") //nolint:revive
 
 	panic("unreachable")
+}
+
+// TestDeviceMapperPartitions verifies that partition maps of a device-mapper device are resolved
+// from sysfs: device-mapper devices never have kernel partitions, partitions are separate
+// device-mapper devices carrying the UUID "part<N>-<parent UUID>".
+func TestDeviceMapperPartitions(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("skipping test; must be root")
+	}
+
+	if _, err := exec.LookPath("dmsetup"); err != nil {
+		t.Skip("skipping test; dmsetup is not available")
+	}
+
+	if _, err := os.Stat("/dev/mapper/control"); err != nil {
+		t.Skip("skipping test; /dev/mapper/control is not available")
+	}
+
+	const (
+		sectorSize = 512
+		imageSize  = 64 * MiB
+	)
+
+	rawImage := filepath.Join(t.TempDir(), "image.raw")
+
+	f, err := os.Create(rawImage)
+	require.NoError(t, err)
+
+	require.NoError(t, f.Truncate(int64(imageSize)))
+	require.NoError(t, f.Close())
+
+	loDev := losetupAttachHelper(t, rawImage, false)
+
+	t.Cleanup(func() {
+		assert.NoError(t, loDev.Detach())
+	})
+
+	// unique suffix so that concurrent test runs on the same host don't collide
+	suffix := fmt.Sprintf("%08x", randv2.Uint32())
+
+	parentName := "gbd-test-" + suffix
+	parentUUID := "mpath-3600508" + suffix
+
+	// the "disk": a linear map over the whole loop device
+	parent := dmsetupCreateHelper(t, parentName, parentUUID,
+		fmt.Sprintf("0 %d linear %s 0", imageSize/sectorSize, loDev.Path()))
+
+	// two partition maps, in the shape kpartx creates them; the parent is referenced by major:minor,
+	// as kpartx does, so that the kernel doesn't have to resolve a path for it
+	part1 := dmsetupCreateHelper(t, parentName+"-part1", "part1-"+parentUUID,
+		fmt.Sprintf("0 2048 linear %s 2048", parent.devNo))
+	part3 := dmsetupCreateHelper(t, parentName+"-part3", "part3-"+parentUUID,
+		fmt.Sprintf("0 4096 linear %s 8192", parent.devNo))
+
+	// a device-mapper device stacked on the "disk" which is not a partition map
+	dmsetupCreateHelper(t, parentName+"-lv", "LVM-"+suffix+"-lvol0",
+		fmt.Sprintf("0 2048 linear %s 20480", parent.devNo))
+
+	devParent, err := block.NewFromPath(parent.path)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		assert.NoError(t, devParent.Close())
+	})
+
+	partitionDevices, err := devParent.GetPartitionDevices()
+	require.NoError(t, err)
+
+	assert.Equal(t, map[uint]string{
+		1: part1.devName,
+		3: part3.devName,
+	}, partitionDevices)
+
+	partitionDevName, err := devParent.GetPartitionDevName(3)
+	require.NoError(t, err)
+
+	assert.Equal(t, filepath.Join("/dev", part3.devName), partitionDevName)
+
+	_, err = devParent.GetPartitionDevName(2)
+	assert.ErrorIs(t, err, block.ErrPartitionNotFound)
+
+	// a partition map doesn't have partitions of its own
+	devPart1, err := block.NewFromPath(part1.path)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		assert.NoError(t, devPart1.Close())
+	})
+
+	partitionDevices, err = devPart1.GetPartitionDevices()
+	require.NoError(t, err)
+
+	assert.Empty(t, partitionDevices)
+}
+
+// dmDevice is a device-mapper device created by dmsetupCreateHelper.
+type dmDevice struct {
+	// devName is the kernel device name, e.g. "dm-1".
+	devName string
+	// devNo is the device number as "major:minor", which a device-mapper table accepts in place of a path.
+	devNo string
+	// path is the /dev/mapper node of the device.
+	path string
+}
+
+// dmsetupCreateHelper creates a device-mapper device, removing it on test cleanup.
+//
+// udev synchronization is disabled, as udev might not be running, and the device node is created
+// explicitly with 'dmsetup mknodes': /dev/dm-<minor> is a devtmpfs node, which is not to be relied
+// upon in a sandbox with a private /dev (a container, for one), where devices created after the
+// sandbox was set up never show up.
+func dmsetupCreateHelper(t *testing.T, name, uuid, table string) dmDevice {
+	t.Helper()
+
+	dmsetupHelper(t, "create", name, "--uuid", uuid, "--noudevsync", "--table", table)
+
+	t.Cleanup(func() {
+		cmd := exec.CommandContext(context.Background(), "dmsetup", "remove", "--noudevsync", "--retry", name)
+		cmd.Stdout = t.Output()
+		cmd.Stderr = t.Output()
+
+		assert.NoError(t, cmd.Run())
+	})
+
+	dmsetupHelper(t, "mknodes", name)
+
+	devName := "dm-" + dmsetupHelper(t, "info", "--columns", "--noheadings", "-o", "minor", name)
+
+	devNo, err := os.ReadFile(filepath.Join("/sys/block", devName, "dev"))
+	require.NoError(t, err)
+
+	return dmDevice{
+		devName: devName,
+		devNo:   strings.TrimSpace(string(devNo)),
+		path:    filepath.Join("/dev/mapper", name),
+	}
+}
+
+// dmsetupHelper runs dmsetup with the given arguments, returning the trimmed standard output.
+func dmsetupHelper(t *testing.T, args ...string) string {
+	t.Helper()
+
+	cmd := exec.CommandContext(t.Context(), "dmsetup", args...)
+	cmd.Stderr = t.Output()
+
+	out, err := cmd.Output()
+	require.NoError(t, err)
+
+	return strings.TrimSpace(string(out))
 }
