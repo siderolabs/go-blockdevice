@@ -186,14 +186,11 @@ func (d *Device) IsWholeDisk() (bool, error) {
 		return false, nil
 	}
 
-	// device-mapper check
-	contents, err := os.ReadFile(filepath.Join(sysFsPath, "dm", "uuid"))
-	if err != nil {
-		// not devmapper
-		return true, nil //nolint:nilerr
-	}
+	// a device-mapper partition map is a device in its own right, and is a partition of the
+	// device its UUID names as the parent
+	_, _, isPartitionMap := sysfs.ParseDeviceMapperPartitionUUID(sysfs.ReadFile(filepath.Join(sysFsPath, "dm", "uuid")))
 
-	return !bytes.HasPrefix(contents, []byte("part-")), nil
+	return !isPartitionMap, nil
 }
 
 // GetWholeDisk returns the whole disk for the blockdevice.
@@ -223,15 +220,11 @@ func (d *Device) GetWholeDisk() (*Device, error) {
 		return NewFromPath(filepath.Join("/dev", devName))
 	}
 
-	// device-mapper check
-	contents, err := os.ReadFile(filepath.Join(sysFsPath, "dm", "uuid"))
-	if err != nil {
-		// not devmapper
-		return d.clone(), nil //nolint:nilerr
-	}
-
-	if !bytes.HasPrefix(contents, []byte("part-")) {
-		// devmapper, but not a partition
+	// a device-mapper partition map is a partition of the device its UUID names as the parent,
+	// which is the device it is stacked on
+	_, parentUUID, isPartitionMap := sysfs.ParseDeviceMapperPartitionUUID(sysfs.ReadFile(filepath.Join(sysFsPath, "dm", "uuid")))
+	if !isPartitionMap {
+		// not device-mapper, or a device-mapper device which is not a partition map
 		return d.clone(), nil
 	}
 
@@ -242,6 +235,14 @@ func (d *Device) GetWholeDisk() (*Device, error) {
 
 	if len(slaves) == 0 {
 		return nil, errors.New("no slaves found")
+	}
+
+	// a partition map has a single slave, but prefer the one carrying the parent UUID if the
+	// kernel ever reports more
+	for _, slave := range slaves {
+		if sysfs.ReadFile(filepath.Join(sysFsPath, "slaves", slave.Name(), "dm", "uuid")) == parentUUID {
+			return NewFromPath(filepath.Join("/dev", slave.Name()))
+		}
 	}
 
 	return NewFromPath(filepath.Join("/dev", slaves[0].Name()))
@@ -391,8 +392,10 @@ func (d *Device) GetProperties() (*DeviceProperties, error) {
 	props.Transport = d.getTransport(sysFsPath, props.DeviceName)
 
 	if props.Transport == "dm" {
+		props.DeviceMapperName = readSysFsFile(filepath.Join(sysFsPath, "dm", "name"))
 		props.DeviceMapperUUID = readSysFsFile(filepath.Join(sysFsPath, "dm", "uuid"))
 		props.DeviceMapperKind = dmKind(props.DeviceMapperUUID)
+		props.DeviceMapperPartitionNumber, props.DeviceMapperParentUUID, _ = ParseDeviceMapperPartitionUUID(props.DeviceMapperUUID)
 	}
 
 	if props.Transport == "nvme" {
@@ -451,10 +454,13 @@ func (d *Device) getTransport(sysFsPath, deviceName string) string {
 }
 
 func dmKind(uuid string) string {
+	// a partition map is of the same kind as the device it is a partition of
+	if _, parentUUID, ok := sysfs.ParseDeviceMapperPartitionUUID(uuid); ok {
+		return dmKind(parentUUID)
+	}
+
 	switch {
 	case strings.HasPrefix(uuid, "mpath-"):
-		return "mpath"
-	case strings.HasPrefix(uuid, "part") && strings.Contains(uuid, "-mpath-"):
 		return "mpath"
 	case strings.HasPrefix(uuid, "LVM-"):
 		return "lvm"
