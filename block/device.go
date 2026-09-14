@@ -5,7 +5,11 @@
 // Package block provides support for operations on blockdevices.
 package block
 
-import "os"
+import (
+	"os"
+
+	"github.com/siderolabs/go-blockdevice/v2/block/internal/sysfs"
+)
 
 // Device wraps blockdevice operations.
 type Device struct {
@@ -62,14 +66,30 @@ type DeviceProperties struct {
 	SubSystem string
 	// Transport of the device: sata, nvme, virtio, dm, etc.
 	Transport string
+	// DeviceMapperName is /sys/block/<dev>/dm/name, only set for DM devices.
+	DeviceMapperName string
 	// DeviceMapperUUID is /sys/block/<dev>/dm/uuid, only set for DM devices.
 	DeviceMapperUUID string
 	// DeviceMapperKind is mpath, lvm, crypt, or dm.
 	DeviceMapperKind string
+	// DeviceMapperParentUUID is the DeviceMapperUUID of the parent device, only set for a DM
+	// partition map (see ParseDeviceMapperPartitionUUID).
+	DeviceMapperParentUUID string
 	// FirmwareRevision from /sys/block/<dev>/device/firmware_rev (NVMe only).
 	FirmwareRevision string
+	// DeviceMapperPartitionNumber is the partition number, only set for a DM partition map.
+	DeviceMapperPartitionNumber uint
 	// Rotational is true if the device is a rotational disk.
 	Rotational bool
+}
+
+// ParseDeviceMapperPartitionUUID parses the UUID of a device-mapper partition map, which is
+// "part<N>-<parent UUID>" as kpartx composes it, returning the partition number and the UUID of the
+// device it is a partition of.
+//
+// It returns false for the UUID of any other device-mapper device.
+func ParseDeviceMapperPartitionUUID(uuid string) (partitionNumber uint, parentUUID string, ok bool) {
+	return sysfs.ParseDeviceMapperPartitionUUID(uuid)
 }
 
 // Options for NewFromPath.

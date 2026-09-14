@@ -161,6 +161,15 @@ func TestDevice(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Empty(t, partitionDevices)
+
+		// the partitions of a device which is not device-mapper belong to the kernel: syncing the
+		// partition maps of such a device has nothing to do, and above all removes nothing
+		require.NoError(t, devWhole.SyncPartitionMaps(nil))
+
+		partitionDevices, err = devWhole.GetPartitionDevices()
+		require.NoError(t, err)
+
+		assert.Len(t, partitionDevices, 6)
 	})
 
 	t.Run("get whole disk", func(t *testing.T) {
