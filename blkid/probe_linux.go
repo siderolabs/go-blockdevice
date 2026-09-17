@@ -20,7 +20,7 @@ import (
 
 // Probe returns the probe information for the specified file.
 //
-//nolint:cyclop
+//nolint:cyclop,gocyclo
 func Probe(f *os.File, opts ...ProbeOption) (*Info, error) {
 	options := applyProbeOptions(opts...)
 
@@ -37,11 +37,6 @@ func Probe(f *os.File, opts ...ProbeOption) (*Info, error) {
 
 	switch sysStat.Mode & unix.S_IFMT {
 	case unix.S_IFBLK:
-		// Invalidate page cache before reading to ensure fresh data from the device.
-		// This is critical when a process (e.g., cryptsetup) wrote to the device using O_DIRECT,
-		// which can leave the block device's page cache stale (especially with loop devices).
-		unix.Fadvise(int(f.Fd()), 0, 0, unix.FADV_DONTNEED) //nolint:errcheck
-
 		// block device, initialize full support
 		info.BlockDevice = block.NewFromFile(f)
 
@@ -116,6 +111,17 @@ func Probe(f *os.File, opts ...ProbeOption) (*Info, error) {
 		}
 
 		defer wholeDisk.Unlock() //nolint:errcheck
+	}
+
+	if info.BlockDevice != nil {
+		// Invalidate page cache before reading to ensure fresh data from the device.
+		// This is critical when a process (e.g., cryptsetup) wrote to the device using O_DIRECT,
+		// which can leave the block device's page cache stale (especially with loop devices).
+		//
+		// This has to happen once the lock is held: acquiring it can take a while (the writer we
+		// race with is the one holding it), and any read in the meantime repopulates the page
+		// cache with the stale pages again.
+		unix.Fadvise(int(f.Fd()), 0, 0, unix.FADV_DONTNEED) //nolint:errcheck
 	}
 
 	if err := info.fillProbeResult(f, options); err != nil {

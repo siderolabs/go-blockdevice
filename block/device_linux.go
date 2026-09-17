@@ -326,7 +326,11 @@ func (d *Device) RetryLockWithTimeout(ctx context.Context, exclusive bool, timeo
 // Unlock releases any lock.
 func (d *Device) Unlock() error {
 	for {
-		if err := unix.Flock(int(d.f.Fd()), unix.LOCK_UN); !errors.Is(err, unix.EINTR) {
+		err := unix.Flock(int(d.f.Fd()), unix.LOCK_UN)
+
+		runtime.KeepAlive(d)
+
+		if !errors.Is(err, unix.EINTR) {
 			return err
 		}
 	}
@@ -340,11 +344,16 @@ func (d *Device) lock(exclusive bool, flag int) error {
 	}
 
 	for {
-		if err := unix.Flock(int(d.f.Fd()), flag); !errors.Is(err, unix.EINTR) {
+		err := unix.Flock(int(d.f.Fd()), flag)
+
+		// the device has to be kept alive until flock returns: a blocking lock parks here for as
+		// long as the lock is contended, and the file being collected in the meantime would close
+		// the descriptor being locked
+		runtime.KeepAlive(d)
+
+		if !errors.Is(err, unix.EINTR) {
 			return err
 		}
-
-		runtime.KeepAlive(d)
 	}
 }
 
