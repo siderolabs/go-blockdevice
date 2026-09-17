@@ -17,18 +17,57 @@ import (
 	"github.com/siderolabs/go-blockdevice/v2/block/internal/sysfs"
 )
 
-// KernelPartitionAdd invokes the BLKPG_ADD_PARTITION ioctl.
+// KernelPartitionAdd makes the kernel aware of a partition of the device, at the given offset and
+// of the given size, both in bytes.
+//
+// A device-mapper device never gets kernel partitions, so a partition map is created for it, the
+// way kpartx does; every other device is informed of the partition with the BLKPG_ADD_PARTITION
+// ioctl.
 func (d *Device) KernelPartitionAdd(no int, start, length uint64) error {
+	dm, err := d.deviceMapper()
+	if err != nil {
+		return err
+	}
+
+	if dm.ok() {
+		return d.deviceMapperPartitionAdd(dm, no, start, length)
+	}
+
 	return d.inform(unix.BLKPG_ADD_PARTITION, int32(no), int64(start), int64(length))
 }
 
-// KernelPartitionResize invokes the BLKPG_RESIZE_PARTITION ioctl.
+// KernelPartitionResize changes the offset and the size of a partition of the device, both in bytes.
+//
+// For a device-mapper device the table of the partition map is replaced; for every other device the
+// BLKPG_RESIZE_PARTITION ioctl is invoked.
 func (d *Device) KernelPartitionResize(no int, first, length uint64) error {
+	dm, err := d.deviceMapper()
+	if err != nil {
+		return err
+	}
+
+	if dm.ok() {
+		return d.deviceMapperPartitionResize(dm, no, first, length)
+	}
+
 	return d.inform(unix.BLKPG_RESIZE_PARTITION, int32(no), int64(first), int64(length))
 }
 
-// KernelPartitionDelete invokes the BLKPG_DEL_PARTITION ioctl.
+// KernelPartitionDelete drops a partition of the device from the kernel.
+//
+// For a device-mapper device the partition map is removed; for every other device the
+// BLKPG_DEL_PARTITION ioctl is invoked. Either way a partition which doesn't exist reports
+// unix.ENXIO, and one which is held open reports unix.EBUSY.
 func (d *Device) KernelPartitionDelete(no int) error {
+	dm, err := d.deviceMapper()
+	if err != nil {
+		return err
+	}
+
+	if dm.ok() {
+		return d.deviceMapperPartitionDelete(dm, no)
+	}
+
 	return d.inform(unix.BLKPG_DEL_PARTITION, int32(no), 0, 0)
 }
 
@@ -61,14 +100,16 @@ func (d *Device) inform(op int32, no int32, start, length int64) error {
 	return errno
 }
 
-// GetKernelLastPartitionNum returns the maximum partition number in the kernel.
+// GetKernelLastPartitionNum returns the maximum partition number the kernel knows for the device.
+//
+// For a device-mapper device the partitions are its partition maps, as it has no kernel partitions.
 func (d *Device) GetKernelLastPartitionNum() (int, error) {
 	sysFsPath, err := d.sysFsPath()
 	if err != nil {
 		return 0, err
 	}
 
-	devices, err := sysfs.KernelPartitionDevices(sysFsPath)
+	devices, err := sysfs.PartitionDevices(sysFsPath)
 	if err != nil {
 		return 0, err
 	}

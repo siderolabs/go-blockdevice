@@ -74,8 +74,12 @@ func TestDMKind(t *testing.T) {
 		expected string
 	}{
 		{"mpath whole device", "mpath-36005076810800567c8000000000009f8", "mpath"},
-		{"mpath partition part-N- form", "part-1-mpath-36005076810800567c8000000000009f8", "mpath"},
 		{"mpath partition partN- form", "part1-mpath-36005076810800567c8000000000009f8", "mpath"},
+		{"mpath partition, two digits", "part12-mpath-36005076810800567c8000000000009f8", "mpath"},
+		// 'part-N-' is not a spelling kpartx produces, so it is not a partition map, and the
+		// UUID is not one of a kind this knows
+		{"part-N- form is not a partition map", "part-1-mpath-36005076810800567c8000000000009f8", "dm"},
+		{"LVM logical volume of an mpath device", "LVM-AbCdEf-0001-0002-0003-0004-0005-0006-lvname", "lvm"},
 		{"LVM", "LVM-AbCdEf-0001-0002-0003-0004-0005-0006-lvname", "lvm"},
 		{"crypt", "CRYPT-LUKS2-abcdef1234567890abcdef1234567890-cryptname", "crypt"},
 		{"generic dm", "some-other-uuid", "dm"},
@@ -131,5 +135,37 @@ func TestReadBlockDeviceModalias(t *testing.T) {
 		t.Parallel()
 
 		assert.Empty(t, readBlockDeviceModalias(t.TempDir()))
+	})
+}
+
+func TestDeviceMapperPartitionID(t *testing.T) {
+	t.Parallel()
+
+	dm := deviceMapperInfo{name: "mpatha", uuid: "mpath-3600140512345"}
+
+	t.Run("kpartx-compatible identity", func(t *testing.T) {
+		t.Parallel()
+
+		id, err := dm.partitionID(3)
+		require.NoError(t, err)
+
+		assert.Equal(t, "mpatha-part3", id.Name)
+		assert.Equal(t, "part3-mpath-3600140512345", id.UUID)
+	})
+
+	t.Run("partition numbers are 1-based", func(t *testing.T) {
+		t.Parallel()
+
+		for _, no := range []int{0, -1} {
+			_, err := dm.partitionID(no)
+			assert.ErrorContains(t, err, "invalid partition number")
+		}
+	})
+
+	t.Run("parent without a UUID", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := deviceMapperInfo{name: "mpatha"}.partitionID(1)
+		assert.ErrorContains(t, err, "has no UUID")
 	})
 }
