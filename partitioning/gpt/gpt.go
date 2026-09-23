@@ -161,13 +161,13 @@ func Read(dev Device, opts ...Option) (*Table, error) {
 		options: options,
 	}
 
-	hdr, entries, err := gptstructs.ReadHeader(dev, 1, lastLBA)
+	hdr, entries, err := gptstructs.ReadHeader(dev, 1, lastLBA, gptstructs.NumEntries)
 	if err != nil && !errors.Is(err, gptstructs.ErrZeroedHeader) { // fallback to backup header if header is zeroed
 		return nil, err
 	}
 
 	if hdr == nil {
-		hdr, entries, err = gptstructs.ReadHeader(dev, lastLBA, lastLBA)
+		hdr, entries, err = gptstructs.ReadHeader(dev, lastLBA, lastLBA, gptstructs.NumEntries)
 		if err != nil {
 			return nil, err
 		}

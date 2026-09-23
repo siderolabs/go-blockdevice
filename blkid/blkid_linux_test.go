@@ -1099,6 +1099,70 @@ func TestProbePathGPT(t *testing.T) {
 	}
 }
 
+// TestProbePathHybridISO probes a hybrid ISO image with a GPT in the system area.
+//
+// The image was generated with the xorrisofs flags used by Talos for hybrid (BIOS + UEFI) ISOs:
+//
+//	truncate -s 4M efiboot.img && mkfs.vfat -n EFI -i 12345678 efiboot.img
+//	SOURCE_DATE_EPOCH=1790095935 xorrisofs -o hybrid.iso -V HYBRID -m efiboot.img -iso-level 3 iso/ \
+//	  -eltorito-alt-boot -e --interval:appended_partition_2:all:: -append_partition 2 0xef efiboot.img \
+//	  -appended_part_as_gpt -partition_cyl_align all -partition_offset 16 -iso_mbr_part_type 0x83 -no-emul-boot \
+//	  -- -volume_date all_file_dates =1790095935 -volume_date uuid 2026092216521500
+func TestProbePathHybridISO(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	rawImage := filepath.Join(tmpDir, "image.raw")
+
+	f, err := os.Create(rawImage)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	fixedImageSetup("testdata/hybrid.iso.zst")(t, rawImage)
+
+	info, err := blkid.ProbePath(rawImage, blkid.WithProbeLogger(zaptest.NewLogger(t)))
+	require.NoError(t, err)
+
+	assert.Equal(t, "iso9660", info.Name)
+	require.NotNil(t, info.Label)
+	assert.Equal(t, "HYBRID", *info.Label)
+
+	partitionsOnly := xslices.Map(info.Parts, func(p blkid.NestedProbeResult) blkid.NestedResult {
+		return p.NestedResult
+	})
+
+	assert.Equal(t, []blkid.NestedResult{
+		{
+			PartitionUUID:   pointer.To(uuid.MustParse("36323032-3930-4232-b131-303635323135")),
+			PartitionType:   pointer.To(uuid.MustParse("ebd0a0a2-b9e5-4433-87c0-68b6b72699c7")),
+			PartitionLabel:  pointer.To("ISO9660"),
+			PartitionIndex:  1,
+			PartitionOffset: 64 * 512,
+			PartitionSize:   1984 * 512,
+		},
+		{
+			PartitionUUID:   pointer.To(uuid.MustParse("36323032-3930-4232-b132-303635323135")),
+			PartitionType:   pointer.To(uuid.MustParse("c12a7328-f81f-11d2-ba4b-00a0c93ec93b")),
+			PartitionLabel:  pointer.To("Appended2"),
+			PartitionIndex:  2,
+			PartitionOffset: 2048 * 512,
+			PartitionSize:   8192 * 512,
+		},
+		{
+			PartitionUUID:   pointer.To(uuid.MustParse("36323032-3930-4232-b133-303635323135")),
+			PartitionType:   pointer.To(uuid.MustParse("ebd0a0a2-b9e5-4433-87c0-68b6b72699c7")),
+			PartitionLabel:  pointer.To("Gap1"),
+			PartitionIndex:  3,
+			PartitionOffset: 10240 * 512,
+			PartitionSize:   600 * 512,
+		},
+	}, partitionsOnly)
+
+	// the ESP is probed as a nested filesystem
+	assert.Equal(t, "vfat", info.Parts[1].Name)
+	require.NotNil(t, info.Parts[1].Label)
+	assert.Equal(t, "EFI", *info.Parts[1].Label)
+}
+
 func TestProbeHalfWipedGPT(t *testing.T) {
 	// wiping first 1MB (first header) should not detect GPT
 	for _, useLoopDevice := range []bool{false, true} {

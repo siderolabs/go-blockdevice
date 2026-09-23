@@ -38,8 +38,8 @@ type HeaderReader interface {
 
 // ReadHeader reads the GPT header and partition entries.
 //
-// It does sanity checks on the header and partition entries.
-func ReadHeader(r HeaderReader, lba, lastLBA uint64) (*Header, []Entry, error) {
+// It does sanity checks on the header and partition entries, the header is rejected if it has more than maxEntries entries.
+func ReadHeader(r HeaderReader, lba, lastLBA uint64, maxEntries uint32) (*Header, []Entry, error) {
 	sectorSize := r.GetSectorSize()
 	buf := make([]byte, sectorSize)
 
@@ -93,7 +93,7 @@ func ReadHeader(r HeaderReader, lba, lastLBA uint64) (*Header, []Entry, error) {
 		return nil, nil, nil
 	}
 
-	if hdr.Get_num_partition_entries() == 0 || hdr.Get_num_partition_entries() > NumEntries {
+	if hdr.Get_num_partition_entries() == 0 || hdr.Get_num_partition_entries() > maxEntries {
 		return nil, nil, nil
 	}
 

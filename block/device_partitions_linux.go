@@ -141,6 +141,20 @@ func (d *Device) GetPartitionDevices() (map[uint]string, error) {
 	return sysfs.PartitionDevices(sysFsPath)
 }
 
+// HasPartitionDevices reports whether the partitions of the device get devices of their own.
+//
+// A device-mapper device gets partition maps (see SyncPartitionMaps), any other device gets kernel partitions,
+// unless the kernel never partitions it: e.g. a CD-ROM, so the partitions of a hybrid ISO image exist only in
+// its partition table, and GetPartitionDevices never returns them.
+func (d *Device) HasPartitionDevices() (bool, error) {
+	sysFsPath, err := d.sysFsPath()
+	if err != nil {
+		return false, err
+	}
+
+	return sysfs.HasPartitionDevices(sysFsPath), nil
+}
+
 // GetPartitionDevName returns the path of the device of the partition with the given number, e.g. "/dev/sda1".
 //
 // If the partition device hasn't appeared (yet), ErrPartitionNotFound is returned.

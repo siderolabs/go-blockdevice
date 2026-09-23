@@ -266,6 +266,72 @@ func TestPartitionDevices(t *testing.T) {
 	}
 }
 
+func TestHasPartitionDevices(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		files map[string]string
+
+		name   string
+		device string
+
+		expected bool
+	}{
+		{
+			name: "disk",
+			files: map[string]string{
+				"sda/ext_range":      "256\n",
+				"sda/sda1/partition": "1\n",
+			},
+			device:   "sda",
+			expected: true,
+		},
+		{
+			name: "cd-rom",
+			files: map[string]string{
+				"sr0/ext_range": "1\n",
+			},
+			device:   "sr0",
+			expected: false,
+		},
+		{
+			name: "device-mapper disk",
+			files: map[string]string{
+				"dm-0/ext_range": "1\n",
+				"dm-0/dm/name":   "mpatha\n",
+				"dm-0/dm/uuid":   mpathUUID + "\n",
+			},
+			device:   "dm-0",
+			expected: true,
+		},
+		{
+			name: "device-mapper device without UUID",
+			files: map[string]string{
+				"dm-1/ext_range": "1\n",
+				"dm-1/dm/name":   "plain\n",
+			},
+			device:   "dm-1",
+			expected: false,
+		},
+		{
+			name: "no ext_range",
+			files: map[string]string{
+				"sda/sda1/partition": "1\n",
+			},
+			device:   "sda/sda1",
+			expected: true,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			root := buildSysFs(t, test.files, nil)
+
+			assert.Equal(t, test.expected, sysfs.HasPartitionDevices(filepath.Join(root, test.device)))
+		})
+	}
+}
+
 func TestPartitionDevicesMissingDevice(t *testing.T) {
 	t.Parallel()
 

@@ -45,7 +45,7 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 	}
 
 	// try reading primary header
-	hdr, entries, err := gptstructs.ReadHeader(r, primaryLBA, lastLBA)
+	hdr, entries, err := gptstructs.ReadHeader(r, primaryLBA, lastLBA, gptstructs.MaxReadEntries)
 	if err != nil {
 		if errors.Is(err, gptstructs.ErrZeroedHeader) {
 			// treat zeroed out primary header as no header, and skip backup header
@@ -59,7 +59,7 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 
 	if hdr == nil {
 		// try reading backup header
-		hdr, entries, err = gptstructs.ReadHeader(r, lastLBA, lastLBA)
+		hdr, entries, err = gptstructs.ReadHeader(r, lastLBA, lastLBA, gptstructs.MaxReadEntries)
 		if err != nil && !errors.Is(err, gptstructs.ErrZeroedHeader) { // skip zeroed out backup headers
 			return nil, err
 		}

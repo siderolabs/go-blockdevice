@@ -11,3 +11,9 @@ package gptstructs
 
 // NumEntries is the number of entries in the GPT.
 const NumEntries = 128
+
+// MaxReadEntries is the maximum number of entries in the GPT accepted when reading (probing) it.
+//
+// The UEFI specification only requires the partition entry array to be at least 16KiB (NumEntries),
+// and some tools write more entries, e.g. xorriso writes 248 entries for hybrid ISO images.
+const MaxReadEntries = 1024

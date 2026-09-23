@@ -14,6 +14,7 @@ import (
 	"golang.org/x/text/encoding/unicode"
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/partitions/gpt"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
 )
 
@@ -109,5 +110,49 @@ vdLoop:
 		res.Label = pointer.To(strings.TrimRight(string(lblBytes), " \000"))
 	}
 
+	probeHybridGPT(r, res)
+
 	return res, nil
+}
+
+// hybridGPTSectorSize is the sector size of the GPT in hybrid ISO images (e.g. built with xorriso),
+// which doesn't depend on the block size of the device the image is on (e.g. 2048 for a CD-ROM).
+const hybridGPTSectorSize = 512
+
+// sectorSizeReader overrides the sector size of the underlying reader.
+type sectorSizeReader struct {
+	probe.Reader
+
+	sectorSize uint
+}
+
+func (r sectorSizeReader) GetSectorSize() uint {
+	return r.sectorSize
+}
+
+// probeHybridGPT probes the GPT embedded into a hybrid ISO image, and adds its partitions to the result.
+//
+// The ISO9660 filesystem doesn't use the first 32KiB of the image (the system area),
+// which is where hybrid images put a (protective) MBR and a GPT, e.g. to expose the EFI System Partition.
+// The Linux kernel doesn't scan partitions on CD-ROM devices, so this is the only way to discover them.
+//
+// Errors are ignored, as a broken GPT shouldn't prevent the ISO9660 filesystem from being detected.
+func probeHybridGPT(r probe.Reader, res *probe.Result) {
+	sectorSizes := []uint{r.GetSectorSize()}
+
+	if sectorSizes[0] != hybridGPTSectorSize {
+		sectorSizes = append(sectorSizes, hybridGPTSectorSize)
+	}
+
+	for _, sectorSize := range sectorSizes {
+		gptRes, err := (&gpt.Probe{}).Probe(sectorSizeReader{Reader: r, sectorSize: sectorSize}, magic.Magic{})
+		if err != nil || gptRes == nil {
+			continue
+		}
+
+		res.Parts = gptRes.Parts
+		res.ExtraSignatures = append(res.ExtraSignatures, gptRes.ExtraSignatures...)
+
+		return
+	}
 }

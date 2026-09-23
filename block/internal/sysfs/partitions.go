@@ -29,6 +29,20 @@ func PartitionDevices(sysFsPath string) (map[uint]string, error) {
 	return KernelPartitionDevices(sysFsPath)
 }
 
+// HasPartitionDevices reports whether the partitions of the device at the given sysfs path get devices of their own.
+//
+// A device-mapper device gets device-mapper partition maps (see PartitionDevices).
+// Any other device gets kernel partitions, unless the kernel never partitions it (GENHD_FL_NO_PART), which
+// the 'ext_range' attribute reports as a single minor: e.g. a CD-ROM, so the partitions of a hybrid ISO image
+// exist only in its partition table.
+func HasPartitionDevices(sysFsPath string) bool {
+	if dmUUID := ReadFile(filepath.Join(sysFsPath, "dm", "uuid")); dmUUID != "" {
+		return true
+	}
+
+	return ReadFile(filepath.Join(sysFsPath, "ext_range")) != "1"
+}
+
 // KernelPartitionDevices returns the kernel partitions of the device at the given sysfs path:
 // sub-directories carrying a 'partition' attribute.
 func KernelPartitionDevices(sysFsPath string) (map[uint]string, error) {
