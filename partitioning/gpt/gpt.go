@@ -15,6 +15,7 @@ import (
 	"math"
 	"slices"
 	"syscall"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/siderolabs/gen/xslices"
@@ -660,6 +661,29 @@ func (t *Table) syncKernel() error {
 	return t.syncKernelIncremental()
 }
 
+// kernelPartitionDelete drops a partition from the kernel, retrying for a while if it is held open.
+//
+// A partition which has just appeared (or changed) is held open by whatever probes block devices
+// (udevd running blkid over it) until the probe is done, so deleting it fails with EBUSY for a while;
+// a partition which stays busy (e.g. mounted) is reported as such once the timeout expires.
+func (t *Table) kernelPartitionDelete(no int) error {
+	const (
+		timeout = 5 * time.Second
+		pause   = 50 * time.Millisecond
+	)
+
+	deadline := time.Now().Add(timeout)
+
+	for {
+		err := t.dev.KernelPartitionDelete(no)
+		if !errors.Is(err, syscall.EBUSY) || time.Now().After(deadline) {
+			return err
+		}
+
+		time.Sleep(pause)
+	}
+}
+
 // syncKernelComplete synchronizes the kernel partition table with the current table by overwriting the whole table.
 //
 // It is incompatible with mounted partitions.
@@ -671,7 +695,7 @@ func (t *Table) syncKernelComplete() error {
 
 	// delete all kernel partitions
 	for no := 1; no <= kernelPartitionNum; no++ {
-		if err := t.dev.KernelPartitionDelete(no); err != nil && !errors.Is(err, syscall.ENXIO) {
+		if err := t.kernelPartitionDelete(no); err != nil && !errors.Is(err, syscall.ENXIO) {
 			return fmt.Errorf("failed to delete partition %d: %w", no, err)
 		}
 	}
@@ -714,7 +738,14 @@ func (t *Table) syncKernelIncremental() error {
 		}
 
 		// try to delete the partition first
-		err := t.dev.KernelPartitionDelete(no)
+		var err error
+
+		if myEntry != nil {
+			// a partition which is held open is resized below instead of being re-created, so there is no point in waiting for it
+			err = t.dev.KernelPartitionDelete(no)
+		} else {
+			err = t.kernelPartitionDelete(no)
+		}
 
 		switch {
 		case errors.Is(err, syscall.ENXIO):

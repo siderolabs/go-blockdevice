@@ -15,7 +15,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -373,6 +375,50 @@ func TestLUKSFstrim(t *testing.T) {
 		require.NotZero(t, trimmed)
 	})
 
+	t.Run("chunked", func(t *testing.T) {
+		mountPath := setupEncryptedXFS(t, luks.WithAllowDiscards())
+
+		// XFS doesn't track trimmed state, so each run reports all the free space
+		single, err := fstrim.Fstrim(mountPath)
+		require.NoError(t, err)
+
+		// XFS issues discards asynchronously and skips the free extents which are still busy
+		// (being discarded) on the next FITRIM call, so give the previous run a chance to finish
+		time.Sleep(100 * time.Millisecond)
+
+		// the chunk size matches the allocation group size, so free extents never cross
+		// chunk boundaries (XFS free extents don't cross allocation groups)
+		chunked, err := fstrim.FstrimChunked(t.Context(), mountPath, fstrim.Options{
+			ChunkSize: xfsAGSize(t, mountPath),
+			Delay:     10 * time.Millisecond,
+		})
+		require.NoError(t, err)
+
+		t.Logf("trimmed %d bytes (single), %d bytes (chunked)", single, chunked)
+
+		require.NotZero(t, chunked)
+
+		// each chunk covers whole allocation groups, so the total should match the single run,
+		// unless some free extents were skipped as busy (see above), so allow for a lenient lower bound
+		require.LessOrEqual(t, chunked, single)
+		require.GreaterOrEqual(t, chunked, single/2)
+	})
+
+	t.Run("chunked canceled", func(t *testing.T) {
+		mountPath := setupEncryptedXFS(t, luks.WithAllowDiscards())
+
+		for _, chunkSize := range []uint64{0, xfsAGSize(t, mountPath)} {
+			ctx, cancel := context.WithCancel(t.Context())
+			cancel()
+
+			trimmed, err := fstrim.FstrimChunked(ctx, mountPath, fstrim.Options{
+				ChunkSize: chunkSize,
+			})
+			require.ErrorIs(t, err, context.Canceled)
+			require.Zero(t, trimmed)
+		}
+	})
+
 	t.Run("without discards allowed", func(t *testing.T) {
 		// without --allow-discards dm-crypt blocks TRIM, so the filesystem reports discard as unsupported
 		mountPath := setupEncryptedXFS(t)
@@ -440,6 +486,37 @@ func setupEncryptedXFS(t *testing.T, opts ...luks.Option) string {
 	})
 
 	return mountPath
+}
+
+// xfsAGSize returns the allocation group size (in bytes) of the mounted XFS filesystem.
+func xfsAGSize(t *testing.T, mountPath string) uint64 {
+	t.Helper()
+
+	if _, err := exec.LookPath("xfs_info"); err != nil {
+		t.Skip("xfs_info is not available")
+	}
+
+	out, err := exec.CommandContext(t.Context(), "xfs_info", mountPath).CombinedOutput()
+	require.NoError(t, err, "xfs_info failed: %s", out)
+
+	// meta-data=/dev/mapper/loop0-encrypted isize=512    agcount=4, agsize=31744 blks
+	// ...
+	// data     =                       bsize=4096   blocks=126976, imaxpct=25
+	agSize := regexp.MustCompile(`agsize=(\d+) blks`).FindSubmatch(out)
+	require.NotNil(t, agSize, "failed to parse agsize: %s", out)
+
+	blockSize := regexp.MustCompile(`(?m)^data\s*=.*bsize=(\d+)`).FindSubmatch(out)
+	require.NotNil(t, blockSize, "failed to parse bsize: %s", out)
+
+	agBlocks, err := strconv.ParseUint(string(agSize[1]), 10, 64)
+	require.NoError(t, err)
+
+	bsize, err := strconv.ParseUint(string(blockSize[1]), 10, 64)
+	require.NoError(t, err)
+
+	t.Logf("XFS allocation group size: %d blocks of %d bytes", agBlocks, bsize)
+
+	return agBlocks * bsize
 }
 
 func losetupAttachHelper(t *testing.T, rawImage string, readonly bool) losetup.Device {
