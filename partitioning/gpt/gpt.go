@@ -13,15 +13,13 @@ import (
 	"hash/crc32"
 	"io"
 	"math"
-	"os"
 	"slices"
+	"syscall"
 
 	"github.com/google/uuid"
 	"github.com/siderolabs/gen/xslices"
-	"golang.org/x/sys/unix"
 	"golang.org/x/text/encoding/unicode"
 
-	"github.com/siderolabs/go-blockdevice/v2/block"
 	"github.com/siderolabs/go-blockdevice/v2/internal/gptstructs"
 	"github.com/siderolabs/go-blockdevice/v2/internal/gptutil"
 )
@@ -78,31 +76,6 @@ type Partition struct {
 	LastLBA  uint64
 
 	Flags uint64
-}
-
-type deviceWrapper struct {
-	*os.File
-	*block.Device
-
-	size uint64
-}
-
-func (wrapper *deviceWrapper) GetSize() uint64 {
-	return wrapper.size
-}
-
-// DeviceFromBlockDevice creates a new Device from a block.Device.
-func DeviceFromBlockDevice(dev *block.Device) (Device, error) {
-	size, err := dev.GetSize()
-	if err != nil {
-		return nil, err
-	}
-
-	return &deviceWrapper{
-		File:   dev.File(),
-		Device: dev,
-		size:   size,
-	}, nil
 }
 
 // New creates a new (empty) partition table for a specified device.
@@ -698,7 +671,7 @@ func (t *Table) syncKernelComplete() error {
 
 	// delete all kernel partitions
 	for no := 1; no <= kernelPartitionNum; no++ {
-		if err := t.dev.KernelPartitionDelete(no); err != nil && !errors.Is(err, unix.ENXIO) {
+		if err := t.dev.KernelPartitionDelete(no); err != nil && !errors.Is(err, syscall.ENXIO) {
 			return fmt.Errorf("failed to delete partition %d: %w", no, err)
 		}
 	}
@@ -744,9 +717,9 @@ func (t *Table) syncKernelIncremental() error {
 		err := t.dev.KernelPartitionDelete(no)
 
 		switch {
-		case errors.Is(err, unix.ENXIO):
+		case errors.Is(err, syscall.ENXIO):
 		// partition doesn't exist, ok
-		case errors.Is(err, unix.EBUSY) && myEntry != nil:
+		case errors.Is(err, syscall.EBUSY) && myEntry != nil:
 			// proceed to resize
 			err = t.dev.KernelPartitionResize(no,
 				myEntry.FirstLBA*uint64(t.sectorSize),
