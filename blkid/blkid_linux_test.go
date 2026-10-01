@@ -250,6 +250,43 @@ func talosmetaSetup(t *testing.T, path string) {
 	require.NoError(t, f.Close())
 }
 
+// writeVMFS writes synthetic VMFS headers at the given offset (as VMFS can't be created on Linux).
+func writeVMFS(t *testing.T, path string, offset int64, withVolume, withFS bool) {
+	t.Helper()
+
+	f, err := os.OpenFile(path, os.O_RDWR, 0)
+	require.NoError(t, err)
+
+	if withVolume {
+		volumeInfo := make([]byte, 146)
+		binary.LittleEndian.PutUint32(volumeInfo, 0xc001d00d)
+		binary.LittleEndian.PutUint32(volumeInfo[4:], 5)
+
+		_, err = f.WriteAt(volumeInfo, offset+1*MiB)
+		require.NoError(t, err)
+	}
+
+	if withFS {
+		fsInfo := make([]byte, 157)
+		binary.LittleEndian.PutUint32(fsInfo, 0x2fabf15e)
+		fsInfo[8] = 6
+		copy(fsInfo[29:], "datastore1")
+
+		_, err = f.WriteAt(fsInfo, offset+2*MiB)
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, f.Close())
+}
+
+func vmfsSetup(withVolume, withFS bool) func(t *testing.T, path string) {
+	return func(t *testing.T, path string) {
+		t.Helper()
+
+		writeVMFS(t, path, 0, withVolume, withFS)
+	}
+}
+
 //nolint:gocognit,maintidx
 func TestProbePathFilesystems(t *testing.T) {
 	for _, test := range []struct { //nolint:govet
@@ -611,6 +648,41 @@ func TestProbePathFilesystems(t *testing.T) {
 			expectUUID:    true,
 			expectedSignatures: []blkid.SignatureRange{
 				{Offset: 4096, Size: 4},
+			},
+		},
+		{
+			name: "vmfs volume",
+
+			size:  100 * MiB,
+			setup: vmfsSetup(true, true),
+
+			expectedName: "vmfs_volume_member",
+			expectedSignatures: []blkid.SignatureRange{
+				{Offset: 1 * MiB, Size: 4},
+				{Offset: 2 * MiB, Size: 4},
+			},
+		},
+		{
+			name: "vmfs volume without filesystem",
+
+			size:  100 * MiB,
+			setup: vmfsSetup(true, false),
+
+			expectedName: "vmfs_volume_member",
+			expectedSignatures: []blkid.SignatureRange{
+				{Offset: 1 * MiB, Size: 4},
+			},
+		},
+		{
+			name: "vmfs filesystem",
+
+			size:  100 * MiB,
+			setup: vmfsSetup(false, true),
+
+			expectedName:  "vmfs",
+			expectedLabel: "datastore1",
+			expectedSignatures: []blkid.SignatureRange{
+				{Offset: 2 * MiB, Size: 4},
 			},
 		},
 	} {
@@ -1217,6 +1289,46 @@ func setupNestedGPT(t *testing.T, path string) {
 	vfatSetup(16)(t, path+"p1")
 	ext4Setup(t, path+"p3")
 	xfsSetup(t, path+"p6")
+}
+
+// TestProbePathGPTVMFS covers a disk previously used as an ESXi datastore: the VMFS partition
+// signatures should be reported as disk signature ranges, so that wiping the disk removes them.
+func TestProbePathGPTVMFS(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	rawImage := filepath.Join(tmpDir, "image.raw")
+
+	f, err := os.Create(rawImage)
+	require.NoError(t, err)
+
+	require.NoError(t, f.Truncate(512*MiB))
+	require.NoError(t, f.Close())
+
+	// ESXi creates the VMFS partition starting at 1 MiB
+	cmd := exec.CommandContext(t.Context(), "sfdisk", rawImage)
+	cmd.Stdin = strings.NewReader(`label: gpt
+start=2048, type=AA31E02A-400F-11DB-9590-000C2911D1B8, name="VMFS"
+`)
+	cmd.Stdout = t.Output()
+	cmd.Stderr = t.Output()
+
+	require.NoError(t, cmd.Run())
+
+	writeVMFS(t, rawImage, 1*MiB, true, true)
+
+	info, err := blkid.ProbePath(rawImage, blkid.WithProbeLogger(zaptest.NewLogger(t)))
+	require.NoError(t, err)
+
+	assert.Equal(t, "gpt", info.Name)
+	require.Len(t, info.Parts, 1)
+
+	assert.Equal(t, "vmfs_volume_member", info.Parts[0].Name)
+	assert.EqualValues(t, 1*MiB, info.Parts[0].PartitionOffset)
+
+	assert.Equal(t, []blkid.SignatureRange{
+		{Offset: 2 * MiB, Size: 4},
+		{Offset: 3 * MiB, Size: 4},
+	}, info.SignatureRanges[2:])
 }
 
 func TestProbePathNested(t *testing.T) {

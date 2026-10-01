@@ -107,7 +107,13 @@ func (i *Info) fillNested(f *os.File, chain chain.Chain, offset uint64, out *[]N
 			})
 		}
 
-		*outSignatures = append(*outSignatures, res.ExtraSignatures...)
+		// extra signatures are relative to the partition, convert them to be relative to the device
+		for _, sig := range res.ExtraSignatures {
+			*outSignatures = append(*outSignatures, SignatureRange{
+				Offset: offset + part.Offset + sig.Offset,
+				Size:   sig.Size,
+			})
+		}
 
 		if err = i.fillNested(f, chain, offset+part.Offset, &(*out)[idx].Parts, outSignatures, res.Parts, options); err != nil {
 			return fmt.Errorf("error probing nested: %w", err)

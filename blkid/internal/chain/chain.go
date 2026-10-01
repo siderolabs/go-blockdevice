@@ -17,6 +17,7 @@ import (
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/swap"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/talosmeta"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/vfat"
+	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/vmfs"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/xfs"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/filesystems/zfs"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/partitions/gpt"
@@ -80,5 +81,7 @@ func Default() Chain {
 		&swap.Probe{},
 		&lvm2.Probe{},
 		&zfs.Probe{},
+		&vmfs.VolumeProbe{},
+		&vmfs.FSProbe{},
 	}
 }
