@@ -7,6 +7,7 @@ package gpt
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -265,7 +266,7 @@ func (t *Table) init(lastLBA uint64) {
 		// only align the LBA when the compatibility flag is not set. This alignment can cause Windows to corrupt the
 		// partition table.
 		if !t.options.CompatFirstUsableLBA {
-			t.firstUsableLBA = (t.firstUsableLBA + t.alignment - 1) / t.alignment * t.alignment // 2048 with 512 sector size, 256 with 4096 sector size
+			t.firstUsableLBA = t.alignUp(t.firstUsableLBA)
 		}
 	}
 
@@ -286,63 +287,70 @@ func (t *Table) Compact() {
 }
 
 type allocatableRange struct {
-	lowLBA  uint64
-	highLBA uint64
+	lowLBA uint64
+	size   uint64
+}
 
-	partitionIdx int
+// alignUp rounds the LBA up to the alignment boundary.
+func (t *Table) alignUp(lba uint64) uint64 {
+	return (lba + t.alignment - 1) / t.alignment * t.alignment
+}
 
-	size uint64
+// alignDown rounds the LBA down to the alignment boundary.
+func (t *Table) alignDown(lba uint64) uint64 {
+	return lba / t.alignment * t.alignment
+}
+
+// allocatableEndLBA returns the (exclusive) upper bound of the LBAs which can be allocated to partitions.
+func (t *Table) allocatableEndLBA() uint64 {
+	return t.alignDown(t.lastUsableLBA)
 }
 
 // allocatableRanges returns the slices of LBA ranges that are not allocated to any partition.
+//
+// The ranges are meant for new partitions, so the start of each range is aligned.
+// Any non-empty range is returned, even if it is a single sector.
+//
+// Partition entries are not necessarily sorted by LBA (e.g. in a table read from the disk),
+// so the ranges are calculated by walking the entries in the LBA order.
 func (t *Table) allocatableRanges() []allocatableRange {
-	partitionIdx := 0
-	lowLBA := t.firstUsableLBA
+	partitions := xslices.Filter(t.entries, func(e *Partition) bool {
+		return e != nil
+	})
+
+	slices.SortFunc(partitions, func(a, b *Partition) int {
+		return cmp.Compare(a.FirstLBA, b.FirstLBA)
+	})
 
 	var ranges []allocatableRange
 
-	for {
-		for partitionIdx < len(t.entries) {
-			if t.entries[partitionIdx] != nil {
-				break
-			}
+	lowLBA := t.firstUsableLBA
 
-			// skip empty entries
-			partitionIdx++
-		}
+	// addRange adds the range from lowLBA (aligned) up to upperLBA (exclusive), if it is not empty
+	addRange := func(upperLBA uint64) {
+		alignedLowLBA := t.alignUp(lowLBA)
 
-		var highLBA uint64
-
-		if partitionIdx < len(t.entries) {
-			highLBA = t.entries[partitionIdx].FirstLBA - 1
-		} else {
-			highLBA = t.lastUsableLBA
-			highLBA = highLBA/t.alignment*t.alignment - 1
-		}
-
-		lowLBA = (lowLBA + t.alignment - 1) / t.alignment * t.alignment
-
-		if highLBA > lowLBA {
+		if upperLBA > alignedLowLBA {
 			ranges = append(ranges, allocatableRange{
-				lowLBA:       lowLBA,
-				highLBA:      highLBA,
-				partitionIdx: partitionIdx,
-				size:         (highLBA - lowLBA + 1) * uint64(t.sectorSize),
+				lowLBA: alignedLowLBA,
+				size:   (upperLBA - alignedLowLBA) * uint64(t.sectorSize),
 			})
 		}
-
-		if partitionIdx >= len(t.entries) {
-			break
-		}
-
-		lowLBA = t.entries[partitionIdx].LastLBA + 1
-		partitionIdx++
 	}
+
+	for _, partition := range partitions {
+		addRange(partition.FirstLBA)
+
+		// partitions might overlap or be nested, so never move the lower bound backwards
+		lowLBA = max(lowLBA, partition.LastLBA+1)
+	}
+
+	addRange(t.allocatableEndLBA())
 
 	return ranges
 }
 
-// LargestContiguousAllocatable returns the size of the largest contiguous allocatable range.
+// LargestContiguousAllocatable returns the size of the largest contiguous range available for a new partition.
 func (t *Table) LargestContiguousAllocatable() uint64 {
 	ranges := t.allocatableRanges()
 
@@ -358,6 +366,9 @@ func (t *Table) LargestContiguousAllocatable() uint64 {
 }
 
 // AllocatePartition adds a new partition to the table.
+//
+// The new partition takes the first empty entry of the table, or a new entry is appended.
+// Existing entries are never moved, as that would change the partition numbers.
 //
 // If successful, returns the partition number (1-indexed) and the partition entry created.
 func (t *Table) AllocatePartition(size uint64, name string, partType uuid.UUID, opts ...PartitionOption) (int, Partition, error) {
@@ -387,6 +398,16 @@ func (t *Table) AllocatePartition(size uint64, name string, partType uuid.UUID, 
 		return 0, Partition{}, errors.New("no allocatable range found")
 	}
 
+	idx := slices.Index(t.entries, nil)
+	if idx < 0 {
+		if len(t.entries) >= gptstructs.NumEntries {
+			return 0, Partition{}, fmt.Errorf("partition table is full: all %d entries are in use", gptstructs.NumEntries)
+		}
+
+		idx = len(t.entries)
+		t.entries = append(t.entries, nil)
+	}
+
 	entry := &Partition{
 		Name:     name,
 		TypeGUID: partType,
@@ -396,26 +417,9 @@ func (t *Table) AllocatePartition(size uint64, name string, partType uuid.UUID, 
 		Flags:    options.Flags,
 	}
 
-	if smallestRange.partitionIdx > 0 && t.entries[smallestRange.partitionIdx-1] == nil {
-		// find the smallest non-empty partition
-		newPartitionIdx := smallestRange.partitionIdx - 1
+	t.entries[idx] = entry
 
-		for newPartitionIdx > 0 && t.entries[newPartitionIdx-1] == nil {
-			newPartitionIdx--
-		}
-
-		t.entries[newPartitionIdx] = entry
-
-		return newPartitionIdx + 1, *entry, nil
-	}
-
-	t.entries = slices.Insert(
-		t.entries,
-		smallestRange.partitionIdx,
-		entry,
-	)
-
-	return smallestRange.partitionIdx + 1, *entry, nil
+	return idx + 1, *entry, nil
 }
 
 // AvailablePartitionGrowth returns the number of bytes that can be added to the partition.
@@ -428,13 +432,32 @@ func (t *Table) AvailablePartitionGrowth(partition int) (uint64, error) {
 		return 0, fmt.Errorf("partition %d is not allocated", partition)
 	}
 
-	for _, allocatableRange := range t.allocatableRanges() {
-		if allocatableRange.partitionIdx == partition+1 {
-			return allocatableRange.size, nil
+	entry := t.entries[partition]
+
+	// The partition can grow up to the closest partition which ends after it (by LBA, not by the entry index,
+	// as entries are not necessarily sorted), or up to the end of the usable space.
+	//
+	// If some other partition overlaps the end of this partition, there is no room to grow.
+	//
+	// Unlike allocatableRanges (which align the start of the range for a new partition), the growth starts
+	// right after the current end of the partition, which might be unaligned (e.g. if the partition was created
+	// by another tool). The upper bound is either the start of the next partition or the aligned end of
+	// the usable space, so the grown partition fills the whole gap.
+	upperLBA := t.allocatableEndLBA()
+
+	for idx, other := range t.entries {
+		if idx == partition || other == nil || other.LastLBA <= entry.LastLBA {
+			continue
 		}
+
+		upperLBA = min(upperLBA, max(other.FirstLBA, entry.LastLBA+1))
 	}
 
-	return 0, nil
+	if upperLBA <= entry.LastLBA+1 {
+		return 0, nil
+	}
+
+	return (upperLBA - entry.LastLBA - 1) * uint64(t.sectorSize), nil
 }
 
 // GrowPartition grows the partition by the specified number of bytes.

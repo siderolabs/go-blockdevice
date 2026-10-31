@@ -244,18 +244,19 @@ func TestGPT(t *testing.T) {
 				require.NoError(t, table.DeletePartition(1))
 				require.NoError(t, table.DeletePartition(2))
 
-				// gap is 2 GiB, while the tail available space is < 2 GiB, so small partitions will be appended to the end
-				assertAllocated(t, 5)(table.AllocatePartition(
+				// gap is 2 GiB, while the tail available space is < 2 GiB, so small partitions will be allocated at the end
+				// of the disk, reusing the deleted entries
+				assertAllocated(t, 2)(table.AllocatePartition(
 					200*MiB, "200M", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("EE1A711E-DE12-4D9F-98FF-672F7AD638F8")),
 				))
-				assertAllocated(t, 6)(table.AllocatePartition(
+				assertAllocated(t, 3)(table.AllocatePartition(
 					400*MiB, "400M", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("15E609C8-9775-4E86-AF59-8A87E7C03FAB")),
 				))
 
-				// bigger partition will fill the gap
-				assertAllocated(t, 2)(table.AllocatePartition(
+				// bigger partition will fill the gap, getting a new entry
+				assertAllocated(t, 5)(table.AllocatePartition(
 					1500*MiB, "1500M", partType2,
 					gpt.WithUniqueGUID(uuid.MustParse("15E609C8-9775-4E86-AF59-8A87E7C03FAC")),
 				))

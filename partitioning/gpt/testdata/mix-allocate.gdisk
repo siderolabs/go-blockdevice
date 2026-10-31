@@ -16,7 +16,7 @@ Total free space is 4085727 sectors (1.9 GiB)
 
 Number  Start (sector)    End (sector)  Size       Code  Name
    1            2048         2099199   1024.0 MiB  EF00  1G1
-   2         2099200         5171199   1.5 GiB     8E00  1500M
+   2         8390656         8800255   200.0 MiB   8E00  200M
+   3         8800256         9619455   400.0 MiB   8E00  400M
    4         6293504         8390655   1024.0 MiB  8E00  1G4
-   5         8390656         8800255   200.0 MiB   8E00  200M
-   6         8800256         9619455   400.0 MiB   8E00  400M
+   5         2099200         5171199   1.5 GiB     8E00  1500M
