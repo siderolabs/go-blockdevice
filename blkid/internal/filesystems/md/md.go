@@ -11,7 +11,6 @@ import (
 	"bytes"
 
 	"github.com/google/uuid"
-	"github.com/siderolabs/go-pointer"
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
@@ -95,7 +94,7 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 				idx = len(name)
 			}
 
-			res.Label = pointer.To(string(name[:idx]))
+			res.Label = new(string(name[:idx]))
 		}
 
 		return res, nil

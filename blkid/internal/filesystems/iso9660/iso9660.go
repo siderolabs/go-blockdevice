@@ -10,7 +10,6 @@ package iso9660
 import (
 	"strings"
 
-	"github.com/siderolabs/go-pointer"
 	"golang.org/x/text/encoding/unicode"
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
@@ -101,13 +100,13 @@ vdLoop:
 		lblBytes := joilet.Get_volume_id()
 
 		if label, err := unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM).NewDecoder().Bytes(lblBytes); err == nil {
-			res.Label = pointer.To(strings.TrimRight(string(label), " \000"))
+			res.Label = new(strings.TrimRight(string(label), " \000"))
 		}
 	}
 
 	if res.Label == nil {
 		lblBytes := pvd.Get_volume_id()
-		res.Label = pointer.To(strings.TrimRight(string(lblBytes), " \000"))
+		res.Label = new(strings.TrimRight(string(lblBytes), " \000"))
 	}
 
 	probeHybridGPT(r, res)

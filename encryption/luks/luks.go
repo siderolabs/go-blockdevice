@@ -377,8 +377,7 @@ func (l *LUKS) runCommand(ctx context.Context, args []string, stdin []byte, capt
 		opts...,
 	)
 	if err != nil {
-		var exitError *cmd.ExitError
-		if errors.As(err, &exitError) {
+		if exitError, ok := errors.AsType[*cmd.ExitError](err); ok {
 			switch exitError.ExitCode {
 			case 1:
 				if strings.Contains(string(exitError.Output), "No usable keyslot is available.") {

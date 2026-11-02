@@ -10,7 +10,6 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	"github.com/siderolabs/go-pointer"
 	"golang.org/x/text/encoding/unicode"
 
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
@@ -145,7 +144,7 @@ func (p *Probe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 		result.Parts = append(result.Parts, probe.Partition{
 			UUID:     &partUUID,
 			TypeUUID: &typeUUID,
-			Label:    pointer.To(string(name)),
+			Label:    new(string(name)),
 
 			Index: partIdx,
 

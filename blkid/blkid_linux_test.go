@@ -27,7 +27,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/klauspost/compress/zstd"
 	"github.com/siderolabs/gen/xslices"
-	"github.com/siderolabs/go-pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -917,9 +916,9 @@ func wipe1MB(f func(*testing.T, string)) func(*testing.T, string) {
 var expectedParts = []blkid.NestedProbeResult{
 	{
 		NestedResult: blkid.NestedResult{
-			PartitionUUID:   pointer.To(uuid.MustParse("3C047FF8-E35C-4918-A061-B4C1E5A291E5")),
-			PartitionType:   pointer.To(uuid.MustParse("C12A7328-F81F-11D2-BA4B-00A0C93EC93B")),
-			PartitionLabel:  pointer.To("EFI"),
+			PartitionUUID:   new(uuid.MustParse("3C047FF8-E35C-4918-A061-B4C1E5A291E5")),
+			PartitionType:   new(uuid.MustParse("C12A7328-F81F-11D2-BA4B-00A0C93EC93B")),
+			PartitionLabel:  new("EFI"),
 			PartitionIndex:  1,
 			PartitionOffset: 1 * MiB,
 			PartitionSize:   100 * MiB,
@@ -927,9 +926,9 @@ var expectedParts = []blkid.NestedProbeResult{
 	},
 	{
 		NestedResult: blkid.NestedResult{
-			PartitionUUID:   pointer.To(uuid.MustParse("942D2017-052E-4216-B4E4-2110507E4CD4")),
-			PartitionType:   pointer.To(uuid.MustParse("21686148-6449-6E6F-744E-656564454649")),
-			PartitionLabel:  pointer.To("BIOS"),
+			PartitionUUID:   new(uuid.MustParse("942D2017-052E-4216-B4E4-2110507E4CD4")),
+			PartitionType:   new(uuid.MustParse("21686148-6449-6E6F-744E-656564454649")),
+			PartitionLabel:  new("BIOS"),
 			PartitionIndex:  2,
 			PartitionOffset: 101 * MiB,
 			PartitionSize:   1 * MiB,
@@ -937,9 +936,9 @@ var expectedParts = []blkid.NestedProbeResult{
 	},
 	{
 		NestedResult: blkid.NestedResult{
-			PartitionUUID:   pointer.To(uuid.MustParse("E8516F6B-F03E-45AE-8D9D-9958456EE7E4")),
-			PartitionType:   pointer.To(uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4")),
-			PartitionLabel:  pointer.To("BOOT"),
+			PartitionUUID:   new(uuid.MustParse("E8516F6B-F03E-45AE-8D9D-9958456EE7E4")),
+			PartitionType:   new(uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4")),
+			PartitionLabel:  new("BOOT"),
 			PartitionIndex:  3,
 			PartitionOffset: 102 * MiB,
 			PartitionSize:   1000 * MiB,
@@ -947,9 +946,9 @@ var expectedParts = []blkid.NestedProbeResult{
 	},
 	{
 		NestedResult: blkid.NestedResult{
-			PartitionUUID:   pointer.To(uuid.MustParse("CE6B2D56-7A70-4546-926C-7A9B41607347")),
-			PartitionType:   pointer.To(uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4")),
-			PartitionLabel:  pointer.To("META"),
+			PartitionUUID:   new(uuid.MustParse("CE6B2D56-7A70-4546-926C-7A9B41607347")),
+			PartitionType:   new(uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4")),
+			PartitionLabel:  new("META"),
 			PartitionIndex:  4,
 			PartitionOffset: 1102 * MiB,
 			PartitionSize:   1 * MiB,
@@ -957,9 +956,9 @@ var expectedParts = []blkid.NestedProbeResult{
 	},
 	{
 		NestedResult: blkid.NestedResult{
-			PartitionUUID:   pointer.To(uuid.MustParse("7F5FCD6C-A703-40D2-8796-E5CF7F3A9EB5")),
-			PartitionType:   pointer.To(uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4")),
-			PartitionLabel:  pointer.To("STATE"),
+			PartitionUUID:   new(uuid.MustParse("7F5FCD6C-A703-40D2-8796-E5CF7F3A9EB5")),
+			PartitionType:   new(uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4")),
+			PartitionLabel:  new("STATE"),
 			PartitionIndex:  5,
 			PartitionOffset: 1103 * MiB,
 			PartitionSize:   100 * MiB,
@@ -967,9 +966,9 @@ var expectedParts = []blkid.NestedProbeResult{
 	},
 	{
 		NestedResult: blkid.NestedResult{
-			PartitionUUID:   pointer.To(uuid.MustParse("0F06E81A-E78D-426B-A078-30A01AAB3FB7")),
-			PartitionType:   pointer.To(uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4")),
-			PartitionLabel:  pointer.To("EPHEMERAL"),
+			PartitionUUID:   new(uuid.MustParse("0F06E81A-E78D-426B-A078-30A01AAB3FB7")),
+			PartitionType:   new(uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4")),
+			PartitionLabel:  new("EPHEMERAL"),
 			PartitionIndex:  6,
 			PartitionOffset: 1203 * MiB,
 			PartitionSize:   844 * MiB,
@@ -1061,9 +1060,9 @@ func TestProbePathGPT(t *testing.T) {
 			expectedParts: []blkid.NestedProbeResult{
 				{
 					NestedResult: blkid.NestedResult{
-						PartitionUUID:   pointer.To(uuid.MustParse("3C047FF8-E35C-4918-A061-B4C1E5A291E5")),
-						PartitionType:   pointer.To(uuid.MustParse("C12A7328-F81F-11D2-BA4B-00A0C93EC93B")),
-						PartitionLabel:  pointer.To("TEST1"),
+						PartitionUUID:   new(uuid.MustParse("3C047FF8-E35C-4918-A061-B4C1E5A291E5")),
+						PartitionType:   new(uuid.MustParse("C12A7328-F81F-11D2-BA4B-00A0C93EC93B")),
+						PartitionLabel:  new("TEST1"),
 						PartitionIndex:  1,
 						PartitionOffset: 1 * MiB,
 						PartitionSize:   100 * MiB,
@@ -1071,9 +1070,9 @@ func TestProbePathGPT(t *testing.T) {
 				},
 				{
 					NestedResult: blkid.NestedResult{
-						PartitionUUID:   pointer.To(uuid.MustParse("0F06E81A-E78D-426B-A078-30A01AAB3FB7")),
-						PartitionType:   pointer.To(uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4")),
-						PartitionLabel:  pointer.To("TEST2"),
+						PartitionUUID:   new(uuid.MustParse("0F06E81A-E78D-426B-A078-30A01AAB3FB7")),
+						PartitionType:   new(uuid.MustParse("0FC63DAF-8483-4772-8E79-3D69D8477DE4")),
+						PartitionLabel:  new("TEST2"),
 						PartitionIndex:  2,
 						PartitionOffset: 101 * MiB,
 						PartitionSize:   410 * MiB,
@@ -1204,25 +1203,25 @@ func TestProbePathHybridISO(t *testing.T) {
 
 	assert.Equal(t, []blkid.NestedResult{
 		{
-			PartitionUUID:   pointer.To(uuid.MustParse("36323032-3930-4232-b131-303635323135")),
-			PartitionType:   pointer.To(uuid.MustParse("ebd0a0a2-b9e5-4433-87c0-68b6b72699c7")),
-			PartitionLabel:  pointer.To("ISO9660"),
+			PartitionUUID:   new(uuid.MustParse("36323032-3930-4232-b131-303635323135")),
+			PartitionType:   new(uuid.MustParse("ebd0a0a2-b9e5-4433-87c0-68b6b72699c7")),
+			PartitionLabel:  new("ISO9660"),
 			PartitionIndex:  1,
 			PartitionOffset: 64 * 512,
 			PartitionSize:   1984 * 512,
 		},
 		{
-			PartitionUUID:   pointer.To(uuid.MustParse("36323032-3930-4232-b132-303635323135")),
-			PartitionType:   pointer.To(uuid.MustParse("c12a7328-f81f-11d2-ba4b-00a0c93ec93b")),
-			PartitionLabel:  pointer.To("Appended2"),
+			PartitionUUID:   new(uuid.MustParse("36323032-3930-4232-b132-303635323135")),
+			PartitionType:   new(uuid.MustParse("c12a7328-f81f-11d2-ba4b-00a0c93ec93b")),
+			PartitionLabel:  new("Appended2"),
 			PartitionIndex:  2,
 			PartitionOffset: 2048 * 512,
 			PartitionSize:   8192 * 512,
 		},
 		{
-			PartitionUUID:   pointer.To(uuid.MustParse("36323032-3930-4232-b133-303635323135")),
-			PartitionType:   pointer.To(uuid.MustParse("ebd0a0a2-b9e5-4433-87c0-68b6b72699c7")),
-			PartitionLabel:  pointer.To("Gap1"),
+			PartitionUUID:   new(uuid.MustParse("36323032-3930-4232-b133-303635323135")),
+			PartitionType:   new(uuid.MustParse("ebd0a0a2-b9e5-4433-87c0-68b6b72699c7")),
+			PartitionLabel:  new("Gap1"),
 			PartitionIndex:  3,
 			PartitionOffset: 10240 * 512,
 			PartitionSize:   600 * 512,

@@ -15,8 +15,6 @@ package vmfs
 import (
 	"bytes"
 
-	"github.com/siderolabs/go-pointer"
-
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/magic"
 	"github.com/siderolabs/go-blockdevice/v2/blkid/internal/probe"
 )
@@ -132,7 +130,7 @@ func (p *FSProbe) Probe(r probe.Reader, _ magic.Magic) (*probe.Result, error) {
 			idx = len(lbl)
 		}
 
-		res.Label = pointer.To(string(bytes.TrimRight(lbl[:idx], " ")))
+		res.Label = new(string(bytes.TrimRight(lbl[:idx], " ")))
 	}
 
 	return res, nil
